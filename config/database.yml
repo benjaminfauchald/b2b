@@ -22,11 +22,11 @@ default: &default
 
 development:
   <<: *default
-  database: <%= ENV['PGDATABASE'] || 'b2b_development' %>
-  host: <%= ENV['PGHOST'] || 'localhost' %>
-  port: <%= ENV['PGPORT'] || 5432 %>
-  username: <%= ENV['PGUSER'] || 'postgres' %>
-  password: <%= ENV['PGPASSWORD'] %>
+  database: b2b_development
+  host: localhost
+  port: 5432
+  username: postgres
+  password: <%= ENV['DEV_DATABASE_PASSWORD'] || 'postgres' %>
 
   # Schema search path. The server defaults to $user,public
   #schema_search_path: myapp,sharedapp,public
@@ -42,11 +42,11 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: <%= ENV['PGDATABASE'] || 'b2b_test' %>
-  host: <%= ENV['PGHOST'] || 'localhost' %>
-  port: <%= ENV['PGPORT'] || 5432 %>
-  username: <%= ENV['PGUSER'] || 'postgres' %>
-  password: <%= ENV['PGPASSWORD'] %>
+  database: b2b_test
+  host: localhost
+  port: 5432
+  username: postgres
+  password: <%= ENV['TEST_DATABASE_PASSWORD'] || 'postgres' %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -68,12 +68,15 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+# Production database - uses the remote PostgreSQL server
 production:
   primary: &primary_production
     <<: *default
-    database: b2b_production
-    username: b2b
-    password: <%= ENV["B2B_DATABASE_PASSWORD"] %>
+    database: <%= ENV['PGDATABASE'] || 'postgres' %>
+    host: <%= ENV['PGHOST'] || '104.43.113.195' %>
+    port: <%= ENV['PGPORT'] || 5432 %>
+    username: <%= ENV['PGUSER'] || 'postgres' %>
+    password: <%= ENV['PGPASSWORD'] %>
   cache:
     <<: *primary_production
     database: b2b_production_cache

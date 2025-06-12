@@ -86,6 +86,9 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  
+  # Shoulda matchers for RSpec
+  gem 'shoulda-matchers'
 end
 
 gem "rubocop", "~> 1.76", group: :development
@@ -95,3 +98,5 @@ gem "rubocop-rails", "~> 2.32", group: :development
 gem "rubocop-performance", "~> 1.25", group: :development
 
 gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
+
+gem "tailwindcss-rails", "~> 4.2"
