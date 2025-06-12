@@ -7,3 +7,71 @@
 #   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
+
+# Service Audit System Configuration Seeds
+puts "Setting up Service Audit System configurations..."
+
+# User Enhancement Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'user_enhancement_v1') do |config|
+  config.refresh_interval_hours = 720  # 30 days
+  config.batch_size = 1000
+  config.retry_attempts = 3
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    enhance_email: true,
+    enhance_name: true,
+    classify_providers: true
+  }
+end
+
+# Domain DNS Testing Service Configuration  
+ServiceConfiguration.find_or_create_by(service_name: 'domain_dns_testing_v1') do |config|
+  config.refresh_interval_hours = 168  # 7 days
+  config.batch_size = 500
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    dns_timeout_seconds: 5,
+    treat_timeout_as_failure: true,
+    retry_network_errors: true,
+    log_dns_details: true
+  }
+end
+
+# Automatic Audit Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'automatic_audit') do |config|
+  config.refresh_interval_hours = 0  # No refresh needed for automatic audits
+  config.batch_size = 1
+  config.retry_attempts = 1
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    audit_creates: true,
+    audit_updates: true,
+    audit_destroys: false
+  }
+end
+
+# Domain Testing Service Configuration (for existing domain services)
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing_v1') do |config|
+  config.refresh_interval_hours = 168  # 7 days
+  config.batch_size = 500
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    test_www: true,
+    test_mx: true,
+    test_dns: true,
+    timeout_seconds: 30
+  }
+end
+
+puts "Service Audit System configured successfully!"
+puts "Available services:"
+ServiceConfiguration.all.each do |config|
+  status = config.active? ? "ACTIVE" : "INACTIVE"
+  puts "  - #{config.service_name} [#{status}]"
+end

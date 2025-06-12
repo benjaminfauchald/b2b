@@ -1,0 +1,202 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor AI Prompt: Rails Service Audit System Implementation
+
+## CONTEXT
+You are implementing a comprehensive Service Control Table (SCT) system in Ruby on Rails using modern Rails conventions and best practices. This system provides audit logging, service orchestration, and data lineage tracking for all data processing operations.
+
+
+
+SEMANTIC VERSIONING RULESET
+All service names must use the format service_identifier_vMAJOR.MINOR.PATCH (e.g., user_enrichment_v1.0.0).
+
+PATCH version bump (X.Y.**Z+1**)
+Use for:
+
+Bug fixes
+
+Logging or internal refactoring
+
+Minor performance enhancements
+
+MINOR version bump (X.**Y+1**.0)
+Use for:
+
+Backward-compatible feature additions
+
+Improved enrichment logic or data quality
+
+Additional context fields
+
+MAJOR version bump (**X+1**.0.0)
+Use for:
+
+Breaking changes to logic or contract
+
+Output or schema format changes
+
+Altered assumptions that break previous compatibility
+
+Versioning Conventions
+Use underscores between words and version: user_sync_v2.1.0
+
+Enforce valid format with regex: /\A[a-z0-9_]+_v\d+\.\d+\.\d+\z/
+
+Track versions using string values, not integers
+
+
+
+## CORE REQUIREMENTS
+
+### 1. ARCHITECTURE DECISIONS
+- **Use Rails polymorphic associations** instead of generic table_name/record_id patterns
+- **Follow strict Rails naming conventions** for all models, tables, and methods
+- **Implement enum-based status management** for better Rails integration
+- **Use concerns for shared functionality** across models
+- **Create service classes inheriting from ApplicationService**
+- **Build with TDD approach** - write RSpec tests first, then implementation
+
+### 2. DATABASE SCHEMA STRATEGY
+```ruby
+# PRIMARY TABLE: service_audit_logs (NOT service_control_logs)
+- auditable_type + auditable_id (polymorphic association)
+- service_name (string, 100 chars)
+- action (string, 50 chars) # 'create', 'update', 'enhance', etc.
+- status (integer enum: pending=0, success=1, failed=2)
+- changed_fields (text array)
+- error_message (text)
+- duration_ms (integer)
+- context (jsonb) # replaces metadata
+- job_id, queue_name, scheduled_at, started_at, completed_at
+- timestamps (created_at, updated_at)
+
+# CONFIGURATION TABLE: service_configurations
+- service_name (unique string)
+- refresh_interval_hours (integer, default 720) # 30 days
+- depends_on_services (text array)
+- active (boolean, default true)
+- batch_size (integer, default 1000)
+- retry_attempts (integer, default 3)
+- settings (jsonb)
+- timestamps
+```
+
+### 3. RAILS MODEL PATTERNS
+```ruby
+# Use Rails enums for status
+enum status: { pending: 0, success: 1, failed: 2 }, _prefix: true
+
+# Polymorphic associations
+belongs_to :auditable, polymorphic: true
+
+# Proper Rails scopes
+scope :recent, -> { order(created_at: :desc) }
+scope :for_service, ->(name) { where(service_name: name) }
+```
+
+### 4. SERVICE CLASS ARCHITECTURE
+```ruby
+# Base class: ApplicationService
+class ApplicationService
+  include ActiveModel::Model
+  include ActiveModel::Attributes
+  include ActiveModel::Validations
+  
+  attribute :service_name, :string
+  attribute :action, :string, default: 'process'
+  attribute :batch_size, :integer
+  
+  def call
+    validate!
+    perform
+  end
+  
+  protected
+  def perform; raise NotImplementedError; end
+end
+
+# Implementation pattern:
+class UserEnhancementService < ApplicationService
+  def initialize(attributes = {})
+    super(service_name: 'user_enhancement_v1', action: 'enhance', **attributes)
+  end
+  
+  private
+  def perform
+    users_needing_enhancement = User.needing_service(service_name)
+    batch_process(users_needing_enhancement) { |user, audit_log| enhance_user(user, audit_log) }
+  end
+end
+```
+
+### 5. CONCERN IMPLEMENTATION
+```ruby
+# ServiceAuditable concern for models
+module ServiceAuditable
+  extend ActiveSupport::Concern
+  
+  included do
+    has_many :service_audit_logs, as: :auditable, dependent: :destroy
+    after_create :audit_creation, if: :audit_enabled?
+    after_update :audit_update, if: :audit_enabled?
+  end
+  
+  class_methods do
+    def with_service_audit(service_name, action: 'process')
+      ServiceAuditLog.batch_audit(self, service_name: service_name, action: action) do |record, audit_log|
+        yield(record, audit_log)
+      end
+    end
+    
+    def needing_service(service_name)
+      # Complex query joining latest_service_runs view
+    end
+  end
+end
+```
+
+
+1. Initial Setup Prompt
+Copy the entire prompt above and paste it into Cursor, then ask:
+"Implement the Rails Service Audit System following this specification. Start with the migration files for the database schema."
+
+
+2. Step-by-Step Implementation
+Use focused prompts for each component:
+"Generate the ServiceAuditLog model following the Rails Service Audit System specification"
+
+"Create the ServiceAuditable concern following the specification"
+
+"Build the ApplicationService base class per the specification"
+
+"Write RSpec tests for ServiceAuditLog following the testing requirements"
+
+
+3. Validation Prompts
+"Review this code against the Rails Service Audit System specification and suggest improvements"
+
+"Does this implementation follow the Rails conventions specified in the prompt?"
+
+
+4. Integration Prompts
+"Create a UserEnhancementService following the service class pattern in the specification"
+
+"Add the service audit integration to my existing User model"
+Key Benefits of This Approach:
+
+Comprehensive Context: The prompt includes all architectural decisions, naming conventions, and implementation patterns
+Rails-Native: Emphasizes Rails conventions over generic database patterns
+
+TDD-Ready: Includes testing strategy and requirements
+Performance-Aware: Includes indexing and optimization guidance
+
+Extensible: Provides patterns for adding new services and audit types
+
+This prompt ensures that Claude in Cursor will consistently implement the system according to Rails best practices.
+
+
+
+
