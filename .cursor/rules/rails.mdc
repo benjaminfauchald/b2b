@@ -1,0 +1,146 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Ruby on Rails Hard Coding Rules
+
+Strictly follow these rules to ensure adherence to Rails conventions, maintainability, and high-quality Rails applications.
+
+## 1. Code Style Enforcement
+
+Use tools to enforce, not just suggest, conventions.
+
+Use `rubocop` with the Rails, Performance, and RSpec cops enabled.
+
+Enabled cops:
+- Style/FrozenStringLiteralComment
+- Style/ClassAndModuleChildren
+- Rails/SkipsModelValidations
+- Performance/*
+- Layout/MultilineMethodCallIndentation
+
+Example `.rubocop.yml`:
+
+```yaml
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  Exclude:
+    - 'db/schema.rb'
+    - 'bin/*'
+
+Rails:
+  Enabled: true
+
+Metrics/MethodLength:
+  Max: 10
+```
+
+## 2. File and Folder Naming
+
+Strictly follow Rails naming conventions:
+
+- Use `snake_case` for file names.
+  - Correct: `user_profile.rb`
+  - Incorrect: `UserProfile.rb`, `userProfile.rb`
+
+- Controllers:
+  - Directory: `app/controllers`
+  - Filename format: `*_controller.rb`
+  - Class name must match: `users_controller.rb` → `class UsersController`
+
+- Models:
+  - Directory: `app/models`
+  - Filename should be singular: `user.rb` → `class User`
+
+## 3. Model Rules
+
+- Always use `enum` for discrete state fields.
+- Avoid booleans if the state might evolve over time.
+- Validate `presence`, `format`, and `uniqueness` explicitly.
+- Prefer `scope` over class methods for query logic.
+
+## 4. Migrations
+
+- Never modify a committed migration.
+- Use descriptive names:
+  - Correct: `add_admin_to_users.rb`
+  - Incorrect: `new_migration_1.rb`
+- Always index foreign keys and frequently queried columns:
+  - Example: `add_index :orders, :user_id`
+
+## 5. Testing
+
+- Use RSpec for all testing.
+- Every model, controller, and service must have test coverage.
+- Use `spec/models/...`, `spec/services/...`, `spec/controllers/...`
+- Use `FactoryBot` and `Faker` for test data. Do not use raw objects.
+
+## 6. Service Objects
+
+- Place business logic outside controllers/models in `app/services`.
+- Structure: `User::Importer.call(...)`
+- Each service must:
+  - Follow single responsibility
+  - Be callable via `.call`
+
+## 7. Database and Query Rules
+
+- Always use `.includes` or `.preload` to avoid N+1 queries.
+- Do not use raw SQL unless strictly necessary and justified by performance.
+- Never implement business logic in SQL; use POROs or service objects.
+
+## 8. Frontend (Rails Views)
+
+- Use Hotwire/Turbo and Stimulus by default (Rails 7+).
+- Avoid sprinkling JavaScript unless necessary.
+- Tailwind CSS should be the default styling system.
+
+## 9. Gem Usage Guidelines
+
+Prefer Ruby standard library or ActiveSupport where possible.
+
+Whitelisted gems (must be justified if using others):
+
+- devise – authentication
+- pundit – authorization
+- sidekiq – background jobs
+- ransack or pg_search – search/filtering
+- kaminari or pagy – pagination
+- annotate – model annotations (dev only)
+
+## 10. Security Practices
+
+- Always use strong parameters for user input.
+- Do not disable CSRF protection.
+- Avoid rendering raw HTML. Use `sanitize` when needed.
+
+## 11. Cursor-Specific Project Settings
+
+Use `.cursor/config.yaml` or `.cursor/settings.json` to enforce rules:
+
+```yaml
+rails:
+  version: "7.1"
+  testing_framework: "rspec"
+  linting:
+    rubocop: true
+    annotate: true
+  conventions:
+    enforce_directory_structure: true
+    require_service_objects: true
+    restrict_raw_sql: true
+```
+
+## 12. Code Organization and Layering
+
+Keep domain logic isolated in clearly defined layers:
+
+- `app/models` – ActiveRecord models only
+- `app/controllers` – HTTP handling only
+- `app/services` – business logic
+- `app/workers` – background jobs
+- `app/serializers` – for JSON APIs
+- `app/lib` – reusable modules/utilities

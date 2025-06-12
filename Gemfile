@@ -56,8 +56,28 @@ group :development do
   gem "web-console"
 end
 
+
+group :development, :test do
+  gem 'guard'
+  gem 'guard-rspec'
+  gem 'spring'
+  gem 'spring-watcher-listen'
+  gem 'rspec-rails', '~> 6.0'
+  gem 'factory_bot_rails'  # Optional but recommended for test data
+  gem 'faker'              # Optional but useful for generating fake data
+
+end
+
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+gem "rubocop", "~> 1.76", group: :development
+
+gem "rubocop-rails", "~> 2.32", group: :development
+
+gem "rubocop-performance", "~> 1.25", group: :development
+
+gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
