@@ -4,16 +4,20 @@ require 'resolv'
 RSpec.describe DomainTestingService, type: :service do
   let!(:service_config) do
     create(:service_configuration, 
-           service_name: 'domain_dns_testing_v1',
-           refresh_interval_hours: 168,
-           batch_size: 500,
+           service_name: 'domain_testing_service',
+           refresh_interval_hours: 24,
+           batch_size: 100,
            active: true)
   end
 
   describe '#initialize' do
-    it 'sets default service name and action' do
+    it 'sets the correct service name' do
       service = DomainTestingService.new
-      expect(service.service_name).to eq('domain_dns_testing_v1')
+      expect(service.service_name).to eq('domain_testing_service')
+    end
+
+    it 'sets the correct action' do
+      service = DomainTestingService.new
       expect(service.action).to eq('test_dns')
     end
 
@@ -50,7 +54,7 @@ RSpec.describe DomainTestingService, type: :service do
           service.call
         }.to change(ServiceAuditLog, :count).by(3)
         
-        audit_logs = ServiceAuditLog.where(service_name: 'domain_dns_testing_v1')
+        audit_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
         expect(audit_logs.count).to eq(3)
         expect(audit_logs.all?(&:status_success?)).to be true
       end
@@ -86,7 +90,7 @@ RSpec.describe DomainTestingService, type: :service do
         domain = create(:domain, dns: true)
         create(:service_audit_log,
                auditable: domain,
-               service_name: 'domain_dns_testing_v1',
+               service_name: 'domain_testing_service',
                status: :success,
                completed_at: 1.hour.ago)
         
@@ -256,7 +260,7 @@ RSpec.describe DomainTestingService, type: :service do
   describe 'audit log integration' do
     let(:service) { DomainTestingService.new }
     let(:domain) { create(:domain, dns: nil) }
-    let(:audit_log) { create(:service_audit_log, auditable: domain, service_name: 'domain_dns_testing_v1') }
+    let(:audit_log) { create(:service_audit_log, auditable: domain, service_name: 'domain_testing_service') }
 
     it 'marks audit log as successful on success' do
       allow(service).to receive(:has_dns?).and_return(true)

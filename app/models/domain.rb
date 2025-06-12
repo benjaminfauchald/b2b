@@ -12,8 +12,8 @@ class Domain < ApplicationRecord
   scope :with_mx, -> { where(mx: true) }
   
   # Instance methods
-  def needs_dns_test?
-    dns.nil? || needs_service?('domain_dns_testing_v1')
+  def needs_testing?
+    dns.nil? || needs_service?('domain_testing_service')
   end
   
   def test_status
@@ -22,5 +22,9 @@ class Domain < ApplicationRecord
     when false then 'inactive'
     when nil then 'untested'
     end
+  end
+
+  def needs_www_testing?
+    dns? && (www.nil? || needs_service?('domain_a_record_testing_v1'))
   end
 end

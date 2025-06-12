@@ -26,7 +26,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'user_enhancement_v1') do |
 end
 
 # Domain DNS Testing Service Configuration  
-ServiceConfiguration.find_or_create_by(service_name: 'domain_dns_testing_v1') do |config|
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing_service') do |config|
   config.refresh_interval_hours = 168  # 7 days
   config.batch_size = 500
   config.retry_attempts = 2
@@ -37,6 +37,21 @@ ServiceConfiguration.find_or_create_by(service_name: 'domain_dns_testing_v1') do
     treat_timeout_as_failure: true,
     retry_network_errors: true,
     log_dns_details: true
+  }
+end
+
+# Domain A Record Testing Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'domain_a_record_testing_v1') do |config|
+  config.refresh_interval_hours = 168  # 7 days
+  config.batch_size = 500
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = ['domain_testing_service']  # Depends on DNS testing
+  config.settings = {
+    www_timeout_seconds: 5,
+    treat_timeout_as_failure: true,
+    retry_network_errors: true,
+    log_www_details: true
   }
 end
 
