@@ -2,18 +2,8 @@ require 'rails_helper'
 
 RSpec.describe Domain, type: :model do
   describe 'validations' do
-    it 'validates presence of domain' do
-      domain = Domain.new(www: true, mx: false)
-      expect(domain).not_to be_valid
-      expect(domain.errors[:domain]).to include("can't be blank")
-    end
-
-    it 'validates uniqueness of domain' do
-      create(:domain, domain: 'example.com')
-      domain = Domain.new(domain: 'example.com')
-      expect(domain).not_to be_valid
-      expect(domain.errors[:domain]).to include('has already been taken')
-    end
+    it { should validate_presence_of(:domain) }
+    it { should validate_uniqueness_of(:domain) }
   end
 
   describe 'ServiceAuditable concern' do
@@ -30,64 +20,172 @@ RSpec.describe Domain, type: :model do
   end
 
   describe 'scopes' do
-    let!(:untested_domain) { create(:domain, dns: nil) }
-    let!(:active_domain) { create(:domain, dns: true) }
-    let!(:inactive_domain) { create(:domain, dns: false) }
-    let!(:www_domain) { create(:domain, www: true) }
-    let!(:mx_domain) { create(:domain, mx: true) }
+    let!(:active_dns) { create(:domain, dns: true) }
+    let!(:inactive_dns) { create(:domain, dns: false) }
+    let!(:untested_dns) { create(:domain, dns: nil) }
+    let!(:active_www) { create(:domain, www: true) }
+    let!(:inactive_www) { create(:domain, www: false) }
+    let!(:untested_www) { create(:domain, www: nil) }
 
-    it 'returns untested domains' do
-      expect(Domain.untested).to include(untested_domain)
-      expect(Domain.untested).not_to include(active_domain, inactive_domain)
+    describe '.dns_active' do
+      it 'returns domains with active DNS' do
+        expect(Domain.dns_active).to include(active_dns)
+        expect(Domain.dns_active).not_to include(inactive_dns, untested_dns)
+      end
     end
 
-    it 'returns dns_active domains' do
-      expect(Domain.dns_active).to include(active_domain)
-      expect(Domain.dns_active).not_to include(untested_domain, inactive_domain)
+    describe '.dns_inactive' do
+      it 'returns domains with inactive DNS' do
+        expect(Domain.dns_inactive).to include(inactive_dns)
+        expect(Domain.dns_inactive).not_to include(active_dns, untested_dns)
+      end
     end
 
-    it 'returns dns_inactive domains' do
-      expect(Domain.dns_inactive).to include(inactive_domain)
-      expect(Domain.dns_inactive).not_to include(untested_domain, active_domain)
+    describe '.untested' do
+      it 'returns domains with untested DNS' do
+        expect(Domain.untested).to include(untested_dns)
+        expect(Domain.untested).not_to include(active_dns, inactive_dns)
+      end
     end
 
-    it 'returns domains with www' do
-      expect(Domain.with_www).to include(www_domain)
+    describe '.www_active' do
+      it 'returns domains with active WWW' do
+        expect(Domain.www_active).to include(active_www)
+        expect(Domain.www_active).not_to include(inactive_www, untested_www)
+      end
     end
 
-    it 'returns domains with mx' do
-      expect(Domain.with_mx).to include(mx_domain)
+    describe '.www_inactive' do
+      it 'returns domains with inactive WWW' do
+        expect(Domain.www_inactive).to include(inactive_www)
+        expect(Domain.www_inactive).not_to include(active_www, untested_www)
+      end
+    end
+
+    describe '.www_untested' do
+      it 'returns domains with untested WWW' do
+        expect(Domain.www_untested).to include(untested_www)
+        expect(Domain.www_untested).not_to include(active_www, inactive_www)
+      end
     end
   end
 
-  describe '#needs_dns_test?' do
-    let!(:config) { create(:service_configuration, service_name: 'domain_dns_testing_v1', refresh_interval_hours: 24) }
+  describe '#needs_testing?' do
+    let!(:config) { create(:service_configuration, service_name: 'domain_testing_service', refresh_interval_hours: 24) }
+    let(:domain) { create(:domain) }
 
-    it 'returns true for untested domains' do
-      domain = create(:domain, dns: nil)
-      expect(domain.needs_dns_test?).to be true
+    context 'when DNS has never been tested' do
+      it 'returns true' do
+        expect(domain.needs_testing?).to be true
+      end
     end
 
-    it 'returns false for recently tested domains' do
-      domain = create(:domain, dns: true)
-      create(:service_audit_log,
-             auditable: domain,
-             service_name: 'domain_dns_testing_v1',
-             status: :success,
-             completed_at: 1.hour.ago)
-      
-      expect(domain.needs_dns_test?).to be false
+    context 'when DNS was tested recently' do
+      before do
+        create(:service_audit_log,
+          auditable: domain,
+          service_name: 'domain_testing_service',
+          created_at: 1.hour.ago,
+          status: :success
+        )
+      end
+
+      it 'returns false' do
+        expect(domain.needs_testing?).to be false
+      end
     end
 
-    it 'returns true for domains tested long ago' do
-      domain = create(:domain, dns: true)
+    context 'when DNS was tested long ago' do
+      before do
+        create(:service_audit_log,
+          auditable: domain,
+          service_name: 'domain_testing_service',
+          created_at: 48.hours.ago,
+          status: :success
+        )
+      end
+
+      it 'returns true' do
+        expect(domain.needs_testing?).to be true
+      end
+    end
+  end
+
+  describe '#needs_www_testing?' do
+    let!(:config) { create(:service_configuration, service_name: 'domain_testing_service', refresh_interval_hours: 24) }
+    let(:domain) { create(:domain, dns: true) }
+
+    context 'when WWW has never been tested' do
+      it 'returns true' do
+        expect(domain.needs_www_testing?).to be true
+      end
+    end
+
+    context 'when WWW was tested recently' do
+      before do
+        create(:service_audit_log,
+          auditable: domain,
+          service_name: 'domain_a_record_testing_v1',
+          created_at: 1.hour.ago,
+          status: :success
+        )
+      end
+
+      it 'returns false' do
+        expect(domain.needs_www_testing?).to be false
+      end
+    end
+
+    context 'when WWW was tested long ago' do
+      before do
+        create(:service_audit_log,
+          auditable: domain,
+          service_name: 'domain_a_record_testing_v1',
+          created_at: 48.hours.ago,
+          status: :success
+        )
+      end
+
+      it 'returns true' do
+        expect(domain.needs_www_testing?).to be true
+      end
+    end
+
+    context 'when DNS is inactive' do
+      let(:domain) { create(:domain, dns: false) }
+
+      it 'returns false' do
+        expect(domain.needs_www_testing?).to be false
+      end
+    end
+  end
+
+  describe '.needing_service' do
+    let!(:config) { create(:service_configuration, service_name: 'domain_testing_service', refresh_interval_hours: 24) }
+    let!(:never_tested) { create(:domain) }
+    let!(:tested_recently) { create(:domain) }
+    let!(:tested_long_ago) { create(:domain) }
+
+    before do
       create(:service_audit_log,
-             auditable: domain,
-             service_name: 'domain_dns_testing_v1',
-             status: :success,
-             completed_at: 2.days.ago)
-      
-      expect(domain.needs_dns_test?).to be true
+        auditable: tested_recently,
+        service_name: 'domain_testing_service',
+        created_at: 1.hour.ago,
+        status: :success
+      )
+
+      create(:service_audit_log,
+        auditable: tested_long_ago,
+        service_name: 'domain_testing_service',
+        created_at: 48.hours.ago,
+        status: :success
+      )
+    end
+
+    it 'returns domains needing testing' do
+      needing_testing = Domain.needing_service('domain_testing_service')
+      expect(needing_testing).to include(never_tested, tested_long_ago)
+      expect(needing_testing).not_to include(tested_recently)
     end
   end
 
@@ -105,36 +203,6 @@ RSpec.describe Domain, type: :model do
     it 'returns "untested" for domains with dns: nil' do
       domain = create(:domain, dns: nil)
       expect(domain.test_status).to eq('untested')
-    end
-  end
-
-  describe '.needing_service integration' do
-    let!(:config) { create(:service_configuration, service_name: 'domain_dns_testing_v1', refresh_interval_hours: 24) }
-    let!(:untested_domain) { create(:domain, dns: nil) }
-    let!(:recently_tested) { create(:domain, dns: true) }
-    let!(:old_tested) { create(:domain, dns: false) }
-
-    before do
-      # Recently tested domain
-      create(:service_audit_log,
-             auditable: recently_tested,
-             service_name: 'domain_dns_testing_v1',
-             status: :success,
-             completed_at: 1.hour.ago)
-
-      # Old tested domain
-      create(:service_audit_log,
-             auditable: old_tested,
-             service_name: 'domain_dns_testing_v1',
-             status: :success,
-             completed_at: 2.days.ago)
-    end
-
-    it 'returns domains that need testing' do
-      needing_testing = Domain.needing_service('domain_dns_testing_v1')
-      
-      expect(needing_testing).to include(untested_domain, old_tested)
-      expect(needing_testing).not_to include(recently_tested)
     end
   end
 end

@@ -1,0 +1,14 @@
+:concurrency: 5
+:timeout: 30
+:max_retries: 3
+:pidfile: tmp/pids/sidekiq.pid
+:logfile: log/sidekiq.log
+
+:queues:
+  - [dns_testing, 2]
+  - [a_record_testing, 2]
+  - [default, 1]
+
+:limits:
+  dns_testing: 3
+  a_record_testing: 3 

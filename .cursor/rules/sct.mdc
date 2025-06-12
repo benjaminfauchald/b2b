@@ -11,41 +11,7 @@ You are implementing a comprehensive Service Control Table (SCT) system in Ruby 
 
 
 SEMANTIC VERSIONING RULESET
-All service names must use the format service_identifier_vMAJOR.MINOR.PATCH (e.g., user_enrichment_v1.0.0).
-
-PATCH version bump (X.Y.**Z+1**)
-Use for:
-
-Bug fixes
-
-Logging or internal refactoring
-
-Minor performance enhancements
-
-MINOR version bump (X.**Y+1**.0)
-Use for:
-
-Backward-compatible feature additions
-
-Improved enrichment logic or data quality
-
-Additional context fields
-
-MAJOR version bump (**X+1**.0.0)
-Use for:
-
-Breaking changes to logic or contract
-
-Output or schema format changes
-
-Altered assumptions that break previous compatibility
-
-Versioning Conventions
-Use underscores between words and version: user_sync_v2.1.0
-
-Enforce valid format with regex: /\A[a-z0-9_]+_v\d+\.\d+\.\d+\z/
-
-Track versions using string values, not integers
+**DONT USE VERSON NUMBERS** service names must use the format service_identifier witout any veriosn number as it breaks refactoring and messes up logging and statistics.
 
 
 
@@ -121,7 +87,7 @@ end
 # Implementation pattern:
 class UserEnhancementService < ApplicationService
   def initialize(attributes = {})
-    super(service_name: 'user_enhancement_v1', action: 'enhance', **attributes)
+    super(service_name: 'user_enhancement', action: 'enhance', **attributes)
   end
   
   private
