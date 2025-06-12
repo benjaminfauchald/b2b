@@ -49,7 +49,26 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  # Test Framework
+  gem 'rspec-rails'
+  gem 'factory_bot_rails'
+  gem 'faker'
+
+  # Test Coverage
+  gem 'simplecov', require: false
+
+  # Guard for automatic testing
+  gem 'guard-rspec'
+  gem 'guard-rubocop'
+  
+  # Environment variables
+  gem 'dotenv-rails'
 end
+
+# Background job processing
+gem 'sidekiq'
+gem 'redis'
 
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
@@ -57,15 +76,10 @@ group :development do
 end
 
 
-group :development, :test do
+group :development do
   gem 'guard'
-  gem 'guard-rspec'
   gem 'spring'
   gem 'spring-watcher-listen'
-  gem 'rspec-rails', '~> 6.0'
-  gem 'factory_bot_rails'  # Optional but recommended for test data
-  gem 'faker'              # Optional but useful for generating fake data
-
 end
 
 group :test do
