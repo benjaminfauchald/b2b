@@ -16,4 +16,8 @@ Rails.application.routes.draw do
   # root "posts#index"
 
   mount Sidekiq::Web => '/sidekiq'
+
+  namespace :webhooks do
+    post '/instantly', to: 'instantly_webhook#create'
+  end
 end
