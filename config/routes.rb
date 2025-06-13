@@ -20,4 +20,8 @@ Rails.application.routes.draw do
   namespace :webhooks do
     post '/instantly', to: 'instantly_webhook#create'
   end
+
+  # Sidekiq Web UI
+  require 'sidekiq/web'
+  mount Sidekiq::Web => '/sidekiq'
 end
