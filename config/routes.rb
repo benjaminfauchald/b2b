@@ -12,4 +12,8 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+
+  namespace :webhooks do
+    post '/instantly', to: 'instantly_webhook#create'
+  end
 end
