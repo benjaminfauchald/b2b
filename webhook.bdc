@@ -1,0 +1,29 @@
+These are webhook-specific rules and best practices for this Rails project.">
+
+- All webhook endpoints must be implemented in a dedicated controller under `app/controllers/webhooks/`.
+
+- Each webhook must have a corresponding service object in `app/services/webhooks/` for business logic.
+
+- Webhook controllers must inherit from `ActionController::API` and not include session/cookie middleware.
+
+- All incoming webhook requests must be authenticated using a secret token or HMAC signature, validated before any processing.
+
+- Webhook payloads must be logged (with sensitive data redacted) for auditability, using the Service Control Table (SCT) system if possible.
+
+- Webhook endpoints must respond quickly (within 2s) and offload heavy processing to background jobs (e.g., Sidekiq).
+
+- All webhook events must be idempotent: repeated delivery of the same event must not cause duplicate side effects.
+
+- Webhook routes must be defined under a dedicated namespace in `config/routes.rb` (e.g., `namespace :webhooks do ... end`).
+
+- All webhook-related code must be covered by request specs and service specs in `spec/requests/webhooks/` and `spec/services/webhooks/`.
+
+- Webhook documentation (event types, payloads, security, retry policy) must be maintained in `docs/webhooks.md`.
+
+- Never expose sensitive credentials or secrets in logs or error messages.
+
+- All webhook endpoints must return appropriate HTTP status codes (200 for success, 400/401 for auth errors, 422 for validation, 500 for server errors).
+
+- Webhook processing must be monitored and failures must be logged to the SCT and error tracking system.
+
+- All changes to webhook logic must be reviewed for security and idempotency.

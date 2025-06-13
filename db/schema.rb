@@ -10,9 +10,133 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_12_164835) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_13_044019) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "brreg", force: :cascade do |t|
+    t.string "organisasjonsnummer", null: false
+    t.text "navn", null: false
+    t.text "organisasjonsform_kode"
+    t.text "organisasjonsform_beskrivelse"
+    t.text "naeringskode1_kode"
+    t.text "naeringskode1_beskrivelse"
+    t.text "naeringskode2_kode"
+    t.text "naeringskode2_beskrivelse"
+    t.text "naeringskode3_kode"
+    t.text "naeringskode3_beskrivelse"
+    t.text "aktivitet"
+    t.integer "antallansatte"
+    t.text "hjemmeside"
+    t.text "epost"
+    t.text "telefon"
+    t.text "mobiltelefon"
+    t.text "forretningsadresse"
+    t.text "forretningsadresse_poststed"
+    t.text "forretningsadresse_postnummer"
+    t.text "forretningsadresse_kommune"
+    t.text "forretningsadresse_land"
+    t.bigint "driftsinntekter"
+    t.bigint "driftskostnad"
+    t.bigint "ordinaertResultat"
+    t.bigint "aarsresultat"
+    t.boolean "mvaregistrert"
+    t.date "mvaregistrertdato"
+    t.boolean "frivilligmvaregistrert"
+    t.date "frivilligmvaregistrertdato"
+    t.date "stiftelsesdato"
+    t.boolean "konkurs"
+    t.date "konkursdato"
+    t.boolean "underavvikling"
+    t.date "avviklingsdato"
+    t.text "linked_in"
+    t.text "linked_in_ai"
+    t.jsonb "linked_in_alternatives"
+    t.boolean "linked_in_processed", default: false
+    t.datetime "linked_in_last_processed_at"
+    t.integer "http_error"
+    t.text "http_error_message"
+    t.jsonb "brreg_result_raw"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["driftsinntekter"], name: "index_brreg_on_driftsinntekter"
+    t.index ["linked_in_ai"], name: "index_brreg_on_linked_in_ai"
+    t.index ["organisasjonsform_beskrivelse"], name: "index_brreg_on_organisasjonsform_beskrivelse"
+    t.index ["organisasjonsnummer"], name: "index_brreg_on_organisasjonsnummer", unique: true
+  end
+
+  create_table "companies", force: :cascade do |t|
+    t.string "source_country", limit: 2, null: false
+    t.string "source_registry", limit: 20, null: false
+    t.text "source_id", null: false
+    t.text "registration_number", null: false
+    t.text "company_name", null: false
+    t.text "organization_form_code"
+    t.text "organization_form_description"
+    t.date "registration_date"
+    t.date "deregistration_date"
+    t.text "deregistration_reason"
+    t.text "registration_country"
+    t.text "primary_industry_code"
+    t.text "primary_industry_description"
+    t.text "secondary_industry_code"
+    t.text "secondary_industry_description"
+    t.text "tertiary_industry_code"
+    t.text "tertiary_industry_description"
+    t.text "business_description"
+    t.text "segment"
+    t.text "industry"
+    t.boolean "has_registered_employees"
+    t.integer "employee_count"
+    t.date "employee_registration_date_registry"
+    t.date "employee_registration_date_nav"
+    t.integer "linkedin_employee_count"
+    t.text "website"
+    t.text "email"
+    t.text "phone"
+    t.text "mobile"
+    t.text "postal_address"
+    t.text "postal_city"
+    t.text "postal_code"
+    t.text "postal_municipality"
+    t.text "postal_municipality_code"
+    t.text "postal_country"
+    t.text "postal_country_code"
+    t.text "business_address"
+    t.text "business_city"
+    t.text "business_postal_code"
+    t.text "business_municipality"
+    t.text "business_municipality_code"
+    t.text "business_country"
+    t.text "business_country_code"
+    t.integer "last_submitted_annual_report"
+    t.bigint "ordinary_result"
+    t.bigint "annual_result"
+    t.bigint "operating_revenue"
+    t.bigint "operating_costs"
+    t.text "linkedin_url"
+    t.text "linkedin_ai_url"
+    t.text "linkedin_alt_url"
+    t.jsonb "linkedin_alternatives"
+    t.boolean "linkedin_processed", default: false
+    t.datetime "linkedin_last_processed_at"
+    t.integer "linkedin_ai_confidence"
+    t.text "sps_match"
+    t.text "sps_match_percentage"
+    t.integer "http_error"
+    t.text "http_error_message"
+    t.jsonb "source_raw_data"
+    t.integer "brreg_id"
+    t.string "country", limit: 2
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
+    t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
+    t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
+  end
 
   create_table "domains", force: :cascade do |t|
     t.string "domain"

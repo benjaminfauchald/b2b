@@ -1,7 +1,7 @@
 class DomainDnsTestingWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :dns_testing, retry: 3
+  sidekiq_options queue: :DomainTestingService, retry: 3
 
   def perform(domain_id)
     domain = Domain.find(domain_id)

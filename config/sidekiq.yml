@@ -5,10 +5,10 @@
 :logfile: log/sidekiq.log
 
 :queues:
-  - [dns_testing, 2]
-  - [a_record_testing, 2]
+  - [DomainTestingService, 2]
+  - [DomainARecordTestingService, 2]
   - [default, 1]
 
 :limits:
-  dns_testing: 3
-  a_record_testing: 3 
+  DomainTestingService: 3
+  DomainARecordTestingService: 3 

@@ -1,7 +1,7 @@
 class DomainARecordTestingWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :a_record_testing, retry: 3
+  sidekiq_options queue: :DomainARecordTestingService, retry: 3
 
   def perform(domain_id)
     domain = Domain.find(domain_id)

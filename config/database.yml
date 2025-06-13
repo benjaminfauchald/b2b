@@ -23,10 +23,10 @@ default: &default
 development:
   <<: *default
   database: b2b_development
-  host: localhost
-  port: 5432
-  username: postgres
-  password: <%= ENV['DEV_DATABASE_PASSWORD'] || 'postgres' %>
+  host: <%= ENV['PGHOST'] %>
+  port: <%= ENV['PGPORT'] %>
+  user: <%= ENV['PGUSER'] %>
+  password: <%= ENV['PGPASSWORD'] %>
 
   # Schema search path. The server defaults to $user,public
   #schema_search_path: myapp,sharedapp,public
@@ -43,10 +43,10 @@ development:
 test:
   <<: *default
   database: b2b_test
-  host: localhost
-  port: 5432
-  username: postgres
-  password: <%= ENV['TEST_DATABASE_PASSWORD'] || 'postgres' %>
+  host: <%= ENV['PGHOST'] %>
+  port: <%= ENV['PGPORT'] %>
+  user: <%= ENV['PGUSER'] %>
+  password: <%= ENV['PGPASSWORD'] %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -72,10 +72,10 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: <%= ENV['PGDATABASE'] || 'postgres' %>
-    host: <%= ENV['PGHOST'] || '104.43.113.195' %>
-    port: <%= ENV['PGPORT'] || 5432 %>
-    username: <%= ENV['PGUSER'] || 'postgres' %>
+    database: b2b_production
+    host: <%= ENV['PGHOST'] %>
+    port: <%= ENV['PGPORT'] %>
+    user: <%= ENV['PGUSER'] %>
     password: <%= ENV['PGPASSWORD'] %>
   cache:
     <<: *primary_production
