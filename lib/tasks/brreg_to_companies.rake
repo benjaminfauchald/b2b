@@ -1,91 +1,40 @@
 namespace :brreg do
-  desc 'Migrate data from brreg table to companies table'
+  desc 'Migrate data from brreg table to companies table using Sidekiq'
   task migrate_to_companies: :environment do
     require 'logger'
     logger = Logger.new(STDOUT)
     batch_size = 1000
     total = Brreg.count
     processed = 0
-    errors = 0
-    last_processed_id = ENV['LAST_ID']&.to_i || 0
+    last_processed_number = ENV['LAST_NUMBER']&.to_i || 0
 
     logger.info "Starting migration: #{total} records to process. Batch size: #{batch_size}"
 
-    Brreg.where('id > ?', last_processed_id).find_in_batches(batch_size: batch_size) do |batch|
-      ActiveRecord::Base.transaction do
-        batch.each do |br|
-          begin
-            company_attrs = {
-              source_country: 'NO',
-              source_registry: 'brreg',
-              source_id: br.organisasjonsnummer,
-              registration_number: br.organisasjonsnummer,
-              company_name: br.navn,
-              organization_form_code: br.organisasjonsform_kode,
-              organization_form_description: br.organisasjonsform_beskrivelse,
-              primary_industry_code: br.naeringskode1_kode,
-              primary_industry_description: br.naeringskode1_beskrivelse,
-              secondary_industry_code: br.naeringskode2_kode,
-              secondary_industry_description: br.naeringskode2_beskrivelse,
-              tertiary_industry_code: br.naeringskode3_kode,
-              tertiary_industry_description: br.naeringskode3_beskrivelse,
-              business_description: br.aktivitet,
-              employee_count: br.antallansatte,
-              website: br.hjemmeside,
-              email: br.epost,
-              phone: br.telefon,
-              mobile: br.mobiltelefon,
-              business_address: br.forretningsadresse,
-              business_city: br.forretningsadresse_poststed,
-              business_postal_code: br.forretningsadresse_postnummer,
-              business_municipality: br.forretningsadresse_kommune,
-              business_country: br.forretningsadresse_land,
-              operating_revenue: br.driftsinntekter,
-              operating_costs: br.driftskostnad,
-              ordinary_result: br.ordinaertResultat,
-              annual_result: br.aarsresultat,
-              vat_registered: br.mvaregistrert,
-              vat_registration_date: br.mvaregistrertdato,
-              voluntary_vat_registered: br.frivilligmvaregistrert,
-              voluntary_vat_registration_date: br.frivilligmvaregistrertdato,
-              registration_date: br.stiftelsesdato,
-              bankruptcy: br.konkurs,
-              bankruptcy_date: br.konkursdato,
-              under_liquidation: br.underavvikling,
-              liquidation_date: br.avviklingsdato,
-              linkedin_url: br.linked_in,
-              linkedin_ai_url: br.linked_in_ai,
-              linkedin_alternatives: br.linked_in_alternatives,
-              linkedin_processed: br.linked_in_processed,
-              linkedin_last_processed_at: br.linked_in_last_processed_at,
-              http_error: br.http_error,
-              http_error_message: br.http_error_message,
-              source_raw_data: br.brreg_result_raw,
-              description: br.description
-            }
-            # Upsert by registration_number
-            company = Company.find_or_initialize_by(registration_number: br.organisasjonsnummer)
-            company.assign_attributes(company_attrs)
-            company.save!
-            processed += 1
-            last_processed_id = br.id
-          rescue => e
-            logger.error "Error processing Brreg id=#{br.id}: #{e.message}"
-            errors += 1
-          end
-        end
-        logger.info "Processed batch up to Brreg id=#{last_processed_id}. Total processed: #{processed}/#{total}, Errors: #{errors}"
-        # Save progress to a file for resumability
-        File.write('tmp/brreg_migration_last_id.txt', last_processed_id)
+    scope = Brreg.where('organisasjonsnummer > ?', last_processed_number).order('organisasjonsnummer ASC')
+    loop do
+      batch = scope.limit(batch_size).pluck(:organisasjonsnummer)
+      break if batch.empty?
+
+      batch.each do |organisasjonsnummer|
+        BrregMigrationWorker.perform_async(organisasjonsnummer)
+        processed += 1
+        last_processed_number = organisasjonsnummer
       end
+
+      logger.info "Enqueued batch up to Brreg organisasjonsnummer=#{last_processed_number}. Total processed: #{processed}/#{total}"
+      # Save progress to a file for resumability
+      File.write('tmp/brreg_migration_last_number.txt', last_processed_number)
+      
+      # Prepare for next batch
+      scope = Brreg.where('organisasjonsnummer > ?', last_processed_number).order('organisasjonsnummer ASC')
     end
-    logger.info "Migration complete. Total processed: #{processed}, Errors: #{errors}"
+    logger.info "Migration jobs enqueued. Total records: #{processed}"
   end
 
-  desc 'Resume migration from last processed id'
+  desc 'Resume migration from last processed number'
   task resume_migrate_to_companies: :environment do
-    last_id = File.exist?('tmp/brreg_migration_last_id.txt') ? File.read('tmp/brreg_migration_last_id.txt').to_i : 0
-    ENV['LAST_ID'] = last_id.to_s
+    last_number = File.exist?('tmp/brreg_migration_last_number.txt') ? File.read('tmp/brreg_migration_last_number.txt').to_i : 0
+    ENV['LAST_NUMBER'] = last_number.to_s
     Rake::Task['brreg:migrate_to_companies'].invoke
   end
 
