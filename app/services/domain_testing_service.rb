@@ -1,45 +1,26 @@
 require 'resolv'
 require 'timeout'
 
-class DomainTestingService < ApplicationService
+class DomainTestingService < KafkaService
+  attr_reader :domain, :batch_size, :max_retries
+
   DNS_TIMEOUT = 5 # 5 second timeout for DNS lookups
   
-  def initialize(attributes = {})
-    super(service_name: 'domain_testing_service', action: 'test_dns', **attributes)
+  def initialize(domain: nil, batch_size: 100, max_retries: 3)
+    @domain = domain
+    @batch_size = batch_size
+    @max_retries = max_retries
+    super(service_name: 'domain_testing_service', action: 'test_dns')
   end
   
-  # Main service entry point
-  def perform
-    domains_needing_testing = Domain.untested
-    
-    if domains_needing_testing.empty?
-      Rails.logger.info "No domains need DNS testing at this time."
-      return { processed: 0, results: {} }
-    end
-    
-    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
-    
-    batch_process(domains_needing_testing) do |domain, audit_log|
-      result = test_domain_dns(domain, audit_log)
-      
-      results[:processed] += 1
-      if result[:dns_result]
-        results[:successful] += 1
-      else
-        results[:failed] += 1
-      end
-    rescue => e
-      results[:errors] += 1
-      Rails.logger.error "Error testing domain #{domain.domain}: #{e.message}"
-      raise
-    end
-    
-    results
+  def call
+    return test_single_domain if domain
+    test_domains_in_batches
   end
   
   # Legacy class methods for backward compatibility
   def self.test_dns(domain)
-    new.send(:test_domain_dns, domain)[:dns_result]
+    new(domain: domain).send(:perform_dns_test)[:records]
   end
   
   def self.queue_all_domains
@@ -68,30 +49,74 @@ class DomainTestingService < ApplicationService
   
   private
   
-  def test_domain_dns(domain, audit_log)
-    dns_result = false
-    
+  def test_single_domain
+    start_time = Time.current
+    result = perform_dns_test
+    duration = Time.current - start_time
+
+    {
+      status: result[:status],
+      records: result[:records],
+      duration: duration
+    }
+  end
+
+  def test_domains_in_batches
+    Domain.untested.find_each(batch_size: batch_size) do |domain|
+      produce_message_with_retry(
+        topic: 'domain_testing',
+        payload: { domain: domain.domain }.to_json,
+        key: domain.id.to_s,
+        max_retries: max_retries
+      )
+    end
+  end
+
+  def perform_dns_test
+    resolver = Resolv::DNS.new
+    records = {
+      a: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::A).map(&:address),
+      mx: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::MX).map(&:exchange),
+      txt: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::TXT).map(&:strings).flatten
+    }
+
+    {
+      status: records.values.any?(&:any?) ? 'success' : 'no_records',
+      records: records
+    }
+  rescue Resolv::ResolvError => e
+    {
+      status: 'error',
+      records: { error: e.message }
+    }
+  end
+
+  def produce_message_with_retry(topic:, payload:, key:, max_retries:)
+    retries = 0
     begin
-      Timeout.timeout(DNS_TIMEOUT) do
-        # Try to resolve the domain
-        resolver = Resolv::DNS.new
-        addresses = resolver.getaddresses(domain.domain)
-        dns_result = addresses.any?
+      produce_message(
+        topic: topic,
+        payload: payload,
+        key: key
+      )
+    rescue StandardError => e
+      retries += 1
+      if retries < (max_retries || @max_retries)
+        sleep(2 ** retries) # Exponential backoff
+        retry
       end
-    rescue Timeout::Error
-      Rails.logger.info "DNS lookup timed out for #{domain.domain}"
-      dns_result = false
-    rescue Resolv::ResolvError => e
-      Rails.logger.info "DNS resolution failed for #{domain.domain}: #{e.message}"
-      dns_result = false
-    rescue => e
-      Rails.logger.error "Unexpected error testing DNS for #{domain.domain}: #{e.message}"
       raise
     end
-    
-    # Update domain status
-    domain.update!(dns: dns_result)
-    
-    { dns_result: dns_result }
+  end
+
+  def log_error(domain, error)
+    Rails.logger.error(
+      message: "Domain testing error",
+      domain_id: domain.id,
+      domain_name: domain.domain,
+      error: error.message,
+      error_type: error.class.name,
+      timestamp: Time.current
+    )
   end
 end 

@@ -32,7 +32,7 @@ namespace :service_audit do
     puts "Deleted #{deleted_count} old audit log records."
   end
   
-  desc "Run specific service for all applicable records"
+  desc "Run a specific service"
   task :run_service, [:service_name] => :environment do |task, args|
     service_name = args[:service_name]
     
@@ -114,6 +114,12 @@ namespace :service_audit do
       puts "  Batch Size: #{config.batch_size}"
       puts "  Retry Attempts: #{config.retry_attempts}"
       puts "  Dependencies: #{config.depends_on_services.join(', ')}" if config.depends_on_services.any?
+      
+      # Show Kafka configuration if available
+      if config.settings['kafka_topic'].present?
+        puts "  Kafka Topic: #{config.settings['kafka_topic']}"
+        puts "  Consumer Group: #{config.settings['kafka_consumer_group']}"
+      end
     end
   end
 
@@ -161,6 +167,24 @@ namespace :service_audit do
     if recent_logs.any?
       puts "\n  Recent Activity (24h): #{recent_logs.count} DNS tests"
       puts "  Success Rate: #{(recent_logs.successful.count * 100.0 / recent_logs.count).round(2)}%"
+    end
+    
+    # Show Kafka consumer lag
+    begin
+      kafka = Kafka.new(
+        ENV.fetch('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(','),
+        client_id: 'b2b_services'
+      )
+      
+      consumer_group = 'domain_testing_consumer'
+      topic = 'domain_testing'
+      
+      lag = kafka.consumer_group_offsets(consumer_group)
+      topic_lag = lag[topic]&.values&.sum || 0
+      
+      puts "\n  Kafka Consumer Lag: #{topic_lag} messages"
+    rescue => e
+      puts "\n  Error getting Kafka stats: #{e.message}"
     end
   end
 end 

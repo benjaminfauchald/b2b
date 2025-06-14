@@ -9,16 +9,26 @@ class DomainDnsTestingWorker
     domain.audit_service_operation('domain_testing_service', action: 'test_dns') do |audit_log|
       begin
         start_time = Time.current
-        result = DomainTestingService.new.send(:test_domain_dns, domain, audit_log)
+        service = DomainTestingService.new(domain: domain)
+        result = service.send(:perform_dns_test)
         duration = ((Time.current - start_time) * 1000).to_i
+
+        # Convert DNS records to strings for JSON storage
+        records = result[:records].transform_values do |values|
+          values.map(&:to_s)
+        end
 
         # Update audit context with results
         audit_log.add_context(
           domain_name: domain.domain,
-          dns_result: result[:dns_result],
+          dns_result: result[:status] == 'success',
           test_duration_ms: duration,
-          dns_status: result[:dns_result] ? 'active' : 'inactive'
+          dns_status: result[:status] == 'success' ? 'active' : 'inactive',
+          records: records
         )
+
+        # Update domain status
+        domain.update!(dns: result[:status] == 'success')
 
         # Success is automatically handled by audit_service_operation
         result

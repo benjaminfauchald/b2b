@@ -178,13 +178,27 @@ namespace :domain_testing do
       untested = Domain.untested.count
       active = Domain.dns_active.count
       inactive = Domain.dns_inactive.count
-      queue_size = Sidekiq::Queue.new('dns_testing').size
-      workers = Sidekiq::Workers.new.size
+      
+      # Get Kafka consumer lag
+      kafka = Kafka.new(
+        ENV.fetch('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(','),
+        client_id: 'b2b_services'
+      )
+      
+      consumer_group = 'domain_testing_consumer'
+      topic = 'domain_testing'
+      
+      begin
+        lag = kafka.consumer_group_offsets(consumer_group)
+        topic_lag = lag[topic]&.values&.sum || 0
+      rescue => e
+        topic_lag = "Error: #{e.message}"
+      end
       
       coverage = ((total - untested) * 100.0 / total).round(2)
       
       puts "[#{Time.current.strftime('%H:%M:%S')}] Tests: +#{@last_untested - untested if @last_untested} | " \
-           "Queue: #{queue_size} | Workers: #{workers} | " \
+           "Kafka Lag: #{topic_lag} | " \
            "Untested: #{untested} | Active: #{active} | Inactive: #{inactive} | " \
            "Coverage: #{coverage}%"
       
@@ -236,10 +250,26 @@ namespace :domain_testing do
     puts "  Tests Run: #{recent.count}"
     puts "  Success Rate: #{(recent.successful.count * 100.0 / recent.count).round(2)}%"
     
-    # Sidekiq stats
-    puts "\nSidekiq Status:"
-    puts "  Queue Size: #{Sidekiq::Queue.new('dns_testing').size}"
-    puts "  Active Workers: #{Sidekiq::Workers.new.size}"
+    # Kafka stats
+    puts "\nKafka Status:"
+    begin
+      kafka = Kafka.new(
+        ENV.fetch('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(','),
+        client_id: 'b2b_services'
+      )
+      
+      consumer_group = 'domain_testing_consumer'
+      topic = 'domain_testing'
+      
+      lag = kafka.consumer_group_offsets(consumer_group)
+      topic_lag = lag[topic]&.values&.sum || 0
+      
+      puts "  Consumer Lag: #{topic_lag} messages"
+      puts "  Consumer Group: #{consumer_group}"
+      puts "  Topic: #{topic}"
+    rescue => e
+      puts "  Error getting Kafka stats: #{e.message}"
+    end
   end
 
   # A Record Testing Tasks
