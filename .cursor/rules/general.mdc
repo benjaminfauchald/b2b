@@ -1,0 +1,3 @@
+*** GENERAL RULES ***
+
+**Please take the time to go through the entire project and understand that you're using the right version of Kafka, the right version of Karafka, and every gem version that everything is consistent, and you're not using any configuration or calls that are not the same version or have some kind of version conflict coding. **

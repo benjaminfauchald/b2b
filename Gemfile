@@ -100,3 +100,9 @@ gem "rubocop-performance", "~> 1.25", group: :development
 gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
 
 gem "tailwindcss-rails", "~> 4.2"
+
+# Kafka
+gem 'ruby-kafka', '~> 1.5.0'  # Kafka client
+gem 'waterdrop', '~> 2.8.4'   # Kafka producer
+gem 'karafka', '~> 2.4.0'     # Kafka consumer framework
+gem 'dry-monitor'           # For monitoring Kafka operations
