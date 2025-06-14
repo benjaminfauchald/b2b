@@ -11,9 +11,9 @@ namespace :domain do
     puts "DomainARecordTestingService completed: #{result.inspect}"
   end
 
-  desc 'Run DomainSuccessfulTestService for domains with both DNS and WWW successful'
-  task test_successful: :environment do
-    result = DomainSuccessfulTestService.new.call
-    puts "DomainSuccessfulTestService completed: #{result.inspect}"
+  desc 'Run DomainMxTestingService for domains with both DNS and WWW successful'
+  task test_mx: :environment do
+    result = DomainMxTestingService.new.call
+    puts "DomainMxTestingService completed: #{result.inspect}"
   end
 end 
