@@ -5,6 +5,8 @@ alwaysApply: false
 ---
 # Service Control Table (SCT) and Service Guidelines
 
+ *** REMOVE ALL VERSION NUMBERS IN SERVICES ***
+
 ## Service Naming Convention
 
 - Do *NOT* use versioning in naming

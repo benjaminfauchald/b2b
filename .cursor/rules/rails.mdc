@@ -7,6 +7,12 @@ alwaysApply: true
 
 ** NEVER DROP OR RECREATE DEVELOPMENT DATABASE **
 
+You do not need the sidekiq-web gem. The web UI is part of the main sidekiq gem. 
+The sidekiq-web gem is not compatible with Rails 8.0.2.
+
+***The sidekiq-web gem is not compatible with Rails 8***
+
+
 Key Highlights:
 🔴 Mandatory TDD Workflow: Red-Green-Refactor cycle with tests written first
 📋 Pre-Development Planning: Structured planning template for every feature
