@@ -30,185 +30,35 @@ namespace :domain_testing do
     end
   end
 
-  desc "Test all domains in controlled batches"
-  task :all_batched => :environment do
-    total_untested = Domain.untested.count
-    batch_size = 500
-    
-    puts "Testing #{total_untested} domains in batches of #{batch_size}..."
-    puts "Estimated time: #{(total_untested * 0.5 / 60).round(2)} minutes"
-    puts "Press Ctrl+C to stop at any time"
-    
-    start_time = Time.current
-    total_processed = 0
-    
-    while Domain.untested.exists?
-      batch_start = Time.current
-      service = DomainTestingService.new(batch_size: batch_size)
-      result = service.call
-      
-      break if result[:processed] == 0
-      
-      total_processed += result[:processed]
-      batch_duration = Time.current - batch_start
-      
-      puts "Batch completed: #{result[:processed]} domains in #{batch_duration.round(2)}s"
-      puts "  Success: #{result[:successful]}, Failed: #{result[:failed]}, Errors: #{result[:errors]}"
-      puts "  Total processed: #{total_processed}/#{total_untested} (#{(total_processed * 100.0 / total_untested).round(2)}%)"
-      puts "  Estimated remaining: #{((total_untested - total_processed) * batch_duration / batch_size / 60).round(2)} minutes"
-      puts
-      
-      # Small delay to prevent overwhelming the DNS servers
-      sleep(1)
-    end
-    
-    total_duration = Time.current - start_time
-    puts "All domains tested in #{(total_duration / 60).round(2)} minutes!"
-  end
-
-  desc "Performance test with timing analysis"
-  task :performance => :environment do
-    puts "Running performance test with 50 domains..."
-    
-    # Clear any existing logs for clean timing
-    test_domains = Domain.untested.limit(50)
-    
-    start_time = Time.current
-    service = DomainTestingService.new(batch_size: 50)
-    result = service.call
-    end_time = Time.current
-    
-    duration = end_time - start_time
-    
-    puts "\nPerformance Results:"
-    puts "  Total Duration: #{duration.round(2)} seconds"
-    puts "  Domains Processed: #{result[:processed]}"
-    puts "  Average per Domain: #{(duration / result[:processed]).round(3)} seconds"
-    puts "  Domains per Second: #{(result[:processed] / duration).round(2)}"
-    puts "  Estimated for 17k domains: #{(17000 * duration / result[:processed] / 60).round(2)} minutes"
-    
-    # Analyze response times
-    recent_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
-                                .where('created_at > ?', start_time)
-    
-    durations = recent_logs.map(&:duration_ms).compact
-    if durations.any?
-      puts "\nDNS Response Time Analysis:"
-      puts "  Min: #{durations.min}ms"
-      puts "  Max: #{durations.max}ms"
-      puts "  Average: #{(durations.sum / durations.count).round(2)}ms"
-      puts "  Median: #{durations.sort[durations.count / 2]}ms"
-    end
-  end
-
-  desc "Error simulation test"
-  task :error_test => :environment do
-    puts "Testing error handling with mock failures..."
-    
-    # Test with a few domains but simulate different error conditions
-    test_domains = Domain.untested.limit(3)
-    
-    test_domains.each_with_index do |domain, index|
-      service = DomainTestingService.new
-      
-      # Mock different error types
-      case index
-      when 0
-        puts "Testing normal operation with #{domain.domain}..."
-        service.send(:test_domain_dns, domain)
-      when 1
-        puts "Simulating DNS resolve error with #{domain.domain}..."
-        # We'll just update the audit log manually for demonstration
-        audit_log = ServiceAuditLog.create!(
-          auditable: domain,
-          service_name: 'domain_testing_service',
-          action: 'test_dns',
-          status: :failed,
-          error_message: 'DNS resolution failed',
-          context: {
-            'error_type' => 'resolve_error',
-            'domain_name' => domain.domain,
-            'test_duration_ms' => 5000
-          }
-        )
-        domain.update!(dns: false)
-      when 2
-        puts "Simulating timeout error with #{domain.domain}..."
-        audit_log = ServiceAuditLog.create!(
-          auditable: domain,
-          service_name: 'domain_testing_service',
-          action: 'test_dns',
-          status: :failed,
-          error_message: 'DNS lookup timed out',
-          context: {
-            'error_type' => 'timeout_error',
-            'domain_name' => domain.domain,
-            'test_duration_ms' => 8000
-          }
-        )
-        domain.update!(dns: false)
-      end
-    end
-    
-    puts "\nError test completed. Check audit logs:"
-    ServiceAuditLog.where(service_name: 'domain_testing_service').recent.limit(3).each do |log|
-      puts "  #{log.context['domain_name']}: #{log.status} - #{log.error_message}"
-    end
-  end
-
-  desc "Queue DNS testing jobs for all untested domains"
-  task :queue_all => :environment do
+  desc "Queue all domains for DNS testing"
+  task queue_all: :environment do
     count = DomainTestingService.queue_all_domains
     puts "Queued #{count} domains for DNS testing"
   end
 
-  desc "Queue DNS testing jobs for 100 untested domains"
-  task :queue_100 => :environment do
-    count = DomainTestingService.queue_100_domains
-    puts "Queued #{count} domains for DNS testing"
-  end
-
-  desc "Monitor DNS testing progress"
-  task :monitor => :environment do
-    puts "Domain Testing Monitor (Press Ctrl+C to stop)"
-    puts "=" * 60
+  desc "Show domains that need DNS testing"
+  task show_pending: :environment do
+    total = Domain.count
+    untested = Domain.untested.count
+    recently_tested = Domain.where('updated_at > ?', 24.hours.ago).where.not(dns: nil).count
+    old_tests = Domain.where('updated_at < ?', 24.hours.ago).where.not(dns: nil).count
     
-    loop do
-      total = Domain.count
-      untested = Domain.untested.count
-      active = Domain.dns_active.count
-      inactive = Domain.dns_inactive.count
-      
-      # Get Kafka consumer lag
-      kafka = Kafka.new(
-        ENV.fetch('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(','),
-        client_id: 'b2b_services'
-      )
-      
-      consumer_group = 'domain_testing_consumer'
-      topic = 'domain_testing'
-      
-      begin
-        lag = kafka.consumer_group_offsets(consumer_group)
-        topic_lag = lag[topic]&.values&.sum || 0
-      rescue => e
-        topic_lag = "Error: #{e.message}"
-      end
-      
-      coverage = ((total - untested) * 100.0 / total).round(2)
-      
-      puts "[#{Time.current.strftime('%H:%M:%S')}] Tests: +#{@last_untested - untested if @last_untested} | " \
-           "Kafka Lag: #{topic_lag} | " \
-           "Untested: #{untested} | Active: #{active} | Inactive: #{inactive} | " \
-           "Coverage: #{coverage}%"
-      
-      @last_untested = untested
-      sleep 5
+    puts "\nPending DNS Testing Statistics"
+    puts "=" * 60
+    puts "Total Domains: #{total}"
+    puts "Untested Domains: #{untested} (#{(untested * 100.0 / total).round(2)}%)"
+    puts "Recently Tested (< 24h): #{recently_tested} (#{(recently_tested * 100.0 / total).round(2)}%)"
+    puts "Old Tests (> 24h): #{old_tests} (#{(old_tests * 100.0 / total).round(2)}%)"
+    
+    # Show some examples of untested domains
+    puts "\nSample of Untested Domains:"
+    Domain.untested.limit(5).each do |domain|
+      puts "  #{domain.domain} (Created: #{domain.created_at.strftime('%Y-%m-%d')})"
     end
   end
 
   desc "Show DNS testing statistics"
-  task :stats => :environment do
+  task stats: :environment do
     puts "\nDNS Testing Statistics"
     puts "=" * 60
     
@@ -224,7 +74,7 @@ namespace :domain_testing do
     puts "  Active DNS: #{active} (#{(active * 100.0 / tested).round(2)}% of tested)"
     puts "  Inactive DNS: #{inactive}"
     
-    # SCT stats
+    # Service Audit Log stats
     sct_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
     total_logs = sct_logs.count
     success_logs = sct_logs.successful.count
@@ -249,113 +99,5 @@ namespace :domain_testing do
     puts "\nRecent Activity (24h):"
     puts "  Tests Run: #{recent.count}"
     puts "  Success Rate: #{(recent.successful.count * 100.0 / recent.count).round(2)}%"
-    
-    # Kafka stats
-    puts "\nKafka Status:"
-    begin
-      kafka = Kafka.new(
-        ENV.fetch('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092').split(','),
-        client_id: 'b2b_services'
-      )
-      
-      consumer_group = 'domain_testing_consumer'
-      topic = 'domain_testing'
-      
-      lag = kafka.consumer_group_offsets(consumer_group)
-      topic_lag = lag[topic]&.values&.sum || 0
-      
-      puts "  Consumer Lag: #{topic_lag} messages"
-      puts "  Consumer Group: #{consumer_group}"
-      puts "  Topic: #{topic}"
-    rescue => e
-      puts "  Error getting Kafka stats: #{e.message}"
-    end
-  end
-
-  # A Record Testing Tasks
-  desc "Queue A record testing jobs for all domains with active DNS"
-  task :queue_a_records => :environment do
-    count = DomainARecordTestingService.queue_all_domains
-    puts "Queued #{count} domains for A record testing"
-  end
-
-  desc "Queue A record testing jobs for 100 domains"
-  task :queue_100_a_records => :environment do
-    count = DomainARecordTestingService.queue_100_domains
-    puts "Queued #{count} domains for A record testing"
-  end
-
-  desc "Monitor A record testing progress"
-  task :monitor_a_records => :environment do
-    puts "A Record Testing Monitor (Press Ctrl+C to stop)"
-    puts "=" * 60
-    
-    loop do
-      total = Domain.dns_active.count
-      untested = Domain.dns_active.where(www: nil).count
-      active = Domain.where(www: true).count
-      inactive = Domain.where(www: false).count
-      queue_size = Sidekiq::Queue.new('a_record_testing').size
-      workers = Sidekiq::Workers.new.size
-      
-      coverage = ((total - untested) * 100.0 / total).round(2)
-      
-      puts "[#{Time.current.strftime('%H:%M:%S')}] Tests: +#{@last_untested - untested if @last_untested} | " \
-           "Queue: #{queue_size} | Workers: #{workers} | " \
-           "Untested: #{untested} | Active: #{active} | Inactive: #{inactive} | " \
-           "Coverage: #{coverage}%"
-      
-      @last_untested = untested
-      sleep 5
-    end
-  end
-
-  desc "Show A record testing statistics"
-  task :a_record_stats => :environment do
-    puts "\nA Record Testing Statistics"
-    puts "=" * 60
-    
-    # Domain stats
-    total = Domain.dns_active.count
-    tested = Domain.dns_active.where.not(www: nil).count
-    active = Domain.where(www: true).count
-    inactive = Domain.where(www: false).count
-    
-    puts "Domains:"
-    puts "  Total DNS Active: #{total}"
-    puts "  Tested: #{tested} (#{(tested * 100.0 / total).round(2)}%)"
-    puts "  Active WWW: #{active} (#{(active * 100.0 / tested).round(2)}% of tested)"
-    puts "  Inactive WWW: #{inactive}"
-    
-    # SCT stats
-    sct_logs = ServiceAuditLog.where(service_name: 'domain_a_record_testing_v1')
-    total_logs = sct_logs.count
-    success_logs = sct_logs.successful.count
-    failed_logs = sct_logs.failed.count
-    
-    puts "\nService Audit Logs:"
-    puts "  Total Logs: #{total_logs}"
-    puts "  Successful: #{success_logs} (#{(success_logs * 100.0 / total_logs).round(2)}%)"
-    puts "  Failed: #{failed_logs}"
-    
-    # Performance stats
-    durations = sct_logs.successful.map { |log| log.context['test_duration_ms'] }.compact
-    if durations.any?
-      puts "\nPerformance:"
-      puts "  Average Duration: #{(durations.sum / durations.size).round(2)}ms"
-      puts "  Min Duration: #{durations.min}ms"
-      puts "  Max Duration: #{durations.max}ms"
-    end
-    
-    # Recent activity
-    recent = sct_logs.where('created_at > ?', 24.hours.ago)
-    puts "\nRecent Activity (24h):"
-    puts "  Tests Run: #{recent.count}"
-    puts "  Success Rate: #{(recent.successful.count * 100.0 / recent.count).round(2)}%"
-    
-    # Sidekiq stats
-    puts "\nSidekiq Status:"
-    puts "  Queue Size: #{Sidekiq::Queue.new('a_record_testing').size}"
-    puts "  Active Workers: #{Sidekiq::Workers.new.size}"
   end
 end 

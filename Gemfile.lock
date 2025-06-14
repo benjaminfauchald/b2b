@@ -76,6 +76,7 @@ GEM
       public_suffix (>= 2.0.2, < 7.0)
     ast (2.4.3)
     base64 (0.3.0)
+    bcrypt (3.1.20)
     bcrypt_pbkdf (1.1.1)
     bcrypt_pbkdf (1.1.1-arm64-darwin)
     bcrypt_pbkdf (1.1.1-x86_64-darwin)
@@ -104,6 +105,12 @@ GEM
     debug (1.10.0)
       irb (~> 1.10)
       reline (>= 0.3.8)
+    devise (4.9.4)
+      bcrypt (~> 3.0)
+      orm_adapter (~> 0.1)
+      railties (>= 4.1.0)
+      responders
+      warden (~> 1.2.3)
     diff-lcs (1.6.2)
     digest-crc (0.7.0)
       rake (>= 12.0.0, < 14.0.0)
@@ -174,6 +181,9 @@ GEM
       rubocop (< 2.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
+    image_processing (1.14.0)
+      mini_magick (>= 4.9.5, < 6)
+      ruby-vips (>= 2.0.17, < 3)
     importmap-rails (2.1.0)
       actionpack (>= 6.0.0)
       activesupport (>= 6.0.0)
@@ -229,6 +239,9 @@ GEM
     marcel (1.0.4)
     matrix (0.4.2)
     method_source (1.1.0)
+    mini_magick (5.2.0)
+      benchmark
+      logger
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
     minitest (5.25.5)
@@ -268,6 +281,7 @@ GEM
     notiffany (0.1.3)
       nenv (~> 0.1)
       shellany (~> 0.0)
+    orm_adapter (0.5.0)
     ostruct (0.6.1)
     parallel (1.27.0)
     parser (3.3.8.0)
@@ -346,6 +360,9 @@ GEM
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
+    responders (3.1.1)
+      actionpack (>= 5.2)
+      railties (>= 5.2)
     rexml (3.4.1)
     rspec (3.13.1)
       rspec-core (~> 3.13.0)
@@ -402,6 +419,9 @@ GEM
     ruby-kafka (1.5.0)
       digest-crc
     ruby-progressbar (1.13.0)
+    ruby-vips (2.2.4)
+      ffi (~> 1.12)
+      logger
     rubyzip (2.4.1)
     securerandom (0.4.1)
     selenium-webdriver (4.33.0)
@@ -482,6 +502,8 @@ GEM
     unicode-emoji (4.0.4)
     uri (1.0.3)
     useragent (0.16.11)
+    warden (1.2.9)
+      rack (>= 2.0.9)
     waterdrop (2.8.4)
       karafka-core (>= 2.4.9, < 3.0.0)
       karafka-rdkafka (>= 0.19.2)
@@ -517,6 +539,7 @@ DEPENDENCIES
   brakeman
   capybara
   debug
+  devise
   dotenv-rails
   dry-monitor
   factory_bot_rails
@@ -524,10 +547,11 @@ DEPENDENCIES
   guard
   guard-rspec
   guard-rubocop
+  image_processing (~> 1.2)
   importmap-rails
   jbuilder
   kamal
-  karafka (~> 2.4)
+  karafka (~> 2.4.0)
   pg (~> 1.1)
   propshaft
   puma (>= 5.0)
@@ -554,7 +578,7 @@ DEPENDENCIES
   thruster
   turbo-rails
   tzinfo-data
-  waterdrop (~> 2.0)
+  waterdrop (~> 2.8.4)
   web-console
 
 BUNDLED WITH

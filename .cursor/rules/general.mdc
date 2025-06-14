@@ -1,3 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 *** GENERAL RULES ***
 
 **Please take the time to go through the entire project and understand that you're using the right version of Kafka, the right version of Karafka, and every gem version that everything is consistent, and you're not using any configuration or calls that are not the same version or have some kind of version conflict coding. **
+
+
+** SERVICES RAKE TASKS CONFIG **
+All services shoudl have these four rake tasks. 
+1. sample  
+2. queue_all
+3. show_pending
+4. stats
+
+This is an example from Rails -T for "domain_a_record_testing":
+
+domain_a_record_testing:sample           # Test A records for a sample of domains
+domain_a_record_testing:queue_all        # Test A records for all domains in batches
+domain_a_record_testing:show_pending     # Show domains that need A record testing
+domain_a_record_testing:stats            # Show A record testing statistics
+
+

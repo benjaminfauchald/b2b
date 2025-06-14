@@ -20,6 +20,14 @@ development:
       partitions: 1
       replication_factor: 1
       retention_ms: 1209600000  # 14 days
+    domain_a_record_testing:
+      partitions: 3
+      replication_factor: 1
+      retention_ms: 604800000
+    domain_a_record_testing_dlq:
+      partitions: 1
+      replication_factor: 1
+      retention_ms: 604800000
 
 production:
   client_id: b2b_production
@@ -42,4 +50,12 @@ production:
       name: domain_testing_dlq
       partitions: 3
       replication_factor: 3
-      retention_ms: 1209600000  # 14 days 
+      retention_ms: 1209600000  # 14 days
+    domain_a_record_testing:
+      partitions: 10
+      replication_factor: 3
+      retention_ms: 604800000
+    domain_a_record_testing_dlq:
+      partitions: 3
+      replication_factor: 3
+      retention_ms: 604800000 
