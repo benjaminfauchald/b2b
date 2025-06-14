@@ -21,6 +21,9 @@ class DomainMxTestingService < ApplicationService
       begin
         mx_result = check_mx_record(domain.domain)
         
+        # Update the domain's MX status
+        domain.update!(mx: mx_result)
+        
         audit_log.add_context(
           domain_name: domain.domain,
           dns: domain.dns,

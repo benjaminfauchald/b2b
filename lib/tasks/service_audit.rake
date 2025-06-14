@@ -5,7 +5,7 @@ namespace :service_audit do
     
     if stats.empty?
       puts "No service performance data available."
-      return
+      next
     end
     
     puts "\n" + "="*80

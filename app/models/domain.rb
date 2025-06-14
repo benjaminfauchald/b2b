@@ -3,6 +3,7 @@ class Domain < ApplicationRecord
   
   # Validations
   validates :domain, presence: true, uniqueness: true
+  validates :mx, inclusion: { in: [true, false] }, allow_nil: true
   
   # Scopes for domain testing
   scope :untested, -> { where(dns: nil) }
