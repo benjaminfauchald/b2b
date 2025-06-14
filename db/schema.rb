@@ -398,6 +398,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_14_100731) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "dns"
+    t.string "mx_error"
   end
 
   create_table "domains_se_raw", id: false, force: :cascade do |t|

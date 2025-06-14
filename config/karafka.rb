@@ -35,14 +35,29 @@ class KarafkaApp < Karafka::App
       Rails.logger.info('Karafka app initialized')
     end
 
-    config.client_id = 'b2b_consumer'
+    config.client_id = 'b2b'
     config.consumer_persistence = true
+  end
+
+  routes.draw do
+    topic 'domain_testing' do
+      consumer DomainTestingConsumer
+    end
+
+    topic 'domain_a_record_testing' do
+      consumer DomainARecordTestingConsumer
+    end
+
+    topic 'domain_mx_testing' do
+      consumer DomainMXTestingConsumer
+    end
   end
 end
 
 # Load consumers
 require Rails.root.join('app', 'consumers', 'domain_testing_consumer')
 require Rails.root.join('app', 'consumers', 'domain_a_record_testing_consumer')
+require Rails.root.join('app', 'consumers', 'domain_mx_testing_consumer')
 
 # Configure routing
 KarafkaApp.routes.draw do
@@ -53,6 +68,10 @@ KarafkaApp.routes.draw do
 
     topic 'domain_a_record_testing' do
       consumer DomainARecordTestingConsumer
+    end
+
+    topic 'domain_mx_testing' do
+      consumer DomainMXTestingConsumer
     end
   end
 end 
