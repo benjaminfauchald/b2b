@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  devise_for :users
   resources :domains
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
@@ -11,13 +12,15 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
-  # root "posts#index"
+  root "domains#index"
 
   namespace :webhooks do
     post '/instantly', to: 'instantly_webhook#create'
   end
 
-  # Sidekiq Web UI
+  # Sidekiq Web UI with authentication
   require 'sidekiq/web'
-  mount Sidekiq::Web => '/sidekiq'
+  authenticate :user, lambda { |u| u.admin? } do
+    mount Sidekiq::Web => '/sidekiq'
+  end
 end

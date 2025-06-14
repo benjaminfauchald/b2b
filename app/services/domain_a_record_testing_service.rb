@@ -1,98 +1,137 @@
 require 'resolv'
 require 'timeout'
 
-class DomainARecordTestingService < ApplicationService
-  A_RECORD_TIMEOUT = 5 # 5 second timeout for A record lookups
+class DomainARecordTestingService < KafkaService
+  attr_reader :domain, :batch_size, :max_retries
+
+  DNS_TIMEOUT = 5 # seconds
   
-  def initialize(attributes = {})
-    super(service_name: 'domain_a_record_testing_v1', action: 'test_a_record', **attributes)
+  def initialize(domain = nil, batch_size: 100, max_retries: 3)
+    super(service_name: 'domain_a_record_testing_service')
+    @domain = domain
+    @batch_size = batch_size
+    @max_retries = max_retries
   end
   
-  # Main service entry point
-  def perform
-    domains_needing_testing = Domain.dns_active.where(www: nil)
-    
-    if domains_needing_testing.empty?
-      Rails.logger.info "No domains need A record testing at this time."
-      return { processed: 0, results: {} }
+  def call
+    if domain
+      test_single_domain
+    else
+      test_domains_in_batches
     end
-    
-    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
-    
-    batch_process(domains_needing_testing) do |domain, audit_log|
-      result = test_domain_a_record(domain, audit_log)
-      
-      results[:processed] += 1
-      if result[:www_result]
-        results[:successful] += 1
-      else
-        results[:failed] += 1
-      end
-      
-      result
-    rescue => e
-      results[:errors] += 1
-      Rails.logger.error "Error testing A record for #{domain.domain}: #{e.message}"
-      raise
-    end
-    
-    results
   end
   
   # Legacy class methods for backward compatibility
   def self.test_a_record(domain)
-    new.send(:test_domain_a_record, domain)[:www_result]
+    new(domain).call
   end
   
-  # Queue methods for Sidekiq integration
   def self.queue_all_domains
-    count = 0
-    Domain.dns_active.where(www: nil).find_each do |domain|
+    Domain.find_each do |domain|
       DomainARecordTestingWorker.perform_async(domain.id)
-      count += 1
     end
-    count
   end
   
   def self.queue_100_domains
+    domains = Domain.dns_active.where(www: nil).limit(100)
     count = 0
-    Domain.dns_active.where(www: nil).limit(100).each do |domain|
+    
+    domains.each do |domain|
       DomainARecordTestingWorker.perform_async(domain.id)
       count += 1
     end
+    
     count
   end
   
   private
   
-  def test_domain_a_record(domain, audit_log)
+  def test_single_domain
+    result = perform_a_record_test(domain.domain)
+    update_domain_status(result)
+    result
+  end
+
+  def test_domains_in_batches
+    Domain.find_in_batches(batch_size: batch_size) do |batch|
+      batch.each do |domain|
+        result = perform_a_record_test(domain.domain)
+        update_domain_status(result)
+        produce_message_with_retry(domain.domain, result)
+      end
+    end
+  end
+
+  def perform_a_record_test(domain_name)
     start_time = Time.current
-    www_result = false
+    resolver = Resolv::DNS.new
+    resolver.timeouts = DNS_TIMEOUT
 
     begin
-      Timeout.timeout(A_RECORD_TIMEOUT) do
-        # Test www A record
-        resolver = Resolv::DNS.new
-        www_domain = "www.#{domain.domain}"
-        addresses = resolver.getaddresses(www_domain)
-        www_result = addresses.any?
-      end
-    rescue Timeout::Error
-      Rails.logger.info "A record lookup timed out for www.#{domain.domain}"
-      www_result = false
-    rescue => e
-      Rails.logger.error "Error testing A record for www.#{domain.domain}: #{e.message}"
-      www_result = false
+      a_records = resolver.getresources(domain_name, Resolv::DNS::Resource::IN::A)
+      {
+        status: :success,
+        a_records: a_records.map(&:address).map(&:to_s),
+        duration: Time.current - start_time
+      }
+    rescue Resolv::ResolvError => e
+      {
+        status: :error,
+        error: e.message,
+        duration: Time.current - start_time
+      }
+    rescue Timeout::Error => e
+      {
+        status: :timeout,
+        error: "DNS lookup timed out after #{DNS_TIMEOUT} seconds",
+        duration: Time.current - start_time
+      }
     end
+  end
 
-    # Update domain
-    domain.update!(www: www_result)
+  def update_domain_status(result)
+    return unless domain
 
-    # Return result
-    {
-      www_result: www_result,
-      domain_name: domain.domain,
-      test_duration_ms: ((Time.current - start_time) * 1000).to_i
-    }
+    case result[:status]
+    when :success
+      domain.update(www: result[:a_records].any?)
+    when :error, :timeout
+      domain.update(www: false)
+    end
+  end
+
+  def produce_message_with_retry(domain_name, result)
+    retries = 0
+    begin
+      produce_message(
+        topic: 'domain_a_record_testing',
+        payload: {
+          domain: domain_name,
+          status: result[:status],
+          a_records: result[:a_records],
+          error: result[:error],
+          duration: result[:duration],
+          timestamp: Time.current.iso8601
+        }.to_json,
+        key: domain_name
+      )
+    rescue StandardError => e
+      retries += 1
+      if retries <= max_retries
+        sleep(2 ** retries) # Exponential backoff
+        retry
+      else
+        log_error(domain_name, e)
+      end
+    end
+  end
+
+  def log_error(domain_name, error)
+    Rails.logger.error(
+      message: "Failed to produce message for domain",
+      domain: domain_name,
+      error: error.message,
+      error_type: error.class.name
+    )
   end
 end 

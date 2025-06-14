@@ -1,31 +1,33 @@
 class DomainARecordTestingWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :DomainARecordTestingService, retry: 3
+  sidekiq_options queue: 'DomainARecordTestingService', retry: 0
 
   def perform(domain_id)
     domain = Domain.find(domain_id)
+    service = DomainARecordTestingService.new(domain: domain)
+    result = service.call
     
-    domain.audit_service_operation('domain_a_record_testing_v1', action: 'test_a_record') do |audit_log|
-      begin
-        start_time = Time.current
-        result = DomainARecordTestingService.new.send(:test_domain_a_record, domain, audit_log)
-        duration = ((Time.current - start_time) * 1000).to_i
-
-        # Update audit context with results
-        audit_log.add_context(
-          domain_name: domain.domain,
-          www_result: result[:www_result],
-          test_duration_ms: duration,
-          www_status: result[:www_result] ? 'active' : 'inactive'
-        )
-
-        # Success is automatically handled by audit_service_operation
-        result
-      rescue => e
-        # Error handling is automatically handled by audit_service_operation
-        raise
-      end
-    end
+    # Update domain with A record test result
+    domain.update!(www: result[:status] == 'success')
+    
+    # Create audit log
+    ServiceAuditLog.create!(
+      auditable: domain,
+      service_name: 'domain_a_record_testing_service',
+      action: 'test_a_record',
+      status: result[:status] == 'success' ? :success : :failed,
+      context: {
+        domain_name: domain.domain,
+        test_duration_ms: (result[:duration] * 1000).to_i,
+        a_records: result[:records][:a],
+        error: result[:records][:error]
+      }
+    )
+  rescue ActiveRecord::RecordNotFound
+    Rails.logger.error "Domain not found: #{domain_id}"
+  rescue StandardError => e
+    Rails.logger.error "Error processing A record test for domain #{domain_id}: #{e.message}"
+    raise
   end
 end 
