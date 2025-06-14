@@ -353,6 +353,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_13_104133) do
     t.boolean "dns"
   end
 
+  create_table "domains_se_raw", id: false, force: :cascade do |t|
+    t.text "c1"
+  end
+
   create_table "service_audit_logs", force: :cascade do |t|
     t.string "auditable_type", null: false
     t.bigint "auditable_id", null: false

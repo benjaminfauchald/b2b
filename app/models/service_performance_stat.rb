@@ -14,6 +14,9 @@ class ServicePerformanceStat < ApplicationRecord
   scope :slow_services, ->(threshold_ms = 5000) { where('avg_duration_ms > ?', threshold_ms) }
   scope :fast_services, ->(threshold_ms = 1000) { where('avg_duration_ms <= ?', threshold_ms) }
   scope :recent_activity, -> { where('last_run_at > ?', 24.hours.ago) }
+  scope :recent, -> { order(last_run_at: :desc) }
+  scope :by_success_rate, -> { order(success_rate_percent: :desc) }
+  scope :by_duration, -> { order(avg_duration_ms: :desc) }
 
   # Class methods
   def self.for_service(service_name)
@@ -26,6 +29,10 @@ class ServicePerformanceStat < ApplicationRecord
 
   def self.problem_services(success_threshold = 80, duration_threshold = 10000)
     where('success_rate_percent < ? OR avg_duration_ms > ?', success_threshold, duration_threshold)
+  end
+
+  def self.refresh
+    ActiveRecord::Base.connection.execute('REFRESH MATERIALIZED VIEW service_performance_stats')
   end
 
   # Instance methods
