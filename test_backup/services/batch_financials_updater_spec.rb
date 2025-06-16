@@ -10,7 +10,7 @@ RSpec.describe BatchFinancialsUpdater do
     let!(:stale_company) { create(:company, :with_stale_financial_data) }
     
     before do
-      allow(UpdateCompanyFinancialsWorker).to receive(:perform_async)
+      allow(CompanyFinancialsWorker).to receive(:perform_async)
     end
     
     it 'enqueues jobs for companies that need updates' do
@@ -22,19 +22,19 @@ RSpec.describe BatchFinancialsUpdater do
       # - stale_company (data is old)
       # Should skip companies that already have recent data
       
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).with(company_without_financials.id)
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).with(failed_company.id)
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).with(stale_company.id)
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).with(company_without_financials.id)
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).with(failed_company.id)
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).with(stale_company.id)
       
       companies.each do |company|
-        expect(UpdateCompanyFinancialsWorker).not_to have_received(:perform_async).with(company.id)
+        expect(CompanyFinancialsWorker).not_to have_received(:perform_async).with(company.id)
       end
     end
     
     it 'respects the limit parameter' do
       described_class.update_all(limit: 2)
       
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).exactly(2).times
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).exactly(2).times
     end
     
     it 'respects the batch_size parameter' do
@@ -54,15 +54,15 @@ RSpec.describe BatchFinancialsUpdater do
     let!(:stale_company2) { create(:company, :with_financial_data) }
     
     before do
-      allow(UpdateCompanyFinancialsWorker).to receive(:perform_async)
+      allow(CompanyFinancialsWorker).to receive(:perform_async)
     end
     
     it 'enqueues jobs for companies with stale financial data' do
       described_class.update_stale
       
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).with(stale_company1.id)
-      expect(UpdateCompanyFinancialsWorker).to have_received(:perform_async).with(stale_company2.id)
-      expect(UpdateCompanyFinancialsWorker).not_to have_received(:perform_async).with(fresh_company.id)
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).with(stale_company1.id)
+      expect(CompanyFinancialsWorker).to have_received(:perform_async).with(stale_company2.id)
+      expect(CompanyFinancialsWorker).not_to have_received(:perform_async).with(fresh_company.id)
     end
   end
   
@@ -71,7 +71,7 @@ RSpec.describe BatchFinancialsUpdater do
     let!(:company2) { create(:company, financial_data_status: nil) }
     
     before do
-      allow(UpdateCompanyFinancialsWorker).to receive(:perform_async).and_raise(StandardError.new('Redis is down'))
+      allow(CompanyFinancialsWorker).to receive(:perform_async).and_raise(StandardError.new('Redis is down'))
       allow(Rails.logger).to receive(:error)
     end
     

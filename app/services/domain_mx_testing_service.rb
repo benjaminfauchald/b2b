@@ -72,37 +72,28 @@ class DomainMxTestingService < KafkaService
           auditable: domain,
           service_name: service_name,
           action: action,
-          status: :pending
+          status: :pending,
+          columns_affected: ['mx'],
+          metadata: { domain_name: domain.domain }
         )
         result = perform_mx_test(domain.domain)
         if result[:status] == :success
           update_domain_status(domain, result)
-          audit_log.add_context({
+          audit_log.mark_success!({
             'domain_name' => domain.domain,
-            'dns' => domain.dns,
-            'www' => domain.www,
-            'mx_result' => true,
-            'status' => 'has_mx_record'
-          })
-          audit_log.mark_success!
+            'mx_status' => domain.mx,
+            'test_duration_ms' => result[:duration]
+          }, ['mx'])
           results[:successful] += 1
         else
           update_domain_status(domain, result)
-          audit_log.add_context({
-            'domain_name' => domain.domain,
-            'dns' => domain.dns,
-            'www' => domain.www,
-            'mx_result' => false,
-            'status' => 'no_mx_record',
-            'error_type' => result[:error]
-          })
-          audit_log.mark_failed!(result[:error].to_s)
+          audit_log.mark_failed!(result[:error] || 'MX test failed', { 'error' => result[:error] || 'MX test failed', 'domain_name' => domain.domain }, [])
           results[:failed] += 1
         end
         results[:processed] += 1
       rescue StandardError => e
         results[:errors] += 1
-        audit_log.mark_failed!(e.message) if audit_log
+        audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, []) if audit_log
       end
     end
     results

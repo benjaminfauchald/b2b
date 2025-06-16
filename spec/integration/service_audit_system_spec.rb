@@ -27,7 +27,7 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
       )
       audit_log.mark_success!({ 'result' => 'ok' })
       expect(audit_log.reload).to have_attributes(
-        status: ServiceAuditLog::STATUS_SUCCESS,
+        status: :success,
         completed_at: be_present,
         execution_time_ms: be_positive
       )
@@ -47,7 +47,7 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
       error_message = 'Test error'
       audit_log.mark_failed!(error_message, { 'error' => error_message })
       expect(audit_log.reload).to have_attributes(
-        status: ServiceAuditLog::STATUS_FAILED,
+        status: :failed,
         error_message: error_message,
         completed_at: be_present,
         execution_time_ms: be_positive

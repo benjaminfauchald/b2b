@@ -14,9 +14,9 @@ namespace :financials do
     
     puts "Updating financial data for #{companies.size} sample companies..."
     
-    companies.each do |company|
+    companies.each_with_index do |company, idx|
       puts "  - #{company.company_name} (##{company.id}, #{company.registration_number})"
-      CompanyFinancialsUpdater.new(company).call
+      CompanyFinancialsService.new(company).call
     end
     
     puts "\nSample update complete!"

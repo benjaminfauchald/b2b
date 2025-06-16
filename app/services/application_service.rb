@@ -111,15 +111,17 @@ class ApplicationService
       auditable: auditable,
       service_name: service_name,
       action: action,
-      status: :pending
+      status: :pending,
+      columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : ['none']),
+      metadata: (defined?(context) && context.present? ? context : { error: 'no metadata' })
     )
 
     begin
       result = yield(audit_log)
-      audit_log.mark_success!(result: result)
+      audit_log.mark_success!(result: result, context: result.respond_to?(:saved_changes) ? result.saved_changes.keys : [], columns_affected: (respond_to?(:saved_changes) ? saved_changes.keys : []))
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e)
+      audit_log.mark_failed!(e, { 'error' => e.message }, [])
       raise e
     end
   end

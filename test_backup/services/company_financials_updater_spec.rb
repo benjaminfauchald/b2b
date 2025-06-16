@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe CompanyFinancialsUpdater do
+RSpec.describe CompanyFinancialsService do
   let(:company) { create(:company, registration_number: '123456789') }
   let(:service) { described_class.new(company) }
   let(:api_url) { "https://data.brreg.no/regnskapsregisteret/regnskap/#{company.registration_number}" }

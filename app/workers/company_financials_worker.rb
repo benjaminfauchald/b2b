@@ -1,4 +1,4 @@
-class UpdateCompanyFinancialsWorker
+class CompanyFinancialsWorker
   include Sidekiq::Worker
   sidekiq_options queue: 'financials', retry: 5, backtrace: true
 
@@ -19,7 +19,7 @@ class UpdateCompanyFinancialsWorker
 
   sidekiq_retry_in do |count, exception|
     case exception
-    when CompanyFinancialsUpdater::RateLimitError
+    when CompanyFinancialsService::RateLimitError
       # Use retry_after from the exception or default to exponential backoff
       (exception.retry_after || 10 * (count + 1)).to_i
     else
@@ -43,7 +43,7 @@ class UpdateCompanyFinancialsWorker
       queue_latency_ms: enqueued_at ? ((@start_time - Time.at(enqueued_at)) * 1000).round : nil
     })
 
-    CompanyFinancialsUpdater.new(@company).call
+    CompanyFinancialsService.new(@company).call
     
     log_to_sct('WORKER_COMPLETE', [], 'SUCCESS', 
       ((Time.current - @start_time) * 1000).round, 

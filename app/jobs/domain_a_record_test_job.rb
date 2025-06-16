@@ -24,7 +24,8 @@ class DomainARecordTestJob < ApplicationJob
       service_name: 'domain_a_record_testing',
       action: 'test_a_record',
       status: result ? :success : :failed,
-      context: context
+      columns_affected: ['www'],
+      metadata: (context.presence || { error: 'no metadata' })
     )
   rescue ActiveRecord::RecordNotFound
     Rails.logger.error "Domain not found: #{domain_id}"
