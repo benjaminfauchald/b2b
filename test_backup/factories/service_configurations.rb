@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :service_configuration do
-    service_name { 'test_service' }
-    refresh_interval_hours { 24 }
+    sequence(:service_name) { |n| "test_service_#{n}" }
+    refresh_interval_hours { 720 }
     depends_on_services { [] }
     active { true }
     batch_size { 1000 }

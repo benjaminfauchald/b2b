@@ -1,46 +1,59 @@
 FactoryBot.define do
   factory :service_audit_log do
-    association :auditable, factory: :user
-    service_name { 'test_audit' }
-    action { 'process' }
-    status { 0 }
-    changed_fields { [] }
+    service_name { 'test_service' }
+    operation_type { 'process' }
+    status { ServiceAuditLog::STATUS_PENDING }
+    started_at { Time.current }
+    association :auditable, factory: :company
+    metadata { {} }
+    columns_affected { [] }
+    completed_at { nil }
+    execution_time_ms { nil }
     error_message { nil }
-    duration_ms { nil }
-    context { {} }
     job_id { nil }
     queue_name { nil }
     scheduled_at { nil }
-    started_at { nil }
-    completed_at { nil }
+    table_name { 'companies' }
+    target_table { nil }
+    record_id { auditable&.id || '1' }
+
+    after(:build) do |log|
+      # Ensure a valid ServiceConfiguration exists for the service_name, but only if present
+      if log.service_name.present?
+        ServiceConfiguration.find_or_create_by!(service_name: log.service_name) do |config|
+          config.refresh_interval_hours = 24
+          config.active = true
+          config.batch_size = 100
+          config.retry_attempts = 3
+          config.settings = {}
+        end
+      end
+      log.table_name ||= log.auditable&.class&.table_name || 'companies'
+      log.record_id ||= log.auditable&.id&.to_s || '1'
+    end
 
     trait :success do
       status { :success }
-      started_at { 2.seconds.ago }
-      completed_at { 1.second.ago }
-      duration_ms { 1000 }
+      completed_at { Time.current }
     end
 
     trait :failed do
       status { :failed }
-      started_at { 2.seconds.ago }
-      completed_at { 1.second.ago }
-      duration_ms { 1500 }
-      error_message { 'Test error message' }
+      completed_at { Time.current }
+      error_message { 'Some error' }
     end
 
-    trait :with_context do
-      context do
+    trait :with_metadata do
+      metadata do
         {
-          'user_id' => auditable&.id,
-          'ip_address' => '127.0.0.1',
-          'user_agent' => 'Test Agent'
+          'company_id' => auditable&.id,
+          'registration_number' => auditable&.registration_number
         }
       end
     end
 
-    trait :with_changes do
-      changed_fields { ['name', 'email'] }
+    trait :with_columns do
+      columns_affected { ['company_name', 'email'] }
     end
 
     trait :with_job_info do
@@ -52,17 +65,19 @@ FactoryBot.define do
     trait :for_domain do
       association :auditable, factory: :domain
       service_name { 'domain_enhancement' }
+      table_name { 'domains' }
     end
 
-    trait :for_user do
-      association :auditable, factory: :user
-      service_name { 'user_enhancement' }
+    trait :for_company do
+      association :auditable, factory: :company
+      service_name { 'company_enhancement' }
+      table_name { 'companies' }
     end
 
     trait :long_running do
       started_at { 30.seconds.ago }
       completed_at { 1.second.ago }
-      duration_ms { 29000 }
+      execution_time_ms { 29000 }
     end
 
     trait :recent do

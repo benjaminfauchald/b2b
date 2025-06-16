@@ -1,0 +1,183 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Service Control Table (SCT) and Service Guidelines
+
+ *** REMOVE ALL VERSION NUMBERS IN SERVICES ***
+
+## Service Naming Convention
+
+- Do *NOT* use versioning in naming
+- Use descriptive, action-oriented names
+- Keep names concise but clear
+- Use snake_case for service names
+- Sidekiq and other queue names should match service names (e.g., `DomainTestingService` queue for `domain_testing` service)
+
+## EXPLICIT SERVICE NAME RULE
+- All service names must use the full class name in underscore format (e.g., 'user_enhancement_service', 'domain_testing_service').
+- No version numbers allowed in service names.
+- All code, tests, and documentation must follow this convention.
+
+## Service Configuration
+```ruby
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing') do |config|
+  config.refresh_interval_hours = 24
+  config.dependencies = ['domain_a_record_testing']
+end
+```
+
+## Service Implementation Template
+```ruby
+class MyService < ApplicationService
+  def initialize(**attributes)
+    super(service_name: 'my_service', action: 'process', **attributes)
+  end
+
+  def perform
+    # Use batch_process for handling multiple records
+    batch_process(records) do |record, audit_log|
+      # Your service logic here
+      result = process_record(record)
+      
+      # Add context to audit log
+      audit_log.add_context(
+        result_key: result[:value],
+        processing_time: result[:duration]
+      )
+      
+      result
+    end
+  end
+end
+```
+
+## Audit Logging Best Practices
+1. Always use `audit_service_operation` for single record operations
+2. Use `batch_process` for multiple records
+3. Include relevant context in audit logs
+4. Track performance metrics
+5. Handle errors appropriately
+
+## Audit Log Structure
+```ruby
+{
+  service_name: 'domain_testing',
+  action: 'process',
+  status: [:pending, :success, :failed],
+  context: {
+    # Service-specific data
+  },
+  changed_fields: [],
+  duration_ms: 100,
+  error_message: nil,
+  started_at: Time.current,
+  completed_at: Time.current
+}
+```
+
+## Service Dependencies
+- Declare dependencies in service configuration
+- Use `depends_on_services` array
+- Services will only run if dependencies are met
+- Example:
+```ruby
+config.depends_on_services = ['domain_testing_service']  # Depends on DNS testing
+```
+
+## Performance Monitoring
+- Track duration of operations
+- Monitor success/failure rates
+- Use the `service_performance_stats` view for analytics
+- Monitor queue sizes and processing times
+
+## Error Handling
+```ruby
+begin
+  result = perform_operation
+  audit_log.mark_success!(result_context)
+rescue StandardError => e
+  audit_log.mark_failed!(e.message, error_context)
+  raise
+end
+```
+
+## Service Refresh Logic
+```ruby
+def needs_service?(service_name)
+  config = ServiceConfiguration.find_by(service_name: service_name)
+  return false unless config&.active?
+  
+  last_run = last_service_run(service_name)
+  return true unless last_run
+  
+  refresh_threshold = config.refresh_interval_hours.hours.ago
+  last_run.completed_at < refresh_threshold
+end
+```
+
+## Monitoring and Maintenance Commands
+- `rake service_audit:stats` - View performance statistics
+- `rake service_audit:clean` - Clean old audit logs
+- `rake service_audit:refresh_needed` - Check pending refreshes
+- `rake service_audit:run_service[service_name]` - Run specific service
+
+## Testing Best Practices
+```ruby
+RSpec.describe MyService do
+  it 'creates audit logs' do
+    expect {
+      MyService.new.call
+    }.to change(ServiceAuditLog, :count)
+  end
+
+  it 'tracks performance metrics' do
+    service = MyService.new
+    service.call
+    log = ServiceAuditLog.last
+    expect(log.duration_ms).to be_present
+  end
+end
+```
+
+## Service Configuration Settings
+Common settings to consider:
+```ruby
+config.settings = {
+  timeout_seconds: 5,
+  treat_timeout_as_failure: true,
+  retry_network_errors: true,
+  log_details: true,
+  batch_size: 500,
+  max_retries: 3
+}
+```
+
+## Queue Configuration
+```yaml
+:queues:
+  - [ServiceName, 2]  # Priority 2
+  - [default, 1]      # Priority 1
+
+:limits:
+  ServiceName: 3      # Max concurrent jobs
+```
+
+## Service Audit Views
+The system provides several views for monitoring:
+1. `latest_service_runs` - Latest successful runs per record/service
+2. `service_performance_stats` - Performance statistics per service
+3. `records_needing_refresh` - Records that need service refresh
+
+## Best Practices Checklist
+- [ ] Follow naming convention
+- [ ] Configure service properly
+- [ ] Implement proper error handling
+- [ ] Add performance monitoring
+- [ ] Include relevant context in audit logs
+- [ ] Set up proper dependencies
+- [ ] Configure queue settings
+- [ ] Write comprehensive tests
+- [ ] Document service behavior
+- [ ] Set up monitoring alerts

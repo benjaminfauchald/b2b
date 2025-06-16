@@ -1,8 +1,8 @@
 FactoryBot.define do
   factory :user do
     sequence(:email) { |n| "user#{n}@example.com" }
-    sequence(:name) { |n| "User #{n}" }
-    enhanced { false }
+    password { 'Password123!' }
+    name { 'Example User' }
     # Add other required fields as needed
 
     trait :without_email do

@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+** NEVER DROP OR RECREATE PRODUCTION DATABASE **
+
+** NEVER DROP OR RECREATE DEVELOPMENT DATABASE **
+
+You do not need the sidekiq-web gem. The web UI is part of the main sidekiq gem. 
+The sidekiq-web gem is not compatible with Rails 8.0.2.
+
+***The sidekiq-web gem is not compatible with Rails 8***
+
+
+Key Highlights:
+🔴 Mandatory TDD Workflow: Red-Green-Refactor cycle with tests written first
+📋 Pre-Development Planning: Structured planning template for every feature
+
+** PLEASE CONTINUE UNTIL YOU HAVE FINISHED THE TASK **
+
+** ANY CHANGES TO DATABASE MUST COME WITH A FULL MIGRATION PLAN AS THE LAST STEP** FINISH EVERY REASONING FIRST AND NO AD HOC CHANGES TO DATABASE STRUCTURE! **
+
+🏗️ Strict Rails Conventions: All naming, file structure, and architectural patterns
+🧪 Comprehensive Testing Strategy: Model, controller, integration, and system test approaches
+🔧 Service Control Table Integration: Aligned with your SCT logging requirements
+Core Principles:
+
+Convention Over Configuration: Strict adherence to Rails naming and structural conventions
+Test-Driven Development: Always write tests first, then minimal code to pass
+Atomic Development: Plan → Test → Code → Refactor → Commit workflow
+Quality Assurance: Rubocop integration, security best practices, proper error handling
+
+The rules include specific templates for:
+
+Feature planning and test strategy documentation
+RSpec test structure and naming conventions
+Factory Bot usage patterns
+Database migration and indexing standards
+Controller and model testing strategies
+Integration with your existing SCT system
+
+This ensures every Rails project follows best practices while maintaining consistency with your existing database logging architecture. The rules are designed to work seamlessly with Roo Code's AI assistance while enforcing the disciplined approach of writing tests before implementation.

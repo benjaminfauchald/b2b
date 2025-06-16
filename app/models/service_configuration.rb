@@ -20,7 +20,8 @@ class ServiceConfiguration < ApplicationRecord
 
   # Class methods
   def self.active?(service_name)
-    find_by(service_name: service_name)&.active?
+    return false if service_name.blank?
+    find_by(service_name: service_name)&.active? || false
   end
 
   def self.find_or_create_by_service_name(service_name, attributes = {})
