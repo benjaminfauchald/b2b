@@ -202,6 +202,8 @@ GEM
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
     json (2.12.2)
+    json-schema (3.0.0)
+      addressable (>= 2.8)
     kamal (2.6.1)
       activesupport (>= 7.0)
       base64 (~> 0.2)
@@ -558,6 +560,7 @@ DEPENDENCIES
   image_processing (~> 1.2)
   importmap-rails
   jbuilder
+  json-schema (~> 3.0)
   kamal
   karafka (~> 2.4.0)
   nokogiri

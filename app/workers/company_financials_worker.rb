@@ -28,7 +28,11 @@ class CompanyFinancialsWorker
     end
   end
 
+  RATE_LIMIT_KEY = 'company_financials_worker:last_api_call'
+  RATE_LIMIT_INTERVAL = 1 # second
+
   def perform(company_id, enqueued_at = nil)
+    enforce_rate_limit!
     @start_time = Time.current
     @company = Company.find_by(id: company_id)
     
@@ -74,5 +78,16 @@ class CompanyFinancialsWorker
     rescue => e
       Rails.logger.error("Failed to log to SCT in worker: #{e.message}")
     end
+  end
+
+  def enforce_rate_limit!
+    redis = Sidekiq.redis { |conn| conn }
+    last_call = redis.get(RATE_LIMIT_KEY)&.to_f
+    now = Time.now.to_f
+    if last_call && (now - last_call) < RATE_LIMIT_INTERVAL
+      sleep_time = RATE_LIMIT_INTERVAL - (now - last_call)
+      sleep(sleep_time) if sleep_time > 0
+    end
+    redis.set(RATE_LIMIT_KEY, Time.now.to_f)
   end
 end

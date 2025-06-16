@@ -1,4 +1,9 @@
+require 'json-schema'
+
 class FinancialsConsumer
+  SCHEMA_PATH = Rails.root.join('docs', 'event_schemas', 'company_financials.json')
+  SCHEMA = JSON.parse(File.read(SCHEMA_PATH))
+
   def initialize(group_id:, topic: 'company_financials')
     @group_id = group_id
     @topic = topic
@@ -21,7 +26,16 @@ class FinancialsConsumer
   
   def process_message(message)
     start_time = Time.current
-    payload = JSON.parse(message.value)
+    payload = JSON.parse(message.value, symbolize_names: false)
+    
+    # Schema validation
+    errors = JSON::Validator.fully_validate(SCHEMA, payload)
+    unless errors.empty?
+      error_msg = "Invalid message schema for company_financials: #{payload.inspect}\nErrors: #{errors.join("; ")}"
+      @logger.error(error_msg)
+      log_to_sct('SCHEMA_INVALID', [], 'FAILED', 0, error_msg, { message_id: message.key })
+      raise error_msg
+    end
     
     log_to_sct('MESSAGE_RECEIVED', [], 'PROCESSING', 0, nil, {
       message_id: message.key,
@@ -55,9 +69,9 @@ class FinancialsConsumer
   end
   
   def handle_financials_updated(payload)
-    company = Company.find_by(registration_number: payload['registration_number'])
+    company = Company.find_by(id: payload['company_id'])
     unless company
-      raise "Company not found: #{payload['registration_number']}"
+      raise "Company not found: #{payload['company_id']}"
     end
     
     # Update company with financial data only
@@ -68,15 +82,20 @@ class FinancialsConsumer
       operating_costs: payload.dig('data', 'operating_costs')
     )
     
+    # Enqueue Sidekiq job for further processing
+    CompanyFinancialsWorker.perform_async(company.id)
+    
     # Log to SCT (ServiceAuditLog)
     ServiceAuditLog.create!(
       auditable: company,
       service_name: 'company_financials',
-      action: 'update',
+      operation_type: 'update',
       status: :success,
-      changed_fields: %w[ordinary_result annual_result operating_revenue operating_costs],
-      context: payload['data'],
-      completed_at: Time.current
+      columns_affected: %w[ordinary_result annual_result operating_revenue operating_costs],
+      metadata: payload['data'],
+      completed_at: Time.current,
+      table_name: 'companies',
+      record_id: company.id
     )
     
     log_to_sct('COMPANY_UPDATED', [], 'SUCCESS', 0, nil, {

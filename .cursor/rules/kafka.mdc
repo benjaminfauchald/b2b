@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 ## Karafka Configuration Reference (IMPORTANT)
 
@@ -250,3 +250,76 @@ Remember:
 - Use appropriate security measures
 - Test thoroughly before deployment
 - Document all Kafka-related configurations
+
+# Kafka & Karafka Best Practices for Rails Microservices
+
+## Centralized Configuration
+- All Kafka topics, consumer groups, and connection settings must be defined in `config/kafka.yml` and `config/karafka.rb`.
+- Use environment variables for sensitive or environment-specific settings.
+- Never hardcode broker addresses or credentials in code.
+
+## Topic Naming & Documentation
+- Use clear, consistent topic names (e.g., `company_financials`, `domain_testing`).
+- Document every topic, producer, and consumer in `docs/kafka_topics.md`.
+- Each topic must have a corresponding JSON schema in `docs/event_schemas/`.
+
+## Producer Patterns
+- All producers must inherit from a shared base (e.g., `KafkaService`).
+- Always validate messages against the topic's JSON schema before producing.
+- Use message keys for deduplication and partitioning.
+- Use synchronous production (`produce_sync` or `WaterDrop::SyncProducer.call`) for critical messages.
+- Implement retry logic for transient errors.
+
+## Consumer Patterns
+- All consumers must inherit from `ApplicationConsumer`.
+- Validate every incoming message against the topic's JSON schema before processing.
+- Implement proper error handling and log all failures.
+- Use DLQ (Dead Letter Queue) for messages that fail after max retries.
+- Track and log consumer lag.
+
+## Schema Validation
+- Store all schemas in `docs/event_schemas/` as JSON files.
+- Use a schema validation gem (e.g., `json-schema`) in both producers and consumers.
+- Reject or send to DLQ any message that fails schema validation.
+
+## DLQ (Dead Letter Queue)
+- Every critical topic must have a DLQ configured in `config/karafka.rb`.
+- Consumers must log and alert on DLQ events.
+
+## Monitoring & Observability
+- Centralize logging for all Kafka events (production, consumption, errors).
+- Monitor consumer lag, error rates, and DLQ usage (e.g., with Prometheus/Grafana).
+- Use unique message keys and log them for traceability.
+
+## Testing
+- Use test topics and mock Kafka in tests.
+- Validate message schemas in all integration tests.
+
+## Deployment & Operations
+- Use systemd or Docker Compose for running Karafka consumers as services.
+- Document all topics, schemas, and service responsibilities in `docs/kafka_topics.md`.
+- Regularly review and update documentation and schemas as the system evolves.
+
+## Example File Structure
+
+```
+/config
+  karafka.rb
+  kafka.yml
+/app/services
+  kafka_service.rb
+/app/consumers
+  application_consumer.rb
+/docs
+  kafka_topics.md
+  event_schemas/
+    company_financials.json
+    domain_testing.json
+```
+
+## Summary
+- Never bypass schema validation.
+- Never produce or consume undocumented topics.
+- Always use DLQ for error handling.
+- Keep documentation and schemas up to date.
+- Use shared base classes for all producers and consumers.
