@@ -1,56 +1,56 @@
 # frozen_string_literal: true
 
-namespace :domain_a_record_testing do
-  desc 'Test A records for a sample of domains'
+namespace :service_template do
+  desc 'Run service for a sample of records'
   task sample: :environment do
     sample_size = ENV.fetch('SAMPLE_SIZE', 5).to_i
     
-    domains = Domain.needs_service('domain_a_record_testing').limit(sample_size)
+    records = Record.needs_service('service_template').limit(sample_size)
     
-    if domains.empty?
-      puts "No domains need A record testing."
+    if records.empty?
+      puts "No records need processing."
       next
     end
     
-    puts "Testing A records for #{domains.size} sample domains..."
+    puts "Processing #{records.size} sample records..."
     
-    domains.each do |domain|
-      print "  - #{domain.domain} (##{domain.id})"
+    records.each do |record|
+      print "  - #{record.name} (##{record.id})"
       
       begin
-        DomainARecordTestingService.new(domain: domain).call
+        ServiceTemplateService.new(record: record).call
         print " ✓\n"
       rescue StandardError => e
         print " ✗ (#{e.message})\n"
       end
     end
     
-    puts "\nSample testing complete!"
+    puts "\nSample processing complete!"
   end
   
-  desc 'Queue domains for A record testing'
+  desc 'Queue records for processing'
   task :queue, [:count] => :environment do |_t, args|
     count = args[:count]&.to_i
     
     if count.nil?
-      puts "Queueing all domains for A record testing..."
-      domains = Domain.needs_service('domain_a_record_testing')
+      puts "Queueing all records for processing..."
+      records = Record.needs_service('service_template')
     else
-      puts "Queueing #{count} domains for A record testing..."
-      domains = Domain.needs_service('domain_a_record_testing').limit(count)
+      puts "Queueing #{count} records for processing..."
+      records = Record.needs_service('service_template').limit(count)
     end
     
-    if domains.empty?
-      puts "No domains need A record testing."
+    if records.empty?
+      puts "No records need processing."
       next
     end
     
-    total = domains.count
+    total = records.count
     processed = 0
     
-    domains.find_each do |domain|
+    records.find_each do |record|
       begin
-        DomainARecordTestingWorker.perform_async(domain.id)
+        ServiceTemplateWorker.perform_async(record.id)
         processed += 1
         print "." if (processed % 100).zero?
       rescue StandardError => e
@@ -58,43 +58,43 @@ namespace :domain_a_record_testing do
       end
     end
     
-    puts "\n\nQueued #{processed} domains for A record testing."
+    puts "\n\nQueued #{processed} records for processing."
   end
   
-  desc 'Show domains that need A record testing'
+  desc 'Show records that need processing'
   task show_pending: :environment do
-    domains = Domain.needs_service('domain_a_record_testing')
+    records = Record.needs_service('service_template')
     
-    if domains.empty?
-      puts "No domains need A record testing."
+    if records.empty?
+      puts "No records need processing."
       next
     end
     
-    puts "Found #{domains.count} domains needing A record testing:"
-    domains.each do |domain|
-      puts "  - #{domain.domain} (##{domain.id})"
+    puts "Found #{records.count} records needing processing:"
+    records.each do |record|
+      puts "  - #{record.name} (##{record.id})"
     end
   end
   
-  desc 'Show A record testing statistics'
+  desc 'Show service statistics'
   task stats: :environment do
-    total = Domain.count
-    tested = Domain.where.not(www: nil).count
-    untested = Domain.where(www: nil).count
-    outdated = Domain.where('updated_at < ?', 1.day.ago).count
+    total = Record.count
+    processed = Record.where.not(service_template_status: nil).count
+    unprocessed = Record.where(service_template_status: nil).count
+    outdated = Record.where('updated_at < ?', 1.day.ago).count
     
     # Get performance metrics from service audit logs
-    logs = ServiceAuditLog.where(service_name: 'domain_a_record_testing')
+    logs = ServiceAuditLog.where(service_name: 'service_template')
     successful = logs.where(status: 'success').count
     failed = logs.where(status: 'failed').count
     
-    puts "\nA Record Testing Statistics"
+    puts "\nService Template Statistics"
     puts "=" * 60
     
-    puts "\nDomains:"
+    puts "\nRecords:"
     puts "  Total: #{total}"
-    puts "  Tested: #{tested} (#{percentage(tested, total)}%)"
-    puts "  Untested: #{untested} (#{percentage(untested, total)}%)"
+    puts "  Processed: #{processed} (#{percentage(processed, total)}%)"
+    puts "  Unprocessed: #{unprocessed} (#{percentage(unprocessed, total)}%)"
     puts "  Outdated: #{outdated} (#{percentage(outdated, total)}%)"
     
     puts "\nService Audit Logs:"

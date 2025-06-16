@@ -1,103 +1,125 @@
 require 'sidekiq/api'
 
 namespace :domain_testing do
-  desc "Test DNS for sample of domains (default: 100)"
-  task :sample, [:count] => :environment do |task, args|
-    count = args[:count]&.to_i || 100
+  desc 'Test DNS for sample of domains'
+  task sample: :environment do
+    sample_size = ENV.fetch('SAMPLE_SIZE', 5).to_i
     
-    puts "Testing #{count} domains..."
+    domains = Domain.needs_service('domain_testing').limit(sample_size)
     
-    # Use a custom batch size for the sample
-    service = DomainTestingService.new(batch_size: count)
-    result = service.call
-    
-    puts "\nSample Testing Results:"
-    puts "  Processed: #{result[:processed]} domains"
-    puts "  Successful: #{result[:successful]} (#{(result[:successful] * 100.0 / result[:processed]).round(2)}%)"
-    puts "  Failed: #{result[:failed]} (#{(result[:failed] * 100.0 / result[:processed]).round(2)}%)"
-    puts "  Errors: #{result[:errors]} (#{(result[:errors] * 100.0 / result[:processed]).round(2)}%)"
-    
-    # Show some examples
-    recent_logs = ServiceAuditLog.where(service_name: 'domain_testing')
-                                .recent.limit(5)
-    
-    puts "\nSample Results:"
-    recent_logs.each do |log|
-      domain_name = log.context['domain_name'] || 'Unknown'
-      dns_result = log.context['dns_result']
-      duration = log.duration_ms
-      puts "  #{domain_name}: #{dns_result} (#{duration}ms)"
+    if domains.empty?
+      puts "No domains need testing."
+      next
     end
+    
+    puts "Testing #{domains.size} sample domains..."
+    
+    domains.each do |domain|
+      print "  - #{domain.domain} (##{domain.id})"
+      
+      begin
+        DomainTestingService.new(domain: domain).call
+        print " ✓\n"
+      rescue StandardError => e
+        print " ✗ (#{e.message})\n"
+      end
+    end
+    
+    puts "\nSample testing complete!"
   end
-
-  desc "Queue all domains for DNS testing"
-  task queue_all: :environment do
-    count = DomainTestingService.queue_all_domains
-    puts "Queued #{count} domains for DNS testing"
+  
+  desc 'Queue domains for DNS testing'
+  task :queue, [:count] => :environment do |_t, args|
+    count = args[:count]&.to_i
+    
+    if count.nil?
+      puts "Queueing all domains for DNS testing..."
+      domains = Domain.needs_service('domain_testing')
+    else
+      puts "Queueing #{count} domains for DNS testing..."
+      domains = Domain.needs_service('domain_testing').limit(count)
+    end
+    
+    if domains.empty?
+      puts "No domains need testing."
+      next
+    end
+    
+    total = domains.count
+    processed = 0
+    
+    domains.find_each do |domain|
+      begin
+        DomainTestingWorker.perform_async(domain.id)
+        processed += 1
+        print "." if (processed % 100).zero?
+      rescue StandardError => e
+        print "x"
+      end
+    end
+    
+    puts "\n\nQueued #{processed} domains for DNS testing."
   end
-
-  desc "Show domains that need DNS testing"
+  
+  desc 'Show domains that need DNS testing'
   task show_pending: :environment do
-    total = Domain.count
-    untested = Domain.untested.count
-    recently_tested = Domain.where('updated_at > ?', 24.hours.ago).where.not(dns: nil).count
-    old_tests = Domain.where('updated_at < ?', 24.hours.ago).where.not(dns: nil).count
+    domains = Domain.needs_service('domain_testing')
     
-    puts "\nPending DNS Testing Statistics"
-    puts "=" * 60
-    puts "Total Domains: #{total}"
-    puts "Untested Domains: #{untested} (#{(untested * 100.0 / total).round(2)}%)"
-    puts "Recently Tested (< 24h): #{recently_tested} (#{(recently_tested * 100.0 / total).round(2)}%)"
-    puts "Old Tests (> 24h): #{old_tests} (#{(old_tests * 100.0 / total).round(2)}%)"
+    if domains.empty?
+      puts "No domains need testing."
+      next
+    end
     
-    # Show some examples of untested domains
-    puts "\nSample of Untested Domains:"
-    Domain.untested.limit(5).each do |domain|
-      puts "  #{domain.domain} (Created: #{domain.created_at.strftime('%Y-%m-%d')})"
+    puts "Found #{domains.count} domains needing DNS testing:"
+    domains.each do |domain|
+      puts "  - #{domain.domain} (##{domain.id})"
     end
   end
-
-  desc "Show DNS testing statistics"
+  
+  desc 'Show DNS testing statistics'
   task stats: :environment do
+    total = Domain.count
+    tested = Domain.where.not(dns_status: nil).count
+    untested = Domain.where(dns_status: nil).count
+    outdated = Domain.where('updated_at < ?', 1.day.ago).count
+    
+    # Get performance metrics from service audit logs
+    logs = ServiceAuditLog.where(service_name: 'domain_testing')
+    successful = logs.where(status: 'success').count
+    failed = logs.where(status: 'failed').count
+    
     puts "\nDNS Testing Statistics"
     puts "=" * 60
     
-    # Domain stats
-    total = Domain.count
-    tested = Domain.where.not(dns: nil).count
-    active = Domain.dns_active.count
-    inactive = Domain.dns_inactive.count
-    
-    puts "Domains:"
+    puts "\nDomains:"
     puts "  Total: #{total}"
-    puts "  Tested: #{tested} (#{(tested * 100.0 / total).round(2)}%)"
-    puts "  Active DNS: #{active} (#{(active * 100.0 / tested).round(2)}% of tested)"
-    puts "  Inactive DNS: #{inactive}"
-    
-    # Service Audit Log stats
-    sct_logs = ServiceAuditLog.where(service_name: 'domain_testing')
-    total_logs = sct_logs.count
-    success_logs = sct_logs.successful.count
-    failed_logs = sct_logs.failed.count
+    puts "  Tested: #{tested} (#{percentage(tested, total)}%)"
+    puts "  Untested: #{untested} (#{percentage(untested, total)}%)"
+    puts "  Outdated: #{outdated} (#{percentage(outdated, total)}%)"
     
     puts "\nService Audit Logs:"
-    puts "  Total Logs: #{total_logs}"
-    puts "  Successful: #{success_logs} (#{(success_logs * 100.0 / total_logs).round(2)}%)"
-    puts "  Failed: #{failed_logs}"
+    puts "  Total Logs: #{logs.count}"
+    puts "  Successful: #{successful} (#{percentage(successful, logs.count)}%)"
+    puts "  Failed: #{failed} (#{percentage(failed, logs.count)}%)"
     
-    # Performance stats
-    durations = sct_logs.successful.map { |log| log.context['test_duration_ms'] }.compact
-    if durations.any?
-      puts "\nPerformance:"
-      puts "  Average Duration: #{(durations.sum / durations.size).round(2)}ms"
-      puts "  Min Duration: #{durations.min}ms"
-      puts "  Max Duration: #{durations.max}ms"
+    # Show recent performance
+    recent_logs = logs.where('created_at > ?', 24.hours.ago)
+    if recent_logs.any?
+      avg_duration = recent_logs.average(:duration_ms).to_i
+      min_duration = recent_logs.minimum(:duration_ms).to_i
+      max_duration = recent_logs.maximum(:duration_ms).to_i
+      
+      puts "\nRecent Performance (24h):"
+      puts "  Average Duration: #{avg_duration}ms"
+      puts "  Min Duration: #{min_duration}ms"
+      puts "  Max Duration: #{max_duration}ms"
     end
-    
-    # Recent activity
-    recent = sct_logs.where('created_at > ?', 24.hours.ago)
-    puts "\nRecent Activity (24h):"
-    puts "  Tests Run: #{recent.count}"
-    puts "  Success Rate: #{(recent.successful.count * 100.0 / recent.count).round(2)}%"
+  end
+  
+  private
+  
+  def percentage(part, total)
+    return 0 if total.zero?
+    ((part.to_f / total) * 100).round(2)
   end
 end 

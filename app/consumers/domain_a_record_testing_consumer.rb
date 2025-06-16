@@ -15,10 +15,32 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
     
     return unless domain
     
-    create_audit_log(domain)
+    service = DomainARecordTestingService.new(domain: domain)
+    result = service.call
+    
+    # Log the result
+    audit_log = ServiceAuditLog.create!(
+      auditable: domain,
+      service_name: 'domain_a_record_testing',
+      operation_type: 'test_a_record',
+      status: result ? :success : :failed,
+      columns_affected: ['www'],
+      metadata: {
+        domain_name: payload['domain'],
+        result: result,
+        consumer: self.class.name,
+        kafka_topic: message.topic,
+        kafka_partition: message.partition,
+        kafka_offset: message.offset
+      }
+    )
+    
     mark_as_processed(message)
+  rescue JSON::ParserError => e
+    Rails.logger.error "Invalid JSON in message: #{e.message}"
   rescue StandardError => e
-    handle_error(e, message)
+    Rails.logger.error "Error processing domain A record test: #{e.message}"
+    raise
   end
 
   def processed?(message)
@@ -32,12 +54,10 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
     ServiceAuditLog.create!(
       auditable: domain,
       service_name: 'domain_a_record_testing',
-      action: 'test_a_record',
-      status: :success,
-      context: {
-        domain_name: domain.domain,
-        message_id: message.offset
-      }
+      operation_type: 'test_a_record',
+      status: :pending,
+      columns_affected: ['www'],
+      metadata: { domain_name: domain.domain }
     )
   end
 

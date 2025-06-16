@@ -125,11 +125,19 @@ class CompanyFinancialsService
     end
   end
 
-  def process_financial_data(financial_data)
-    financials = parse_response(financial_data)
+  def process_financial_data(api_result)
+    # api_result now contains both parsed_data and raw_response
+    if api_result.is_a?(Hash) && api_result.key?(:parsed_data)
+      financials = api_result[:parsed_data]
+      raw_response = api_result[:raw_response]
+    else
+      # Fallback for backward compatibility
+      financials = api_result
+      raw_response = nil
+    end
     
     if financials.any?
-      changed_fields = update_company_financials(financials)
+      changed_fields = update_company_financials(financials, raw_response)
       publish_to_kafka(financials)
       
       {
@@ -165,6 +173,12 @@ class CompanyFinancialsService
         timeout: 30,
         verify: true
       })
+
+      # Check if response is nil (returned by handle_httparty_request for invalid responses)
+      if response.nil?
+        @logger.warn "[#{SERVICE_NAME}] No valid response received for #{@org_number} (likely 404 or network error)"
+        return nil
+      end
 
       # Explicitly check response body for nil or empty (HTTParty deprecation fix)
       if response.body.nil? || response.body.empty?
@@ -202,7 +216,8 @@ class CompanyFinancialsService
           return nil
         end
         
-        parsed_response
+        # Return both parsed data and raw response
+        { parsed_data: parsed_response, raw_response: response.body }
       else
         @logger.error "[#{SERVICE_NAME}] API request failed with status #{response.code}: #{response.message}"
         raise ApiError, "API request failed with status #{response.code}: #{response.message}"
@@ -249,30 +264,27 @@ class CompanyFinancialsService
     begin
       @logger.debug "[#{SERVICE_NAME}] Extracting financial data from response"
       
+      # The API returns an array of financial records, get the first (most recent) one
+      financial_record = if response_data.is_a?(Array) && response_data.any?
+        @logger.info "[#{SERVICE_NAME}] Found #{response_data.length} financial record(s), using the first one"
+        response_data.first
+      elsif response_data.is_a?(Hash)
+        @logger.info "[#{SERVICE_NAME}] Response is a single financial record"
+        response_data
+      else
+        @logger.info "[#{SERVICE_NAME}] No financial data found in response"
+        return {}
+      end
+      
       # Extract financial data with proper error handling
       financials = {}
       
-      # Helper method to safely extract and log each field
-      def extract_value(data, *path, default: nil)
-        value = safe_dig(data, *path)
-        @logger.debug "[#{SERVICE_NAME}] Extracted #{path.join('.')}: #{value.inspect}"
-        value
-      end
-      
       begin
         financials = {
-          revenue: extract_value(response_data, 'resultatregnskapResultat', 'driftsresultat', 'driftsinntekter', 'sumDriftsinntekter'),
-          profit: extract_value(response_data, 'resultatregnskapResultat', 'ordinaertResultatFoerSkattekostnad'),
-          equity: extract_value(response_data, 'egenkapitalGjeld', 'egenkapital', 'sumEgenkapital'),
-          total_assets: extract_value(response_data, 'eiendeler', 'sumEiendeler'),
-          year: parse_year(extract_value(response_data, 'regnskapsperiode', 'tilDato')),
-          current_assets: extract_value(response_data, 'eiendeler', 'omloepsmidler', 'sumOmloepsmidler'),
-          fixed_assets: extract_value(response_data, 'eiendeler', 'anleggsmidler', 'sumAnleggsmidler'),
-          current_liabilities: extract_value(response_data, 'egenkapitalGjeld', 'gjeldOversikt', 'kortsiktigGjeld', 'sumKortsiktigGjeld'),
-          long_term_liabilities: extract_value(response_data, 'egenkapitalGjeld', 'gjeldOversikt', 'langsiktigGjeld', 'sumLangsiktigGjeld'),
-          annual_result: extract_value(response_data, 'resultatregnskapResultat', 'aarsresultat'),
-          operating_revenue: extract_value(response_data, 'resultatregnskapResultat', 'driftsresultat', 'driftsinntekter', 'sumDriftsinntekter'),
-          operating_costs: extract_value(response_data, 'resultatregnskapResultat', 'driftsresultat', 'driftskostnad', 'sumDriftskostnad')
+          operating_revenue: safe_dig(financial_record, 'resultatregnskapResultat', 'driftsresultat', 'driftsinntekter', 'sumDriftsinntekter'),
+          ordinary_result: safe_dig(financial_record, 'resultatregnskapResultat', 'ordinaertResultatFoerSkattekostnad'),
+          annual_result: safe_dig(financial_record, 'resultatregnskapResultat', 'aarsresultat'),
+          operating_costs: safe_dig(financial_record, 'resultatregnskapResultat', 'driftsresultat', 'driftskostnad', 'sumDriftskostnad')
         }.compact
 
         @logger.debug "[#{SERVICE_NAME}] Extracted financials: #{financials.inspect}"
@@ -288,6 +300,7 @@ class CompanyFinancialsService
           end
         end
         
+        @logger.info "[#{SERVICE_NAME}] Successfully parsed financial data for #{@org_number}: #{result.keys.join(', ')}"
         @logger.debug "[#{SERVICE_NAME}] After numeric conversion: #{result.inspect}"
         result
         
@@ -345,9 +358,15 @@ class CompanyFinancialsService
     nil
   end
 
-  def update_company_financials(financials)
+  def update_company_financials(financials, raw_response = nil)
     # Filter out any nil values to prevent setting fields to nil
     update_attrs = financials.compact
+    
+    # Add the raw API response if provided
+    if raw_response.present?
+      update_attrs[:financial_data] = raw_response
+    end
+    
     changed_fields = []
     
     # Only update if we have fields to update

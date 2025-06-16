@@ -18,7 +18,10 @@ class ServiceTemplate < KafkaService
       audit_log = ServiceAuditLog.create!(
         auditable: resource,
         service_name: self.class.name.underscore,
-        action: 'process'
+        operation_type: 'process',
+        status: :pending,
+        columns_affected: [],
+        metadata: { resource_id: resource.id }
       )
       
       audit_log.mark_started!

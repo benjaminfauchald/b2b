@@ -81,13 +81,17 @@ class CompanyFinancialsWorker
   end
 
   def enforce_rate_limit!
-    redis = Sidekiq.redis { |conn| conn }
-    last_call = redis.get(RATE_LIMIT_KEY)&.to_f
-    now = Time.now.to_f
-    if last_call && (now - last_call) < RATE_LIMIT_INTERVAL
-      sleep_time = RATE_LIMIT_INTERVAL - (now - last_call)
-      sleep(sleep_time) if sleep_time > 0
+    Sidekiq.redis do |redis|
+      last_call_str = redis.get(RATE_LIMIT_KEY)
+      last_call = last_call_str ? last_call_str.to_f : nil
+      now = Time.now.to_f
+      
+      if last_call && (now - last_call) < RATE_LIMIT_INTERVAL
+        sleep_time = RATE_LIMIT_INTERVAL - (now - last_call)
+        sleep(sleep_time) if sleep_time > 0
+      end
+      
+      redis.set(RATE_LIMIT_KEY, now.to_s)
     end
-    redis.set(RATE_LIMIT_KEY, Time.now.to_f)
   end
 end

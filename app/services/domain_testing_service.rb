@@ -19,7 +19,7 @@ class DomainTestingService < ApplicationService
       audit_log = ServiceAuditLog.create!(
         auditable: domain,
         service_name: service_name,
-        action: action,
+        operation_type: action,
         status: :pending,
         columns_affected: ['dns'],
         metadata: { domain_name: domain.domain }
@@ -172,7 +172,7 @@ class DomainTestingService < ApplicationService
       audit_log = ServiceAuditLog.create!(
         auditable: domain,
         service_name: service_name,
-        action: action,
+        operation_type: action,
         status: :pending,
         columns_affected: ['dns'],
         metadata: { domain_name: domain.domain }
@@ -255,5 +255,22 @@ class DomainTestingService < ApplicationService
 
   def service_active?
     ServiceConfiguration.active?(service_name)
+  end
+
+  def process_domain(domain)
+    audit_log = ServiceAuditLog.create!(
+      auditable: domain,
+      service_name: service_name,
+      operation_type: action,
+      status: :pending,
+      columns_affected: ['dns'],
+      metadata: { domain_name: domain.domain }
+    )
+    result = test_single_domain_for(domain)
+    if result == true
+      audit_log.mark_success!
+    else
+      audit_log.mark_failed!('DNS test failed')
+    end
   end
 end 

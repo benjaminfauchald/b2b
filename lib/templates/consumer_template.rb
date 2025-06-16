@@ -15,7 +15,18 @@ class ConsumerTemplate < Karafka::BaseConsumer
         audit_log = ServiceAuditLog.create!(
           auditable: resource,
           service_name: self.class.name.underscore,
-          action: 'consume'
+          operation_type: 'consume',
+          status: :success,
+          table_name: '<%= table_name %>',
+          record_id: data['id'] || SecureRandom.uuid,
+          columns_affected: [],
+          metadata: {
+            message_data: data,
+            consumer: self.class.name,
+            kafka_topic: message.topic,
+            kafka_partition: message.partition,
+            kafka_offset: message.offset
+          }
         )
 
         audit_log.mark_started!
