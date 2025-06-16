@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_16_064710) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_16_134643) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -239,6 +239,58 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_064710) do
     t.text "segment"
   end
 
+  create_table "brreg_old", id: :bigint, default: -> { "nextval('brreg_id_seq'::regclass)" }, force: :cascade do |t|
+    t.string "organisasjonsnummer", null: false
+    t.text "navn", null: false
+    t.text "organisasjonsform_kode"
+    t.text "organisasjonsform_beskrivelse"
+    t.text "naeringskode1_kode"
+    t.text "naeringskode1_beskrivelse"
+    t.text "naeringskode2_kode"
+    t.text "naeringskode2_beskrivelse"
+    t.text "naeringskode3_kode"
+    t.text "naeringskode3_beskrivelse"
+    t.text "aktivitet"
+    t.integer "antallansatte"
+    t.text "hjemmeside"
+    t.text "epost"
+    t.text "telefon"
+    t.text "mobiltelefon"
+    t.text "forretningsadresse"
+    t.text "forretningsadresse_poststed"
+    t.text "forretningsadresse_postnummer"
+    t.text "forretningsadresse_kommune"
+    t.text "forretningsadresse_land"
+    t.bigint "driftsinntekter"
+    t.bigint "driftskostnad"
+    t.bigint "ordinaertResultat"
+    t.bigint "aarsresultat"
+    t.boolean "mvaregistrert"
+    t.date "mvaregistrertdato"
+    t.boolean "frivilligmvaregistrert"
+    t.date "frivilligmvaregistrertdato"
+    t.date "stiftelsesdato"
+    t.boolean "konkurs"
+    t.date "konkursdato"
+    t.boolean "underavvikling"
+    t.date "avviklingsdato"
+    t.text "linked_in"
+    t.text "linked_in_ai"
+    t.jsonb "linked_in_alternatives"
+    t.boolean "linked_in_processed", default: false
+    t.datetime "linked_in_last_processed_at"
+    t.integer "http_error"
+    t.text "http_error_message"
+    t.jsonb "brreg_result_raw"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["driftsinntekter"], name: "index_brreg_on_driftsinntekter"
+    t.index ["linked_in_ai"], name: "index_brreg_on_linked_in_ai"
+    t.index ["organisasjonsform_beskrivelse"], name: "index_brreg_on_organisasjonsform_beskrivelse"
+    t.index ["organisasjonsnummer"], name: "index_brreg_on_organisasjonsnummer", unique: true
+  end
+
   create_table "communications", force: :cascade do |t|
     t.datetime "timestamp"
     t.string "event_type"
@@ -358,12 +410,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_064710) do
     t.string "auditable_type", null: false
     t.bigint "auditable_id", null: false
     t.string "service_name", limit: 100, null: false
-    t.string "action", limit: 50, default: "process", null: false
+    t.string "operation_type", limit: 50, default: "process", null: false
     t.integer "status", default: 0, null: false
-    t.text "changed_fields", default: [], array: true
+    t.text "columns_affected", default: [], array: true
     t.text "error_message"
-    t.integer "duration_ms"
-    t.jsonb "context", default: {}
+    t.integer "execution_time_ms"
+    t.jsonb "metadata", default: {}
     t.string "job_id"
     t.string "queue_name"
     t.datetime "scheduled_at"
@@ -371,13 +423,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_064710) do
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "table_name", default: "", null: false
+    t.string "target_table"
+    t.string "record_id"
     t.index ["auditable_type", "auditable_id", "service_name"], name: "index_service_audit_logs_on_auditable_and_service"
     t.index ["auditable_type", "auditable_id"], name: "index_service_audit_logs_on_auditable"
-    t.index ["context"], name: "index_service_audit_logs_on_context", using: :gin
     t.index ["created_at"], name: "index_service_audit_logs_on_created_at"
+    t.index ["metadata"], name: "index_service_audit_logs_on_metadata", using: :gin
+    t.index ["record_id"], name: "index_service_audit_logs_on_record_id"
     t.index ["service_name", "status", "created_at"], name: "index_service_audit_logs_on_service_status_created"
     t.index ["service_name"], name: "index_service_audit_logs_on_service_name"
     t.index ["status"], name: "index_service_audit_logs_on_status"
+    t.index ["table_name"], name: "index_service_audit_logs_on_table_name"
+    t.index ["target_table"], name: "index_service_audit_logs_on_target_table"
   end
 
   create_table "service_configurations", force: :cascade do |t|

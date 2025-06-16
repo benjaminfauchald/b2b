@@ -2,11 +2,11 @@
 
 FactoryBot.define do
   factory :company do
-    sequence(:company_name) { |n| "Company #{n}" }
-    sequence(:registration_number) { |n| "REG#{n}" }
     source_country { 'NO' }
     source_registry { 'brreg' }
     source_id { registration_number }
+    sequence(:registration_number) { |n| format('%09d', n) }
+    company_name { Faker::Company.name }
     organization_form_code { 'AS' }
     organization_form_description { 'Aksjeselskap' }
     primary_industry_code { Faker::Number.number(digits: 5).to_s }
