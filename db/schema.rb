@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_14_100731) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_15_175816) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -239,58 +239,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_14_100731) do
     t.text "segment"
   end
 
-  create_table "brreg_old", id: :bigint, default: -> { "nextval('brreg_id_seq'::regclass)" }, force: :cascade do |t|
-    t.string "organisasjonsnummer", null: false
-    t.text "navn", null: false
-    t.text "organisasjonsform_kode"
-    t.text "organisasjonsform_beskrivelse"
-    t.text "naeringskode1_kode"
-    t.text "naeringskode1_beskrivelse"
-    t.text "naeringskode2_kode"
-    t.text "naeringskode2_beskrivelse"
-    t.text "naeringskode3_kode"
-    t.text "naeringskode3_beskrivelse"
-    t.text "aktivitet"
-    t.integer "antallansatte"
-    t.text "hjemmeside"
-    t.text "epost"
-    t.text "telefon"
-    t.text "mobiltelefon"
-    t.text "forretningsadresse"
-    t.text "forretningsadresse_poststed"
-    t.text "forretningsadresse_postnummer"
-    t.text "forretningsadresse_kommune"
-    t.text "forretningsadresse_land"
-    t.bigint "driftsinntekter"
-    t.bigint "driftskostnad"
-    t.bigint "ordinaertResultat"
-    t.bigint "aarsresultat"
-    t.boolean "mvaregistrert"
-    t.date "mvaregistrertdato"
-    t.boolean "frivilligmvaregistrert"
-    t.date "frivilligmvaregistrertdato"
-    t.date "stiftelsesdato"
-    t.boolean "konkurs"
-    t.date "konkursdato"
-    t.boolean "underavvikling"
-    t.date "avviklingsdato"
-    t.text "linked_in"
-    t.text "linked_in_ai"
-    t.jsonb "linked_in_alternatives"
-    t.boolean "linked_in_processed", default: false
-    t.datetime "linked_in_last_processed_at"
-    t.integer "http_error"
-    t.text "http_error_message"
-    t.jsonb "brreg_result_raw"
-    t.text "description"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["driftsinntekter"], name: "index_brreg_on_driftsinntekter"
-    t.index ["linked_in_ai"], name: "index_brreg_on_linked_in_ai"
-    t.index ["organisasjonsform_beskrivelse"], name: "index_brreg_on_organisasjonsform_beskrivelse"
-    t.index ["organisasjonsnummer"], name: "index_brreg_on_organisasjonsnummer", unique: true
-  end
-
   create_table "communications", force: :cascade do |t|
     t.datetime "timestamp"
     t.string "event_type"
@@ -388,6 +336,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_14_100731) do
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
+    t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
     t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
   end
 

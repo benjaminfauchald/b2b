@@ -6,8 +6,10 @@ module ServiceAuditable
     has_many :service_audit_logs, as: :auditable, dependent: :destroy
 
     # Callbacks for automatic auditing
-    after_create :audit_creation, if: :audit_enabled?
-    after_update :audit_update, if: :audit_enabled?
+    unless Rails.env.test?
+      after_create :audit_creation, if: -> { automatic_audit_enabled? }
+      after_update :audit_update, if: -> { automatic_audit_enabled? }
+    end
   end
 
   # Instance methods
@@ -50,50 +52,43 @@ module ServiceAuditable
   end
 
   def audit_enabled?
-    # Check Rails configuration, default to true
-    # In test environment, allow overriding via environment variable
+    Rails.application.config.service_auditing_enabled
+  end
+
+  def automatic_audit_enabled?
     if Rails.env.test?
-      ENV['ENABLE_SERVICE_AUDITING'] == 'true' || 
-        (Rails.application.config.respond_to?(:service_auditing_enabled) && 
-         Rails.application.config.service_auditing_enabled)
+      ENV['ENABLE_AUTOMATIC_AUDITING'] == 'true'
     else
-      Rails.application.config.respond_to?(:service_auditing_enabled) ? 
-        Rails.application.config.service_auditing_enabled : true
+      Rails.application.config.respond_to?(:automatic_auditing_enabled) ? Rails.application.config.automatic_auditing_enabled != false : true
     end
   end
 
   # Class methods
   class_methods do
     def with_service_audit(service_name, action: 'process', **options)
-      ServiceAuditLog.batch_audit(all, service_name: service_name, action: action, **options) do |record, audit_log|
-        yield(record, audit_log)
+      all.each do |record|
+        record.audit_service_operation(service_name, action: action, **options) do |audit_log|
+          yield(record, audit_log)
+        end
       end
     end
 
     def needing_service(service_name)
       config = ServiceConfiguration.find_by(service_name: service_name)
-      return none unless config&.active? # If no config or inactive, return none
-      
+      return [] unless config&.active?
+
       refresh_threshold = config.refresh_interval_hours.hours.ago
-      
+
       # Find records that either:
-      # 1. Have no successful runs for this service
-      # 2. Have their last successful run older than the refresh threshold
-      left_joins_sql = <<-SQL
-        LEFT JOIN (
-          SELECT DISTINCT ON (auditable_id) 
-            auditable_id, 
-            completed_at
-          FROM service_audit_logs 
-          WHERE auditable_type = '#{name}' 
-            AND service_name = '#{service_name}' 
-            AND status = #{ServiceAuditLog.statuses[:success]}
-          ORDER BY auditable_id, completed_at DESC
-        ) latest_runs ON #{table_name}.id = latest_runs.auditable_id
-      SQL
-      
-      joins(left_joins_sql)
-        .where('latest_runs.auditable_id IS NULL OR latest_runs.completed_at < ?', refresh_threshold)
+      # 1. Have never been processed by this service
+      # 2. Have only failed attempts
+      # 3. Have a successful run older than the refresh interval
+      where.not(
+        id: ServiceAuditLog
+          .where(auditable_type: name, service_name: service_name, status: ServiceAuditLog.statuses[:success])
+          .where('completed_at > ?', refresh_threshold)
+          .select(:auditable_id)
+      )
     end
   end
 
@@ -111,17 +106,29 @@ module ServiceAuditable
   end
 
   def audit_update
-    return unless saved_changes.present?
-    
     service_audit_logs.create!(
       service_name: 'automatic_audit',
       action: 'update',
-      changed_fields: saved_changes.keys,
       context: {
         'model_class' => self.class.name,
-        'record_id' => id,
-        'changes' => saved_changes
-      }
+        'record_id' => id
+      },
+      changed_fields: changed
     )
+  end
+end
+
+# Module methods for thread-local auditing control
+module ServiceAuditable
+  def self.automatic_auditing_disabled?
+    Thread.current[:automatic_auditing_disabled] == true
+  end
+
+  def self.with_automatic_auditing_disabled
+    previous = Thread.current[:automatic_auditing_disabled]
+    Thread.current[:automatic_auditing_disabled] = true
+    yield
+  ensure
+    Thread.current[:automatic_auditing_disabled] = previous
   end
 end 

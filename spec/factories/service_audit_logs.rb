@@ -1,11 +1,18 @@
 FactoryBot.define do
   factory :service_audit_log do
     association :auditable, factory: :user
-    service_name { 'test_service_v1' }
+    service_name { 'test_service' }
     action { 'process' }
-    status { :pending }
-    context { {} }
+    status { 0 }
     changed_fields { [] }
+    error_message { nil }
+    duration_ms { nil }
+    context { {} }
+    job_id { nil }
+    queue_name { nil }
+    scheduled_at { nil }
+    started_at { nil }
+    completed_at { nil }
 
     trait :success do
       status { :success }
@@ -44,12 +51,12 @@ FactoryBot.define do
 
     trait :for_domain do
       association :auditable, factory: :domain
-      service_name { 'domain_enhancement_v1' }
+      service_name { 'domain_enhancement' }
     end
 
     trait :for_user do
       association :auditable, factory: :user
-      service_name { 'user_enhancement_v1' }
+      service_name { 'user_enhancement' }
     end
 
     trait :long_running do

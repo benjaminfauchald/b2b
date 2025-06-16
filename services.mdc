@@ -8,24 +8,15 @@ alwaysApply: false
 ## Service Naming Convention
 
 - Do *NOT* use versioning in naming
-- Services must follow the pattern: `model_action`
-- Examples: `domain_testing`, `domain_a_record_testing`, `domain_mx_record_testing`,`company_linked_in_ai_url_finder` OR the user can explicitly specify the service name if it is a bit more complex like
-`company_financial_no_brreg` which specifies the countries to be updated with the brreg service. 
-
-- Always include version number to support future iterations
-- Sidekiq and other queue names should match service names (e.g., `DomainTestingService` queue for `domain_testing_v1` service)
+- Services must follow the pattern: `model_action_service`
+- Examples: `domain_testing_service`, `domain_a_record_testing_service`, `domain_mx_record_testing_service`, `company_linked_in_ai_url_finder_service`, `company_financial_no_brreg_service`
+- Sidekiq and other queue names should match service names (e.g., `DomainTestingService` queue for `domain_testing_service`)
 
 ## Service Configuration
 ```ruby
-ServiceConfiguration.find_or_create_by(service_name: 'service_name_v1') do |config|
-  config.refresh_interval_hours = 168  # 7 days
-  config.batch_size = 500
-  config.retry_attempts = 2
-  config.active = true
-  config.depends_on_services = []  # Array of dependent services
-  config.settings = {
-    # Service-specific settings
-  }
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing_service') do |config|
+  config.refresh_interval_hours = 24
+  config.depends_on_services = ['domain_a_record_testing_service']
 end
 ```
 
@@ -33,7 +24,7 @@ end
 ```ruby
 class MyService < ApplicationService
   def initialize(attributes = {})
-    super(service_name: 'my_service_v1', action: 'process', **attributes)
+    super(service_name: 'my_service', action: 'process', **attributes)
   end
 
   def perform
@@ -64,7 +55,7 @@ end
 ## Audit Log Structure
 ```ruby
 {
-  service_name: 'service_name_v1',
+  service_name: 'domain_testing_service',
   action: 'process',
   status: [:pending, :success, :failed],
   context: {
@@ -158,11 +149,11 @@ config.settings = {
 ## Queue Configuration
 ```yaml
 :queues:
-  - [ServiceName, 2]  # Priority 2
+  - [DomainTestingService, 2]  # Priority 2
   - [default, 1]      # Priority 1
 
 :limits:
-  ServiceName: 3      # Max concurrent jobs
+  DomainTestingService: 3      # Max concurrent jobs
 ```
 
 ## Service Audit Views

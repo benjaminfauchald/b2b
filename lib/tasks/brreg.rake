@@ -1,0 +1,249 @@
+namespace :brreg do
+  desc 'Process a sample of brreg records'
+  task sample: :environment do
+    logger = Logger.new(STDOUT)
+    count = ENV['COUNT']&.to_i || 5
+    
+    logger.info ""
+    logger.info "Brreg Sample Processing"
+    logger.info "=" * 60
+    logger.info "Processing #{count} random records...\n"
+    
+    Brreg.order('RANDOM()').limit(count).each do |record|
+      logger.info "Organization: #{record.navn} (##{record.organisasjonsnummer})"
+      logger.info "Type: #{record.organisasjonsform_beskrivelse || 'N/A'}"
+      logger.info "Industry: #{record.naeringskode1_beskrivelse || 'N/A'}"
+      logger.info "Employees: #{record.antallansatte || 'N/A'}"
+      logger.info "Website: #{record.hjemmeside || 'N/A'}"
+      logger.info "Address: #{[record.forretningsadresse_adresse, record.forretningsadresse_postnummer, record.forretningsadresse_poststed].compact.join(', ')}"
+      
+      # Check if this record has been processed recently
+      last_processed = ServiceAuditLog
+        .where(service_name: 'brreg')
+        .where(auditable_type: 'Brreg')
+        .where("auditable_id::text = ?", record.organisasjonsnummer.to_s)
+        .order(created_at: :desc)
+        .first
+      
+      if last_processed
+        logger.info "Last Processed: #{last_processed.created_at} (#{last_processed.status})"
+        logger.info "Duration: #{last_processed.duration_ms}ms" if last_processed.duration_ms
+      else
+        logger.info "Status: Not yet processed"
+      end
+      
+      logger.info ""
+    end
+    
+    logger.info "Sample processing complete"
+    logger.info "=" * 60
+  end
+
+  desc 'Queue all brreg records for processing'
+  task queue_all: :environment do
+    batch_size = ENV['BATCH_SIZE']&.to_i || 1000
+    total = Brreg.count
+    processed = 0
+    last_processed_number = ENV['LAST_NUMBER']&.to_i || 0
+
+    puts "\nBrreg Queue All Processing"
+    puts "============================================================"
+    puts "Total records to process: #{total}"
+    puts "Batch size: #{batch_size}"
+    puts "Starting from record number: #{last_processed_number}"
+
+    scope = Brreg.where('organisasjonsnummer > ?', last_processed_number).order('organisasjonsnummer ASC')
+    
+    loop do
+      batch = scope.limit(batch_size)
+      break if batch.empty?
+
+      BrregKafkaProducer.produce_batch(batch)
+      processed += batch.size
+      last_processed_number = batch.last.organisasjonsnummer
+
+      puts "Processed batch up to #{last_processed_number} (#{processed}/#{total})"
+      File.write('tmp/brreg_last_number.txt', last_processed_number)
+      
+      scope = Brreg.where('organisasjonsnummer > ?', last_processed_number).order('organisasjonsnummer ASC')
+    end
+
+    puts "\nProcessing complete!"
+    puts "Total records queued: #{processed}"
+  end
+
+  desc 'Show pending brreg records'
+  task show_pending: :environment do
+    total = Brreg.count
+    processed = Company.where.not(brreg_id: nil).count
+    untested = total - processed
+    recent = Company.where('created_at > ?', 24.hours.ago).where.not(brreg_id: nil).count
+    old = processed - recent
+
+    puts "\nPending Brreg Processing Statistics"
+    puts "============================================================"
+    puts "Total Records: #{total}"
+    puts "Untested Records: #{untested} (#{(untested.to_f/total*100).round(2)}%)"
+    puts "Recently Processed (< 24h): #{recent} (#{(recent.to_f/total*100).round(2)}%)"
+    puts "Old Processing (> 24h): #{old} (#{(old.to_f/total*100).round(2)}%)"
+
+    puts "\nSample of Untested Records:"
+    Brreg.left_outer_joins(:company)
+         .where(companies: { id: nil })
+         .order('RANDOM()')
+         .limit(5)
+         .each do |record|
+      puts "  #{record.organisasjonsnummer} - #{record.navn} (Created: #{record.created_at.strftime('%Y-%m-%d')})"
+    end
+  end
+
+  desc 'Show brreg processing statistics'
+  task stats: :environment do
+    total = Brreg.count
+    processed = Company.where.not(brreg_id: nil).count
+    successful = Company.where.not(brreg_id: nil).where.not(status: 'error').count
+    failed = Company.where.not(brreg_id: nil).where(status: 'error').count
+
+    recent_logs = ServiceAuditLog.where(service_name: 'brreg')
+                                .where('created_at > ?', 24.hours.ago)
+    recent_success = recent_logs.where(status: :success).count
+    recent_total = recent_logs.count
+    success_rate = recent_total > 0 ? (recent_success.to_f / recent_total * 100).round(2) : 0
+
+    avg_duration = recent_logs.average(:duration_ms)&.round || 0
+    min_duration = recent_logs.minimum(:duration_ms) || 0
+    max_duration = recent_logs.maximum(:duration_ms) || 0
+
+    puts "\nBrreg Processing Statistics"
+    puts "============================================================"
+    puts "Records:"
+    puts "  Total: #{total}"
+    puts "  Processed: #{processed} (#{(processed.to_f/total*100).round(2)}%)"
+    puts "  Successful: #{successful} (#{(successful.to_f/processed*100).round(2)}% of processed)"
+    puts "  Failed: #{failed}"
+
+    puts "\nService Audit Logs:"
+    puts "  Total Logs: #{recent_total}"
+    puts "  Successful: #{recent_success} (#{success_rate}%)"
+    puts "  Failed: #{recent_total - recent_success}"
+
+    puts "\nPerformance:"
+    puts "  Average Duration: #{avg_duration}ms"
+    puts "  Min Duration: #{min_duration}ms"
+    puts "  Max Duration: #{max_duration}ms"
+
+    puts "\nRecent Activity (24h):"
+    puts "  Records Processed: #{recent_total}"
+    puts "  Success Rate: #{success_rate}%"
+  end
+
+  desc 'Migrate data from Brreg to Company model'
+  task migrate_to_companies: :environment do
+    logger = Logger.new(STDOUT)
+    batch_size = ENV['BATCH_SIZE']&.to_i || 1000
+    total = Brreg.count
+    processed = 0
+    success_count = 0
+    skipped_count = 0
+    error_count = 0
+    batch_index = 0
+
+    logger.info "\nStarting Brreg to Company migration"
+    logger.info "Total records to process: #{total}"
+    logger.info "Batch size: #{batch_size}"
+    logger.info "=" * 60
+
+    # Get all organisasjonsnummers first to ensure consistent pagination
+    org_numbers = Brreg.unscoped.order(:organisasjonsnummer).pluck(:organisasjonsnummer)
+    
+    org_numbers.each_slice(batch_size) do |batch_org_numbers|
+      batch_index += 1
+      batch = Brreg.where(organisasjonsnummer: batch_org_numbers)
+                  .index_by(&:organisasjonsnummer)
+                  .values_at(*batch_org_numbers)
+      
+      logger.info "Processing batch ##{batch_index} (records #{processed + 1} - #{[processed + batch.size, total].min})"
+
+      ActiveRecord::Base.transaction do
+        batch.each do |brreg_record|
+          begin
+            company = Company.find_or_initialize_by(registration_number: brreg_record.organisasjonsnummer)
+            
+            # Skip if the company already exists and hasn't changed
+            if company.persisted? && !company_changed?(company, brreg_record)
+              logger.debug "Skipping company #{brreg_record.organisasjonsnummer} - no changes detected"
+              skipped_count += 1
+              next
+            end
+            
+            update_company_attributes(company, brreg_record)
+            
+            if company.save!
+              success_count += 1
+              logger.debug "Successfully #{company.previously_new_record? ? 'created' : 'updated'} company: #{brreg_record.organisasjonsnummer}"
+            end
+            
+          rescue ActiveRecord::RecordNotUnique => e
+            logger.error "Skipping duplicate registration number: #{brreg_record.organisasjonsnummer} - #{e.message}"
+            skipped_count += 1
+          rescue => e
+            error_count += 1
+            logger.error "Error processing Brreg record #{brreg_record.organisasjonsnummer}: #{e.message}"
+            logger.error e.backtrace.join("\n") if ENV['DEBUG']
+          end
+          
+          processed += 1
+        end
+      end
+      
+      logger.info "Processed #{processed}/#{total} records (#{((processed.to_f / total) * 100).round(1)}%)"
+      logger.info "Success: #{success_count}, Skipped: #{skipped_count}, Errors: #{error_count}"
+    end
+
+    logger.info "\nMigration completed!"
+    logger.info "Total processed: #{processed}"
+    logger.info "Successfully migrated: #{success_count}"
+    logger.info "Skipped (no changes/duplicates): #{skipped_count}"
+    logger.info "Errors: #{error_count}"
+    logger.info "=" * 60
+  end
+
+  private
+
+  def company_changed?(company, brreg_record)
+    company.new_record? || 
+      company.company_name != brreg_record.navn ||
+      company.organization_form_description != brreg_record.organisasjonsform_beskrivelse
+  end
+
+  def update_company_attributes(company, brreg_record)
+    company.assign_attributes(
+      source_country: 'NO',
+      source_registry: 'brreg',
+      source_id: brreg_record.organisasjonsnummer.to_s,
+      company_name: brreg_record.navn,
+      organization_form_code: brreg_record.organisasjonsform_kode,
+      organization_form_description: brreg_record.organisasjonsform_beskrivelse,
+      primary_industry_code: brreg_record.naeringskode1_kode,
+      primary_industry_description: brreg_record.naeringskode1_beskrivelse,
+      website: brreg_record.hjemmeside,
+      email: brreg_record.epostadresse,
+      phone: brreg_record.telefon,
+      mobile: brreg_record.mobil,
+      postal_address: brreg_record.forretningsadresse_adresse,
+      postal_city: brreg_record.forretningsadresse_poststed,
+      postal_code: brreg_record.forretningsadresse_postnummer,
+      postal_municipality: brreg_record.forretningsadresse_kommune,
+      postal_country: brreg_record.forretningsadresse_land,
+      postal_country_code: brreg_record.forretningsadresse_landkode,
+      has_registered_employees: brreg_record.harregistrertantallansatte == 'true',
+      employee_count: brreg_record.antallansatte&.to_i,
+      employee_registration_date_registry: parse_date(brreg_record.registreringsdatoantallansatteenhetsregisteret),
+      employee_registration_date_nav: parse_date(brreg_record.registreringsdatoantallansattenavaaregisteret)
+    )
+  end
+
+  def parse_date(date_str)
+    Date.parse(date_str) rescue nil
+  end
+end 

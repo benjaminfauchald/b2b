@@ -1,12 +1,13 @@
 class UserEnhancementService < ApplicationService
   def initialize(attributes = {})
-    super(service_name: 'user_enhancement_v1', action: 'enhance', **attributes)
+    super(service_name: 'user_enhancement_service', action: 'enhance', **attributes)
   end
   
   private
   
   def perform
     users_needing_enhancement = User.needing_service(service_name)
+    puts "[DEBUG] UserEnhancementService processing user IDs: #{users_needing_enhancement.map(&:id)}"
     
     if users_needing_enhancement.empty?
       puts "No users need enhancement at this time."
@@ -51,17 +52,15 @@ class UserEnhancementService < ApplicationService
     raise
   end
   
-  private
-  
   def classify_email_provider(domain)
     case domain.downcase
-    when 'gmail.com', 'googlemail.com'
+    when /gmail\.com$/, /googlemail\.com$/
       'Google'
-    when 'yahoo.com', 'yahoo.co.uk'
+    when /yahoo\./
       'Yahoo'
-    when 'hotmail.com', 'outlook.com', 'live.com'
+    when /hotmail\.com$/, /outlook\.com$/, /live\.com$/
       'Microsoft'
-    when 'icloud.com', 'me.com', 'mac.com'
+    when /icloud\.com$/, /me\.com$/, /mac\.com$/
       'Apple'
     else
       'Other'

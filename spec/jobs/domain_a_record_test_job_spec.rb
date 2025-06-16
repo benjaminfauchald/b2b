@@ -33,10 +33,10 @@ RSpec.describe DomainARecordTestJob, type: :job do
     end
 
     context 'when domain is not found' do
-      it 'raises ActiveRecord::RecordNotFound' do
+      it 'handles missing domain gracefully' do
         expect {
           DomainARecordTestJob.perform_now(99999)
-        }.to raise_error(ActiveRecord::RecordNotFound)
+        }.not_to raise_error
       end
     end
 

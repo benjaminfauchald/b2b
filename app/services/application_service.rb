@@ -3,16 +3,26 @@ class ApplicationService
   include ActiveModel::Attributes
   include ActiveModel::Validations
 
+  attr_reader :service_name, :action, :batch_size
+
   # Core service attributes
-  attribute :service_name, :string
   attribute :action, :string, default: 'process'
   attribute :batch_size, :integer
 
   # Validations
-  validates :service_name, presence: true, format: {
-    with: /\A[a-z_]+_v\d+\z/,
-    message: 'must follow naming convention (service_name_v1)'
+  validates :action, presence: true, format: {
+    with: /\A[a-z0-9_]+\z/,
+    message: 'must follow naming convention (e.g., process, enhance, test)'
   }
+
+  validates :service_name, presence: true, format: { with: /\A[a-z0-9_]+\z/, message: "can only contain lowercase letters, numbers, and underscores" }
+
+  def initialize(service_name:, action: 'process', batch_size: 1000, **attributes)
+    @service_name = service_name
+    @action = action
+    @batch_size = batch_size
+    attributes.each { |key, value| instance_variable_set("@#{key}", value) }
+  end
 
   # Main entry point
   def call
@@ -39,19 +49,24 @@ class ApplicationService
     @configuration ||= ServiceConfiguration.find_by(service_name: service_name)
   end
 
+  # Service name derived from class name
+  def service_name
+    return @service_name if @service_name.present?
+    if self.class.name.present? && self.class.name != ""
+      self.class.name.underscore.encode('UTF-8')
+    else
+      # Fallback for anonymous classes in tests
+      "test_service_#{SecureRandom.hex(8)}"
+    end
+  end
+
+  def service_name=(value)
+    @service_name = value
+  end
+
   # Batch processing with audit logging
-  def batch_process(records, **options)
-    effective_batch_size = batch_size || configuration&.batch_size
-    
-    # Filter out service-specific options that shouldn't go to audit log
-    audit_options = options.except(:batch_size)
-    
-    ServiceAuditLog.batch_audit(
-      records, 
-      service_name: service_name, 
-      action: action,
-      **audit_options
-    ) do |record, audit_log|
+  def batch_process(records)
+    ServiceAuditLog.batch_audit(records, service_name: service_name, action: action, batch_size: batch_size) do |record, audit_log|
       yield(record, audit_log)
     end
   end

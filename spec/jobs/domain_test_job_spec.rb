@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe DomainTestJob, type: :job do
   describe '#perform' do
     let(:domain) { create(:domain, domain: 'example.com', dns: nil) }
+    let(:service_name) { 'domain_testing' }
 
     context 'with valid domain ID' do
       it 'calls DomainTestingService.test_dns' do
@@ -11,8 +12,8 @@ RSpec.describe DomainTestJob, type: :job do
       end
 
       it 'updates domain record with result' do
-        # Allow real DNS lookup to work by mocking Resolv
-        allow(Resolv).to receive(:getaddress).with('example.com').and_return('1.2.3.4')
+        # Mock successful DNS resolution
+        allow(DomainTestingService).to receive(:test_dns).with(domain).and_return(true)
         described_class.new.perform(domain.id)
         expect(domain.reload.dns).to be true
       end

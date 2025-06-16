@@ -11,10 +11,13 @@ class Domain < ApplicationRecord
   scope :dns_inactive, -> { where(dns: false) }
   scope :with_www, -> { where(www: true) }
   scope :with_mx, -> { where(mx: true) }
+  scope :www_active, -> { where(www: true) }
+  scope :www_inactive, -> { where(www: false) }
+  scope :www_untested, -> { where(www: nil) }
   
   # Instance methods
-  def needs_testing?
-    dns.nil? || needs_service?('domain_testing_service')
+  def needs_testing?(service_name = 'domain_testing_service')
+    dns.nil? || needs_service?(service_name)
   end
   
   def test_status
@@ -25,7 +28,11 @@ class Domain < ApplicationRecord
     end
   end
 
-  def needs_www_testing?
-    dns? && (www.nil? || needs_service?('domain_a_record_testing_v1'))
+  def needs_www_testing?(service_name = 'domain_a_record_testing')
+    dns? && (www.nil? || needs_service?(service_name))
+  end
+
+  def needs_dns_testing?
+    dns.nil? || needs_service?('domain_testing')
   end
 end

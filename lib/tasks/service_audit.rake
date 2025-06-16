@@ -59,10 +59,10 @@ namespace :service_audit do
     puts "Running service: #{service_name}"
     
     case service_name
-    when 'user_enhancement_v1'
+    when 'user_enhancement_service'
       result = UserEnhancementService.new.call
       puts "User enhancement completed: #{result}"
-    when 'domain_dns_testing_v1'
+    when 'domain_testing_service'
       result = DomainTestingService.new.call
       puts "Domain DNS testing completed: #{result}"
     else

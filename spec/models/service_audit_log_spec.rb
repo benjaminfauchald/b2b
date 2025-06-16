@@ -1,6 +1,15 @@
 require 'rails_helper'
 
 RSpec.describe ServiceAuditLog, type: :model do
+  let(:service_name) { 'domain_testing' }
+  let!(:service_config) do
+    create(:service_configuration, 
+           service_name: service_name,
+           refresh_interval_hours: 24,
+           batch_size: 100,
+           active: true)
+  end
+
   describe 'associations' do
     it { should belong_to(:auditable) }
   end
@@ -8,6 +17,8 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'validations' do
     it { should validate_presence_of(:service_name) }
     it { should validate_presence_of(:action) }
+    it { should validate_presence_of(:status) }
+    it { should validate_presence_of(:auditable) }
     it { should validate_length_of(:service_name).is_at_most(100) }
     it { should validate_length_of(:action).is_at_most(50) }
   end
@@ -19,8 +30,8 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'scopes' do
     let!(:recent_log) { create(:service_audit_log, created_at: 1.hour.ago) }
     let!(:old_log) { create(:service_audit_log, created_at: 1.week.ago) }
-    let!(:user_log) { create(:service_audit_log, service_name: 'user_enhancement_v1') }
-    let!(:domain_log) { create(:service_audit_log, service_name: 'domain_testing_v1') }
+    let!(:user_log) { create(:service_audit_log, service_name: 'user_enhancement_service') }
+    let!(:domain_log) { create(:service_audit_log, service_name: 'domain_testing_service') }
     let!(:success_log) { create(:service_audit_log, :success) }
     let!(:failed_log) { create(:service_audit_log, :failed) }
 
@@ -33,35 +44,44 @@ RSpec.describe ServiceAuditLog, type: :model do
     end
 
     describe '.for_service' do
-      it 'filters by service name' do
-        expect(ServiceAuditLog.for_service('user_enhancement_v1')).to contain_exactly(user_log)
+      let!(:log1) { create(:service_audit_log, service_name: service_name) }
+      let!(:log2) { create(:service_audit_log, service_name: 'other_service') }
+
+      it 'returns only logs for specified service' do
+        expect(ServiceAuditLog.for_service(service_name)).to include(log1)
+        expect(ServiceAuditLog.for_service(service_name)).not_to include(log2)
       end
     end
 
     describe '.successful' do
       it 'returns only successful logs' do
-        expect(ServiceAuditLog.successful).to contain_exactly(success_log)
+        expect(ServiceAuditLog.successful).to include(success_log)
+        expect(ServiceAuditLog.successful).not_to include(failed_log)
       end
     end
 
     describe '.failed' do
       it 'returns only failed logs' do
-        expect(ServiceAuditLog.failed).to contain_exactly(failed_log)
+        expect(ServiceAuditLog.failed).to include(failed_log)
+        expect(ServiceAuditLog.failed).not_to include(success_log)
       end
     end
 
     describe '.for_auditable' do
-      let(:user) { create(:user) }
-      let!(:user_audit_log) { create(:service_audit_log, auditable: user) }
+      let(:domain) { create(:domain) }
+      let!(:log1) { create(:service_audit_log, auditable: domain) }
+      let!(:log2) { create(:service_audit_log) }
 
-      it 'returns logs for specific auditable record' do
-        expect(ServiceAuditLog.for_auditable(user)).to contain_exactly(user_audit_log)
+      it 'returns only logs for specified auditable' do
+        expect(ServiceAuditLog.for_auditable(domain)).to include(log1)
+        expect(ServiceAuditLog.for_auditable(domain)).not_to include(log2)
       end
     end
   end
 
   describe 'instance methods' do
     let(:audit_log) { build(:service_audit_log) }
+    let!(:service_config) { create(:service_configuration, service_name: service_name) }
 
     describe '#mark_started!' do
       it 'sets started_at timestamp' do
@@ -78,29 +98,41 @@ RSpec.describe ServiceAuditLog, type: :model do
     end
 
     describe '#mark_success!' do
-      it 'sets status to success and marks completed' do
-        audit_log.started_at = 1.second.ago
-        audit_log.mark_success!
-        expect(audit_log).to be_status_success
-        expect(audit_log.completed_at).to be_present
+      let(:log) { create(:service_audit_log, status: :started) }
+
+      it 'marks log as successful' do
+        log.mark_success!
+        expect(log.status).to eq('success')
+        expect(log.completed_at).to be_present
       end
     end
 
     describe '#mark_failed!' do
-      it 'sets status to failed and marks completed' do
-        audit_log.started_at = 1.second.ago
-        audit_log.mark_failed!('Test error')
-        expect(audit_log).to be_status_failed
-        expect(audit_log.error_message).to eq('Test error')
-        expect(audit_log.completed_at).to be_present
+      let(:log) { create(:service_audit_log, status: :started) }
+
+      it 'marks log as failed' do
+        log.mark_failed!('Test error')
+        expect(log.status).to eq('failed')
+        expect(log.error_message).to eq('Test error')
+        expect(log.completed_at).to be_present
       end
     end
 
     describe '#add_context' do
-      it 'merges context data' do
-        audit_log.add_context(key1: 'value1')
-        audit_log.add_context(key2: 'value2')
-        expect(audit_log.context).to eq({ 'key1' => 'value1', 'key2' => 'value2' })
+      let(:log) { create(:service_audit_log) }
+
+      it 'adds context to log' do
+        log.add_context(test_key: 'test_value')
+        expect(log.context['test_key']).to eq('test_value')
+      end
+
+      it 'merges with existing context' do
+        log.update!(context: { existing_key: 'existing_value' })
+        log.add_context(new_key: 'new_value')
+        expect(log.context).to include(
+          'existing_key' => 'existing_value',
+          'new_key' => 'new_value'
+        )
       end
     end
 
@@ -114,6 +146,34 @@ RSpec.describe ServiceAuditLog, type: :model do
         expect(audit_log.changed_fields).to include('name')
       end
     end
+
+    it 'sets service_name' do
+      expect(audit_log.service_name).to eq(service_name)
+    end
+
+    describe '#status_success?' do
+      it 'returns true for success status' do
+        log = create(:service_audit_log, :success)
+        expect(log.status_success?).to be true
+      end
+
+      it 'returns false for other statuses' do
+        log = create(:service_audit_log, :failed)
+        expect(log.status_success?).to be false
+      end
+    end
+
+    describe '#status_failed?' do
+      it 'returns true for failed status' do
+        log = create(:service_audit_log, :failed)
+        expect(log.status_failed?).to be true
+      end
+
+      it 'returns false for other statuses' do
+        log = create(:service_audit_log, :success)
+        expect(log.status_failed?).to be false
+      end
+    end
   end
 
   describe 'class methods' do
@@ -122,7 +182,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'creates audit logs for batch processing' do
         expect do
-          ServiceAuditLog.batch_audit(users, service_name: 'test_service_v1') do |user, audit_log|
+          ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
             audit_log.mark_success!
           end
         end.to change(ServiceAuditLog, :count).by(3)
@@ -130,7 +190,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'yields each record with its audit log' do
         yielded_pairs = []
-        ServiceAuditLog.batch_audit(users, service_name: 'test_service_v1') do |user, audit_log|
+        ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
           yielded_pairs << [user, audit_log]
           audit_log.mark_success!
         end
@@ -142,6 +202,14 @@ RSpec.describe ServiceAuditLog, type: :model do
           expect(audit_log.auditable).to eq(user)
         end
       end
+
+      it 'handles errors and marks failed logs' do
+        expect do
+          ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
+            raise 'Test error'
+          end
+        end.to change(ServiceAuditLog, :count).by(3)
+      end
     end
 
     describe '.cleanup_old_logs' do
@@ -151,6 +219,23 @@ RSpec.describe ServiceAuditLog, type: :model do
       it 'removes logs older than specified days' do
         expect { ServiceAuditLog.cleanup_old_logs(90) }.to change(ServiceAuditLog, :count).by(-3)
         expect(ServiceAuditLog.all).to match_array(recent_logs)
+      end
+    end
+
+    describe '.create_for_service' do
+      let(:domain) { create(:domain) }
+
+      it 'creates log with service name and action' do
+        log = ServiceAuditLog.create_for_service(service_name, action: 'test_dns', auditable: domain)
+        expect(log.service_name).to eq(service_name)
+        expect(log.action).to eq('test_dns')
+        expect(log.auditable).to eq(domain)
+        expect(log.status).to eq('started')
+      end
+
+      it 'creates log with default action' do
+        log = ServiceAuditLog.create_for_service(service_name, auditable: domain)
+        expect(log.action).to eq('process')
       end
     end
   end

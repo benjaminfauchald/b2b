@@ -1,5 +1,6 @@
 Rails.application.configure do
   config.service_auditing_enabled = !Rails.env.test?
+  config.automatic_auditing_enabled = !Rails.env.test?
   config.service_auditing = ActiveSupport::OrderedOptions.new
   config.service_auditing.cleanup_after_days = 90
   config.service_auditing.default_batch_size = 1000

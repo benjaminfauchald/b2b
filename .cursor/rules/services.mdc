@@ -10,32 +10,29 @@ alwaysApply: false
 ## Service Naming Convention
 
 - Do *NOT* use versioning in naming
-- Services must follow the pattern: `model_action`
-- Examples: `domain_testing`, `domain_a_record_testing`, `domain_mx_record_testing`,`company_linked_in_ai_url_finder` OR the user can explicitly specify the service name if it is a bit more complex like
-`company_financial_no_brreg` which specifies the countries to be updated with the brreg service. 
+- Use descriptive, action-oriented names
+- Keep names concise but clear
+- Use snake_case for service names
+- Sidekiq and other queue names should match service names (e.g., `DomainTestingService` queue for `domain_testing` service)
 
-- Always include version number to support future iterations
-- Sidekiq and other queue names should match service names (e.g., `DomainTestingService` queue for `domain_testing_v1` service)
+## EXPLICIT SERVICE NAME RULE
+- All service names must use the full class name in underscore format (e.g., 'user_enhancement_service', 'domain_testing_service').
+- No version numbers allowed in service names.
+- All code, tests, and documentation must follow this convention.
 
 ## Service Configuration
 ```ruby
-ServiceConfiguration.find_or_create_by(service_name: 'service_name_v1') do |config|
-  config.refresh_interval_hours = 168  # 7 days
-  config.batch_size = 500
-  config.retry_attempts = 2
-  config.active = true
-  config.depends_on_services = []  # Array of dependent services
-  config.settings = {
-    # Service-specific settings
-  }
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing') do |config|
+  config.refresh_interval_hours = 24
+  config.dependencies = ['domain_a_record_testing']
 end
 ```
 
 ## Service Implementation Template
 ```ruby
 class MyService < ApplicationService
-  def initialize(attributes = {})
-    super(service_name: 'my_service_v1', action: 'process', **attributes)
+  def initialize(**attributes)
+    super(service_name: 'my_service', action: 'process', **attributes)
   end
 
   def perform
@@ -66,7 +63,7 @@ end
 ## Audit Log Structure
 ```ruby
 {
-  service_name: 'service_name_v1',
+  service_name: 'domain_testing',
   action: 'process',
   status: [:pending, :success, :failed],
   context: {

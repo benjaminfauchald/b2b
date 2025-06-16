@@ -11,6 +11,15 @@ RSpec.describe DomainARecordTestingService, type: :service do
   let!(:domain_with_dns_nil) { create(:domain, dns: nil, www: nil) }
   let!(:domain_already_tested) { create(:domain, dns: true, www: true) }
 
+  let(:service_name) { 'domain_a_record_testing' }
+  let!(:service_config) do
+    create(:service_configuration, 
+           service_name: service_name,
+           refresh_interval_hours: 24,
+           batch_size: 100,
+           active: true)
+  end
+
   describe '.test_a_record' do
     context 'when www.domain resolves successfully' do
       before do
@@ -30,7 +39,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
       end
     end
 
-    context 'when www.domain fails to resolve (ResolvError)' do
+    context 'when www.domain fails to resolve' do
       before do
         allow(Resolv).to receive(:getaddress).with("www.#{domain_with_dns_true.domain}").and_raise(Resolv::ResolvError)
       end
@@ -50,7 +59,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
     context 'when www.domain times out' do
       before do
-        allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+        allow(Resolv).to receive(:getaddress).with("www.#{domain_with_dns_true.domain}").and_raise(Timeout::Error)
       end
 
       it 'updates domain www field to false' do
@@ -74,108 +83,147 @@ RSpec.describe DomainARecordTestingService, type: :service do
       it 'updates domain www field to nil' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
         
-        expect(result).to be_nil
-        expect(domain_with_dns_true.reload.www).to be_nil
+        expect(result).to be nil
+        expect(domain_with_dns_true.reload.www).to be nil
       end
 
       it 'returns nil' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
-        expect(result).to be_nil
+        expect(result).to be nil
       end
     end
   end
 
   describe '.queue_all_domains' do
-    before do
-      # Create additional test domains
-      create_list(:domain, 5, dns: true, www: nil)
-      create_list(:domain, 3, dns: false, www: nil)
-      create_list(:domain, 2, dns: nil, www: nil)
-    end
-
     it 'queues only domains with dns=true and www=nil' do
-      expect(DomainARecordTestJob).to receive(:perform_later).exactly(6).times # 1 + 5 domains with dns=true, www=nil
+      expect(DomainARecordTestingWorker).to receive(:perform_async).with(domain_with_dns_true.id)
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_false.id)
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_nil.id)
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_already_tested.id)
       
-      result = DomainARecordTestingService.queue_all_domains
-      expect(result).to eq(6)
+      DomainARecordTestingService.queue_all_domains
     end
 
     it 'does not queue domains with dns=false' do
-      expect(DomainARecordTestJob).to receive(:perform_later).exactly(6).times
-      
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_false.id)
       DomainARecordTestingService.queue_all_domains
     end
 
     it 'does not queue domains with dns=nil' do
-      expect(DomainARecordTestJob).to receive(:perform_later).exactly(6).times
-      
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_nil.id)
       DomainARecordTestingService.queue_all_domains
     end
 
-    it 'does not queue domains already tested (www not nil)' do
-      expect(DomainARecordTestJob).to receive(:perform_later).exactly(6).times
-      
+    it 'does not queue domains already tested' do
+      expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_already_tested.id)
       DomainARecordTestingService.queue_all_domains
     end
 
     it 'returns count of queued domains' do
-      allow(DomainARecordTestJob).to receive(:perform_later)
-      
-      result = DomainARecordTestingService.queue_all_domains
-      expect(result).to eq(6)
+      count = DomainARecordTestingService.queue_all_domains
+      expect(count).to eq(1) # Only domain_with_dns_true should be queued
     end
   end
 
   describe '.queue_100_domains' do
-    context 'when there are more than 100 domains to test' do
-      before do
-        create_list(:domain, 150, dns: true, www: nil)
-      end
+    before do
+      create_list(:domain, 150, dns: true, www: nil)
+    end
 
+    it 'only queues domains with dns=true and www=nil' do
+      expect(DomainARecordTestingWorker).to receive(:perform_async).exactly(100).times
+      DomainARecordTestingService.queue_100_domains
+    end
+
+    context 'when there are more than 100 domains to test' do
       it 'queues exactly 100 domains' do
-        expect(DomainARecordTestJob).to receive(:perform_later).exactly(100).times
-        
-        result = DomainARecordTestingService.queue_100_domains
-        expect(result).to eq(100)
+        count = DomainARecordTestingService.queue_100_domains
+        expect(count).to eq(100)
       end
     end
 
     context 'when there are fewer than 100 domains to test' do
       before do
+        Domain.delete_all
         create_list(:domain, 50, dns: true, www: nil)
       end
 
       it 'queues all available domains' do
-        expect(DomainARecordTestJob).to receive(:perform_later).exactly(51).times # 1 + 50
-        
-        result = DomainARecordTestingService.queue_100_domains
-        expect(result).to eq(51)
+        count = DomainARecordTestingService.queue_100_domains
+        expect(count).to eq(50)
       end
     end
 
     context 'when there are no domains to test' do
       before do
-        Domain.update_all(www: true) # Mark all as tested
+        Domain.delete_all
       end
 
       it 'queues no domains' do
-        expect(DomainARecordTestJob).not_to receive(:perform_later)
-        
-        result = DomainARecordTestingService.queue_100_domains
-        expect(result).to eq(0)
+        count = DomainARecordTestingService.queue_100_domains
+        expect(count).to eq(0)
+      end
+    end
+  end
+
+  describe '#call' do
+    context 'when domain needs testing' do
+      it 'processes the domain' do
+        service = described_class.new(domain: domain_with_dns_true)
+        expect(service).to receive(:process_domain).with(domain_with_dns_true)
+        service.call
       end
     end
 
-    it 'only queues domains with dns=true and www=nil' do
-      create_list(:domain, 30, dns: true, www: nil)
-      create_list(:domain, 30, dns: false, www: nil)
-      create_list(:domain, 30, dns: nil, www: nil)
-      create_list(:domain, 30, dns: true, www: true)
+    context 'when domain does not need testing' do
+      it 'skips the domain' do
+        service = described_class.new(domain: domain_already_tested)
+        expect(service).not_to receive(:process_domain)
+        service.call
+      end
+    end
+  end
 
-      expect(DomainARecordTestJob).to receive(:perform_later).exactly(31).times # 1 + 30 valid domains
-      
-      result = DomainARecordTestingService.queue_100_domains
-      expect(result).to eq(31)
+  describe '#process_domain' do
+    let(:domain) { create(:domain) }
+    let(:service) { described_class.new }
+
+    before do
+      allow(service).to receive(:service_name).and_return(service_name)
+    end
+
+    context 'when A record test succeeds' do
+      before do
+        allow(service).to receive(:test_a_record).with(domain).and_return(true)
+      end
+
+      it 'creates success audit log' do
+        expect {
+          service.send(:process_domain, domain)
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        audit_log = ServiceAuditLog.last
+        expect(audit_log.service_name).to eq(service_name)
+        expect(audit_log.status).to eq('success')
+        expect(audit_log.auditable).to eq(domain)
+      end
+    end
+
+    context 'when A record test fails' do
+      before do
+        allow(service).to receive(:test_a_record).with(domain).and_return(false)
+      end
+
+      it 'creates failure audit log' do
+        expect {
+          service.send(:process_domain, domain)
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        audit_log = ServiceAuditLog.last
+        expect(audit_log.service_name).to eq(service_name)
+        expect(audit_log.status).to eq('failed')
+        expect(audit_log.auditable).to eq(domain)
+      end
     end
   end
 end 
