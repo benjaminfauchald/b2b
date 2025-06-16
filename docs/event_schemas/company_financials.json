@@ -1,8 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "CompanyFinancialsMessage",
   "type": "object",
-  "required": ["company_id", "requested_at"],
+  "required": ["company_id", "requested_at", "event_type", "data"],
   "properties": {
     "company_id": {
       "type": "integer",
@@ -12,10 +12,31 @@
       "type": "string",
       "format": "date-time",
       "description": "The time the update was requested."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "The type of event, e.g., 'company_financials_updated'."
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "ordinary_result": { "type": "number" },
+        "annual_result": { "type": "number" },
+        "operating_revenue": { "type": "number" },
+        "operating_costs": { "type": "number" }
+      },
+      "required": ["ordinary_result", "annual_result", "operating_revenue", "operating_costs"]
     }
   },
   "example": {
     "company_id": 12345,
-    "requested_at": "2025-06-16T12:00:00Z"
+    "requested_at": "2025-06-16T12:00:00Z",
+    "event_type": "company_financials_updated",
+    "data": {
+      "ordinary_result": 1000,
+      "annual_result": 900,
+      "operating_revenue": 5000,
+      "operating_costs": 4000
+    }
   }
 } 

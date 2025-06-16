@@ -1,10 +1,27 @@
+require 'json-schema'
+
 class KafkaService < ApplicationService
   class << self
     def topic_name
       name.underscore
     end
 
+    def schema_path
+      Rails.root.join('docs', 'event_schemas', "#{topic_name}.json")
+    end
+
+    def schema
+      @schema ||= File.exist?(schema_path) ? JSON.parse(File.read(schema_path)) : nil
+    end
+
     def produce(message, key: nil)
+      if schema
+        unless JSON::Validator.validate(schema, message)
+          error_msg = "Invalid message schema for #{topic_name}: #{message.inspect}"
+          Rails.logger.error(error_msg)
+          raise error_msg
+        end
+      end
       WaterDrop::SyncProducer.call(
         message.to_json,
         topic: topic_name,
