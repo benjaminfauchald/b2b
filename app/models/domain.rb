@@ -16,7 +16,7 @@ class Domain < ApplicationRecord
   scope :www_untested, -> { where(www: nil) }
   
   # Instance methods
-  def needs_testing?(service_name = 'domain_testing_service')
+  def needs_testing?(service_name = 'domain_testing')
     dns.nil? || needs_service?(service_name)
   end
   
@@ -34,5 +34,14 @@ class Domain < ApplicationRecord
 
   def needs_dns_testing?
     dns.nil? || needs_service?('domain_testing')
+  end
+
+  def self.needing_service(service_name)
+    case service_name.to_s
+    when 'domain_mx_testing'
+      where(dns: true, www: true, mx: nil)
+    else
+      all
+    end
   end
 end

@@ -1,130 +1,119 @@
 class ServiceAuditLog < ApplicationRecord
-  # Polymorphic association for auditable records
-  belongs_to :auditable, polymorphic: true
+  belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name'
+  belongs_to :auditable, polymorphic: true, optional: true
 
-  # Validations
   validates :service_name, presence: true, length: { maximum: 100 }
   validates :action, presence: true, length: { maximum: 50 }
+  validates :status, presence: true
+  validates :context, presence: true
 
-  # Enums for status with prefix
-  enum :status, { pending: 0, success: 1, failed: 2 }, prefix: true
+  enum status: {
+    pending: 0,
+    success: 1,
+    failed: 2
+  }
 
-  # Scopes
-  scope :recent, -> { order(created_at: :desc) }
-  scope :for_service, ->(name) { where(service_name: name) }
   scope :successful, -> { where(status: :success) }
   scope :failed, -> { where(status: :failed) }
-  scope :for_auditable, ->(record) { where(auditable: record) }
+  scope :pending, -> { where(status: :pending) }
+  scope :recent, -> { order(created_at: :desc) }
+  scope :for_service, ->(service_name) { where(service_name: service_name) }
+  scope :for_auditable, ->(auditable) { where(auditable: auditable) }
 
-  # Instance methods
+  before_create :set_defaults
+
   def mark_started!
-    update!(started_at: Time.current)
+    update!(
+      status: :pending,
+      started_at: Time.current,
+      completed_at: nil,
+      duration_ms: nil
+    )
   end
 
   def mark_completed!(duration_ms: nil)
     now = Time.current
     update!(
       completed_at: now,
-      duration_ms: duration_ms,
-      status: :success
+      duration_ms: duration_ms || calculate_duration
     )
   end
 
-  def mark_success!(context_data = {})
-    add_context(context_data) if context_data.present?
-    now = Time.current
-    duration = started_at ? ((now - started_at) * 1000).to_i : nil
-    mark_completed!(duration_ms: duration)
-    update!(status: :success)
-  end
-
-  def mark_failed!(error = nil, context_data = {})
-    add_context(context_data) if context_data.present?
-    now = Time.current
-    
-    # Handle frozen string errors by creating a new string
-    error_message = if error.is_a?(String)
-                      error.dup.force_encoding('UTF-8')
-                    elsif error.respond_to?(:message)
-                      error.message.to_s.dup.force_encoding('UTF-8')
-                    else
-                      error.to_s.dup.force_encoding('UTF-8')
-                    end
-    
+  def mark_success!(context = {})
     update!(
-      completed_at: now,
-      status: :failed,
-      error_message: error_message
+      status: :success,
+      completed_at: Time.current,
+      duration_ms: calculate_duration,
+      context: self.context.merge(context)
     )
   end
 
-  def add_context(key_or_hash, value = nil)
-    current_context = context || {}
-    
-    # Create a new hash with stringified keys and properly encoded values
-    new_context = if key_or_hash.is_a?(Hash)
-                    key_or_hash.each_with_object({}) do |(k, v), hash|
-                      hash[k.to_s] = deep_encode_value(v)
-                    end
-                  else
-                    { key_or_hash.to_s => deep_encode_value(value) }
-                  end
-    
-    update!(context: current_context.merge(new_context))
-  end
-  
-  private
-  
-  def deep_encode_value(value)
-    case value
-    when String
-      value.dup.force_encoding('UTF-8')
-    when Hash
-      value.transform_values { |v| deep_encode_value(v) }
-    when Array
-      value.map { |v| deep_encode_value(v) }
-    else
-      value
-    end
-  rescue => e
-    Rails.logger.error("Failed to encode value: #{value.inspect}. Error: #{e.message}")
-    value.to_s.dup.force_encoding('UTF-8') rescue value
+  def mark_failed!(error_message, context = {})
+    update!(
+      status: :failed,
+      completed_at: Time.current,
+      duration_ms: calculate_duration,
+      error_message: error_message,
+      context: self.context.merge(context)
+    )
   end
 
-  def track_changes(record)
-    if record.changed?
-      self.changed_fields = (changed_fields || []) | record.changed
-      save! if persisted?
-    end
+  def calculate_duration
+    return nil unless started_at && completed_at
+    ((completed_at - started_at) * 1000).round
   end
 
-  # Class methods
-  def self.batch_audit(records, service_name:, action: 'process', batch_size: 1000, **options)
+  def add_context(data)
+    update!(context: context.merge(data))
+  end
+
+  def track_changes(changes)
+    update!(changed_fields: Array(changes))
+  end
+
+  def self.cleanup_old_logs(days = 90)
+    where('created_at < ?', days.days.ago).delete_all
+  end
+
+  def self.batch_audit(records, service_name:, action: 'process', batch_size: 1000)
     records.each_slice(batch_size) do |batch|
-      batch.each do |record|
-        audit_log = create!(
-          auditable: record,
-          service_name: service_name,
-          action: action,
-          **options
-        )
-        
-        begin
-          yield(record, audit_log)
-        rescue StandardError => e
-          audit_log.mark_failed!(e)
-          raise
+      transaction do
+        batch.each do |record|
+          audit_log = create!(
+            service_name: service_name,
+            action: action,
+            status: :pending,
+            auditable: record,
+            started_at: Time.current,
+            context: {},
+            changed_fields: []
+          )
+
+          begin
+            yield(record, audit_log)
+            audit_log.mark_success!
+          rescue StandardError => e
+            audit_log.mark_failed!(e.message)
+            raise
+          end
         end
       end
     end
   end
 
-  def self.cleanup_old_logs(days)
-    where('created_at < ?', days.days.ago).delete_all
+  def self.create_for_service(service_name, action: 'process', auditable: nil)
+    create!(
+      service_name: service_name,
+      action: action,
+      status: :pending,
+      auditable: auditable,
+      started_at: Time.current,
+      context: {},
+      changed_fields: []
+    )
   end
 
-  # Callbacks
-  before_create :set_defaults
+  private
 
   def set_defaults
     self.context ||= {}

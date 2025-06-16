@@ -71,13 +71,13 @@ namespace :financials do
     
     last_month = 1.month.ago
     recently_updated = ServiceAuditLog.where(
-      service_name: 'company_financials_v1',
+      service_name: 'company_financials',
       status: :success,
       created_at: (last_month..Time.current)
     ).count
     
     old_updates = ServiceAuditLog.where(
-      service_name: 'company_financials_v1',
+      service_name: 'company_financials',
       status: :success,
       created_at: ..last_month
     ).count
@@ -106,7 +106,7 @@ namespace :financials do
     with_data = Company.with_financial_data.count
     without_data = Company.without_financial_data.count
     
-    logs = ServiceAuditLog.where(service_name: 'company_financials_v1')
+    logs = ServiceAuditLog.where(service_name: 'company_financials')
     successful_logs = logs.where(status: :success)
     failed_logs = logs.where(status: :failed)
     successful_logs = logs.where(status: 'success')

@@ -88,11 +88,39 @@ class ApplicationService
     Rails.logger.info "Starting service: #{service_name} (action: #{action})"
   end
 
-  def log_service_completion(result)
-    Rails.logger.info "Completed service: #{service_name} (action: #{action}) - Result: #{result.class.name}"
+  def log_service_completion(result = nil)
+    result_info = result.respond_to?(:class) ? result.class.name : result.to_s
+    Rails.logger.info "Completed service: #{service_name} (action: #{action}) - Result: #{result_info}"
   end
 
-  def log_service_error(error)
-    Rails.logger.error "Service failed: #{service_name} (action: #{action}) - Error: #{error.class.name}: #{error.message}"
+  def log_service_error(error, context = {})
+    error_message = error.respond_to?(:message) ? error.message : error.to_s
+    error_class = error.respond_to?(:class) ? error.class.name : 'UnknownError'
+    context_str = context.any? ? " - Context: #{context.inspect}" : ""
+    Rails.logger.error "Service failed: #{service_name} (action: #{action}) - Error: #{error_class}: #{error_message}#{context_str}"
+  end
+
+  # Alias for backward compatibility
+  alias_method :log_start, :log_service_start
+  alias_method :log_completion, :log_service_completion
+  alias_method :log_error, :log_service_error
+
+  # Audit logging for service operations
+  def audit_service_operation(auditable = nil)
+    audit_log = ServiceAuditLog.create!(
+      auditable: auditable,
+      service_name: service_name,
+      action: action,
+      status: :pending
+    )
+
+    begin
+      result = yield(audit_log)
+      audit_log.mark_success!(result: result)
+      result
+    rescue StandardError => e
+      audit_log.mark_failed!(e)
+      raise e
+    end
   end
 end 

@@ -23,7 +23,7 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
 
   def processed?(message)
     ServiceAuditLog.exists?(
-      service_name: 'domain_a_record_testing_service',
+      service_name: 'domain_a_record_testing',
       message_id: message.offset
     )
   end
@@ -31,7 +31,7 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
   def create_audit_log(domain)
     ServiceAuditLog.create!(
       auditable: domain,
-      service_name: 'domain_a_record_testing_service',
+      service_name: 'domain_a_record_testing',
       action: 'test_a_record',
       status: :success,
       context: {

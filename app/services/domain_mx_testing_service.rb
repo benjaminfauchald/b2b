@@ -10,97 +10,154 @@ class DomainMxTestingService < KafkaService
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
-    super(service_name: 'domain_mx_testing_service', action: 'test_mx')
+    super(service_name: 'domain_mx_testing', action: 'test_mx')
   end
 
   def call
     return test_single_domain if domain
-    test_domains_in_batches
+    return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
+    test_domains_in_batches(Domain.needing_service('domain_mx_testing'))
   end
 
   def self.queue_all_domains
-    domains = Domain.where(mx: nil)
+    domains = Domain.needing_service('domain_mx_testing')
     count = 0
+    
     domains.find_each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       count += 1
     end
+    
     count
   end
 
   def self.queue_100_domains
-    domains = Domain.where(mx: nil).limit(100)
+    domains = Domain.needing_service('domain_mx_testing').limit(100)
     count = 0
+    
     domains.each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       count += 1
     end
+    
     count
+  end
+
+  def check_mx_record(domain_name)
+    resolver = Resolv::DNS.new
+    begin
+      Timeout.timeout(MX_TIMEOUT) do
+        mx_records = resolver.getresources(domain_name, Resolv::DNS::Resource::IN::MX)
+        return !mx_records.empty?
+      end
+    rescue Timeout::Error, Resolv::ResolvError, StandardError
+      false
+    end
   end
 
   private
 
   def test_single_domain
     result = perform_mx_test(domain.domain)
-    update_domain_status(result)
+    update_domain_status(domain, result)
     result
   end
 
-  def test_domains_in_batches
-    Domain.where(mx: nil).find_in_batches(batch_size: batch_size) do |batch|
-      batch.each do |domain|
-        result = perform_mx_test(domain.domain)
-        update_domain_status(result)
-        produce_message_with_retry(
-          topic: 'domain_mx_testing',
-          payload: {
-            domain: domain.domain,
-            status: result[:status],
-            mx_records: result[:mx_records],
-            error: result[:error],
-            duration: result[:duration],
-            timestamp: Time.current.iso8601
-          }.to_json,
-          key: domain.id.to_s,
-          max_retries: max_retries
+  def test_domains_in_batches(domains)
+    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
+    domains.find_each(batch_size: batch_size) do |domain|
+      audit_log = nil
+      begin
+        audit_log = ServiceAuditLog.create!(
+          auditable: domain,
+          service_name: service_name,
+          action: action,
+          status: :pending
         )
+        result = perform_mx_test(domain.domain)
+        if result[:status] == :success
+          update_domain_status(domain, result)
+          audit_log.add_context({
+            'domain_name' => domain.domain,
+            'dns' => domain.dns,
+            'www' => domain.www,
+            'mx_result' => true,
+            'status' => 'has_mx_record'
+          })
+          audit_log.mark_success!
+          results[:successful] += 1
+        else
+          update_domain_status(domain, result)
+          audit_log.add_context({
+            'domain_name' => domain.domain,
+            'dns' => domain.dns,
+            'www' => domain.www,
+            'mx_result' => false,
+            'status' => 'no_mx_record',
+            'error_type' => result[:error]
+          })
+          audit_log.mark_failed!(result[:error].to_s)
+          results[:failed] += 1
+        end
+        results[:processed] += 1
+      rescue StandardError => e
+        results[:errors] += 1
+        audit_log.mark_failed!(e.message) if audit_log
       end
     end
+    results
   end
 
   def perform_mx_test(domain_name)
     start_time = Time.current
     resolver = Resolv::DNS.new
-    resolver.timeouts = MX_TIMEOUT
     begin
-      mx_records = resolver.getresources(domain_name, Resolv::DNS::Resource::IN::MX)
-      {
-        status: :success,
-        mx_records: mx_records.map { |mx| mx.exchange.to_s },
-        duration: Time.current - start_time
-      }
+      Timeout.timeout(MX_TIMEOUT) do
+        mx_records = resolver.getresources(domain_name, Resolv::DNS::Resource::IN::MX)
+        {
+          status: mx_records.any? ? :success : :no_records,
+          mx_records: mx_records.map { |mx| mx.exchange.to_s },
+          duration: Time.current - start_time
+        }
+      end
     rescue Resolv::ResolvError => e
       {
         status: :error,
-        error: e.message,
+        error: 'DNS resolution failed',
         duration: Time.current - start_time
       }
     rescue Timeout::Error => e
       {
-        status: :timeout,
-        error: "DNS lookup timed out after #{MX_TIMEOUT} seconds",
+        status: :error,
+        error: "DNS resolution timed out after #{MX_TIMEOUT} seconds",
         duration: Time.current - start_time
       }
     end
   end
 
-  def update_domain_status(result)
-    return unless domain
+  def update_domain_status(domain, result)
     case result[:status]
     when :success
-      domain.update(mx: result[:mx_records].any?)
-    when :error, :timeout
-      domain.update(mx: false)
+      domain.update_columns(mx: true)
+    when :no_records, :error, :timeout
+      domain.update_columns(mx: false)
+    end
+  end
+
+  def service_active?
+    ServiceConfiguration.active?(service_name)
+  end
+
+  # Legacy class methods for backward compatibility
+  def self.test_mx(domain)
+    service = new(domain: domain)
+    result = service.send(:perform_mx_test, domain.domain)
+    if result[:status] == 'success'
+      domain.update_columns(mx: true)
+      true
+    else
+      domain.update_columns(mx: false)
+      false
     end
   end
 end 

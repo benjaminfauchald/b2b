@@ -59,10 +59,10 @@ namespace :service_audit do
     puts "Running service: #{service_name}"
     
     case service_name
-    when 'user_enhancement_service'
+    when 'user_enhancement'
       result = UserEnhancementService.new.call
       puts "User enhancement completed: #{result}"
-    when 'domain_testing_service'
+    when 'domain_testing'
       result = DomainTestingService.new.call
       puts "Domain DNS testing completed: #{result}"
     else
@@ -161,7 +161,7 @@ namespace :service_audit do
     end
     
     # Show recent DNS testing activity
-    recent_logs = ServiceAuditLog.where(service_name: 'domain_dns_testing_v1')
+    recent_logs = ServiceAuditLog.where(service_name: 'domain_dns_testing')
                                 .where('created_at > ?', 24.hours.ago)
     
     if recent_logs.any?

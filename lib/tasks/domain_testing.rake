@@ -18,7 +18,7 @@ namespace :domain_testing do
     puts "  Errors: #{result[:errors]} (#{(result[:errors] * 100.0 / result[:processed]).round(2)}%)"
     
     # Show some examples
-    recent_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
+    recent_logs = ServiceAuditLog.where(service_name: 'domain_testing')
                                 .recent.limit(5)
     
     puts "\nSample Results:"
@@ -75,7 +75,7 @@ namespace :domain_testing do
     puts "  Inactive DNS: #{inactive}"
     
     # Service Audit Log stats
-    sct_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
+    sct_logs = ServiceAuditLog.where(service_name: 'domain_testing')
     total_logs = sct_logs.count
     success_logs = sct_logs.successful.count
     failed_logs = sct_logs.failed.count

@@ -1,7 +1,7 @@
 class LatestServiceRun < ApplicationRecord
   # This is a read-only view model
   self.table_name = 'latest_service_runs'
-  self.primary_key = 'audit_log_id'
+  self.primary_key = ['service_name', 'auditable_type', 'auditable_id']
 
   # Make it read-only
   def readonly?
@@ -9,6 +9,7 @@ class LatestServiceRun < ApplicationRecord
   end
 
   # Associations
+  belongs_to :auditable, polymorphic: true
   belongs_to :audit_log, class_name: 'ServiceAuditLog', foreign_key: 'audit_log_id'
 
   # Scopes
@@ -29,6 +30,18 @@ class LatestServiceRun < ApplicationRecord
     ).first
   end
 
+  def self.refresh
+    connection.execute('REFRESH MATERIALIZED VIEW latest_service_runs')
+  end
+
+  def self.find_by_auditable(service_name, auditable)
+    find_by(
+      service_name: service_name,
+      auditable_type: auditable.class.name,
+      auditable_id: auditable.id
+    )
+  end
+
   # Instance methods
   def auditable
     auditable_type.constantize.find(auditable_id)
@@ -44,5 +57,21 @@ class LatestServiceRun < ApplicationRecord
     return nil unless duration_ms
     
     (duration_ms / 1000.0).round(2)
+  end
+
+  def duration_seconds
+    duration_ms.to_f / 1000 if duration_ms
+  end
+
+  def success?
+    status == 'success'
+  end
+
+  def failed?
+    status == 'failed'
+  end
+
+  def pending?
+    status == 'pending'
   end
 end 

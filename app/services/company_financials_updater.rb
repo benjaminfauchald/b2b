@@ -4,7 +4,7 @@ class CompanyFinancialsUpdater
   BASE_URL = 'https://data.brreg.no/regnskapsregisteret/regnskap'.freeze
   MAX_ATTEMPTS = 3
   INITIAL_RETRY_DELAY = 2 # seconds
-  SERVICE_NAME = 'company_financials_updater'
+  SERVICE_NAME = 'company_financials'
 
   class ApiError < StandardError; end
   class RateLimitError < StandardError

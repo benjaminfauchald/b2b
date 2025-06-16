@@ -95,7 +95,7 @@ namespace :financials do
     recent_success_rate = 0
     
     if defined?(ServiceAuditLog)
-      logs = ServiceAuditLog.where(service_name: 'company_financials_updater')
+      logs = ServiceAuditLog.where(service_name: 'company_financials')
       successful_logs = logs.where(status: 'SUCCESS')
       failed_logs = logs.where(status: 'FAILED')
       

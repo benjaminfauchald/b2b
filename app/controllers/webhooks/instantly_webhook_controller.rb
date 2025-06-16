@@ -1,91 +1,108 @@
 module Webhooks
-  class InstantlyWebhookController < ActionController::API
+  class InstantlyWebhookController < ApplicationController
+    skip_before_action :verify_authenticity_token
+    before_action :validate_webhook
+
     def create
+      audit_log = ServiceAuditLog.create!(
+        service_name: 'instantly_webhook',
+        action: 'process_webhook',
+        status: :pending,
+        context: { payload: webhook_params },
+        started_at: Time.current
+      )
+
       begin
-        payload = JSON.parse(request.body.read)
-        Rails.logger.info("Received Instantly webhook: #{payload.inspect}")
-
-        event_type = payload['event_type']
-        unless event_type.present? && event_type.end_with?('_email_sent')
-          return render json: { error: 'Invalid event type' }, status: :bad_request
-        end
-
-        timestamp = begin
-          Time.parse(payload['timestamp'])
-        rescue
-          nil
-        end
-
-        communication = Communication.new(
-          timestamp: timestamp,
-          event_type: event_type,
-          campaign_name: payload['campaign_name'],
-          workspace: payload['workspace'],
-          campaign_id: payload['campaign_id'],
-          service: 'instantly',
-          connection_attempt_type: 'email',
-          lead_email: payload['lead_email'],
-          first_name: payload['firstName'],
-          last_name: payload['lastName'],
-          company_name: payload['companyName'],
-          website: payload['website'],
-          phone: payload['phone'],
-          step: payload['step'],
-          email_account: payload['email_account']
+        validate_event_type!
+        timestamp = parse_timestamp
+        communication = create_communication(timestamp)
+        
+        audit_log.update!(
+          status: :success,
+          auditable: communication,
+          completed_at: Time.current,
+          duration_ms: ((Time.current - audit_log.started_at) * 1000).round,
+          context: audit_log.context.merge(
+            communication_id: communication.id,
+            event_type: webhook_params[:event_type],
+            campaign_name: webhook_params[:campaign_name]
+          )
         )
 
-        if communication.save
-          # Create audit log after successful communication save
-          ServiceAuditLog.create!(
-            service_name: 'instantly_webhook',
-            action: 'process_webhook',
-            status: :success,
-            auditable: communication,
-            context: {
-              event_type: event_type,
-              campaign_id: payload['campaign_id'],
-              lead_email: payload['lead_email']
-            }
-          )
-          render json: { status: 'success' }, status: :ok
-        else
-          # Create audit log for failed communication
-          ServiceAuditLog.create!(
-            service_name: 'instantly_webhook',
-            action: 'process_webhook',
-            status: :failed,
-            error_message: communication.errors.full_messages.join(', '),
-            context: {
-              event_type: event_type,
-              campaign_id: payload['campaign_id'],
-              lead_email: payload['lead_email'],
-              errors: communication.errors.full_messages
-            }
-          )
-          render json: { errors: communication.errors.full_messages }, status: :unprocessable_entity
-        end
-      rescue JSON::ParserError => e
-        ServiceAuditLog.create!(
-          service_name: 'instantly_webhook',
-          action: 'process_webhook',
-          status: :failed,
-          error_message: "Invalid JSON payload: #{e.message}",
-          context: { raw_body: request.body.read }
-        )
-        render json: { error: 'Invalid JSON payload' }, status: :bad_request
+        render json: { status: 'success', message: 'Webhook processed successfully' }
       rescue StandardError => e
-        ServiceAuditLog.create!(
-          service_name: 'instantly_webhook',
-          action: 'process_webhook',
+        audit_log.update!(
           status: :failed,
+          completed_at: Time.current,
+          duration_ms: ((Time.current - audit_log.started_at) * 1000).round,
           error_message: e.message,
-          context: {
-            error_class: e.class.name,
-            backtrace: e.backtrace.first(5)
-          }
+          context: audit_log.context.merge(error: e.message)
         )
-        render json: { error: 'Internal server error' }, status: :internal_server_error
+        raise
       end
+    end
+
+    private
+
+    def validate_webhook
+      # Add any webhook validation logic here
+      # For example, verify signatures, tokens, etc.
+    end
+
+    def webhook_params
+      params.permit(
+        :timestamp,
+        :event_type,
+        :campaign_name,
+        :workspace,
+        :campaign_id,
+        :lead_email,
+        :firstName,
+        :lastName,
+        :companyName,
+        :website,
+        :phone,
+        :step,
+        :email_account
+      )
+    end
+
+    def validate_event_type!
+      return if webhook_params[:event_type].end_with?('_email_sent')
+      raise "Invalid event type: #{webhook_params[:event_type]}"
+    end
+
+    def parse_timestamp
+      Time.parse(webhook_params[:timestamp])
+    rescue ArgumentError
+      raise "Invalid timestamp format: #{webhook_params[:timestamp]}"
+    end
+
+    def create_communication(timestamp)
+      Communication.create!(
+        source: 'instantly',
+        type: 'email',
+        status: 'sent',
+        sent_at: timestamp,
+        recipient_email: webhook_params[:lead_email],
+        recipient_name: "#{webhook_params[:firstName]} #{webhook_params[:lastName]}".strip,
+        recipient_company: webhook_params[:companyName],
+        recipient_website: webhook_params[:website],
+        recipient_phone: webhook_params[:phone],
+        campaign_name: webhook_params[:campaign_name],
+        campaign_id: webhook_params[:campaign_id],
+        workspace: webhook_params[:workspace],
+        step: webhook_params[:step],
+        sender_email: webhook_params[:email_account],
+        metadata: {
+          event_type: webhook_params[:event_type],
+          campaign_name: webhook_params[:campaign_name],
+          workspace: webhook_params[:workspace],
+          campaign_id: webhook_params[:campaign_id],
+          step: webhook_params[:step],
+          email_account: webhook_params[:email_account]
+        }
+      )
     end
   end
 end 
