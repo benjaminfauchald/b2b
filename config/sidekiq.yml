@@ -12,6 +12,6 @@
   - [default, 1]
 
 :limits:
-  financials: 5  # Allow more concurrent financial jobs
-  DomainTestingService: 3
-  DomainARecordTestingService: 3
+  financials: 1  # Only 1 concurrent financial job to respect rate limits
+  DomainTestingService: 1
+  DomainARecordTestingService: 1
