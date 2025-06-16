@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CompanyFinancialsService < ApplicationService
-  SERVICE_NAME = 'company_financials_v1'.freeze
+  SERVICE_NAME = 'company_financials'.freeze
   
   def initialize(company_id: nil, batch_size: 100, force: false)
     @company_id = company_id

@@ -32,16 +32,36 @@ class ServicePerformanceStat < ApplicationRecord
   end
 
   def self.refresh
-    ActiveRecord::Base.connection.execute('REFRESH MATERIALIZED VIEW service_performance_stats')
+    connection.execute('REFRESH MATERIALIZED VIEW service_performance_stats')
+  end
+
+  def self.find_by_service_name(service_name)
+    find_by(service_name: service_name)
   end
 
   # Instance methods
+  def success_rate
+    success_rate_percent / 100.0
+  end
+
+  def failure_rate
+    1 - success_rate
+  end
+
+  def failure_rate_last_hour
+    failure_rate_last_hour_percent / 100.0
+  end
+
   def healthy?
-    success_rate_percent >= 95 && avg_duration_ms <= 5000
+    failure_rate_last_hour < 0.1 # Less than 10% failure rate in last hour
   end
 
   def needs_attention?
-    success_rate_percent < 80 || avg_duration_ms > 10000
+    failure_rate_last_hour > 0.2 # More than 20% failure rate in last hour
+  end
+
+  def critical?
+    failure_rate_last_hour > 0.5 # More than 50% failure rate in last hour
   end
 
   def avg_duration_seconds

@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :service_audit_log do
     association :auditable, factory: :user
-    service_name { 'test_service' }
+    service_name { 'test_audit' }
     action { 'process' }
     status { 0 }
     changed_fields { [] }

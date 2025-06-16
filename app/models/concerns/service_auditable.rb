@@ -4,6 +4,8 @@ module ServiceAuditable
   included do
     # Polymorphic association to service audit logs
     has_many :service_audit_logs, as: :auditable, dependent: :destroy
+    has_many :latest_service_runs, as: :auditable
+    has_many :records_needing_refresh, as: :auditable
 
     # Callbacks for automatic auditing
     unless Rails.env.test?
@@ -13,107 +15,141 @@ module ServiceAuditable
   end
 
   # Instance methods
-  def audit_service_operation(service_name, action: 'process', **options)
+  def audit_service_operation(service_name, action = 'process', context = {})
+    return unless audit_enabled?
+
     audit_log = service_audit_logs.create!(
       service_name: service_name,
       action: action,
-      **options
+      status: :pending,
+      auditable: self,
+      context: context,
+      started_at: Time.current
     )
     
     audit_log.mark_started!
     
     begin
       result = yield(audit_log)
-      audit_log.mark_success! unless audit_log.status_success?
+      audit_log.mark_success!(context)
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e.message)
+      audit_log.mark_failed!(e.message, context)
       raise
     end
   end
 
   def needs_service?(service_name)
-    config = ServiceConfiguration.find_by(service_name: service_name)
-    return false unless config&.active? # If no config or inactive, doesn't need service
-    
+    service_configuration = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless service_configuration&.active?
     last_run = last_service_run(service_name)
-    return true unless last_run # If no previous run, needs service
-    
-    # Check if last run is older than refresh interval
-    refresh_threshold = config.refresh_interval_hours.hours.ago
+    return true unless last_run
+    refresh_threshold = service_configuration.refresh_interval_hours.hours.ago
     last_run.completed_at < refresh_threshold
   end
 
   def last_service_run(service_name)
     service_audit_logs
-      .where(service_name: service_name, status: ServiceAuditLog.statuses[:success])
+      .for_service(service_name)
+      .successful
       .order(completed_at: :desc)
       .first
   end
 
   def audit_enabled?
-    Rails.application.config.service_auditing_enabled
+    return true unless Rails.env.test?
+    if defined?(Rails.configuration) && Rails.configuration.respond_to?(:service_auditing_enabled)
+      Rails.configuration.service_auditing_enabled
+    else
+      true
+    end
   end
 
   def automatic_audit_enabled?
-    if Rails.env.test?
-      ENV['ENABLE_AUTOMATIC_AUDITING'] == 'true'
+    return false if Rails.env.test?
+    if defined?(Rails.configuration) && Rails.configuration.respond_to?(:automatic_auditing_enabled)
+      Rails.configuration.automatic_auditing_enabled
     else
-      Rails.application.config.respond_to?(:automatic_auditing_enabled) ? Rails.application.config.automatic_auditing_enabled != false : true
+      true
     end
   end
 
+  def with_service_audit(service_name, action = 'process', context = {})
+    audit_log = audit_service_operation(service_name, action, context)
+    return yield unless audit_log
+
+    begin
+      result = yield
+      audit_log.mark_success!(context)
+      result
+    rescue => e
+      audit_log.mark_failed!(e.message, context)
+      raise
+    end
+  end
+
+  def needing_service(service_name)
+    service_configuration = ServiceConfiguration.find_by(service_name: service_name)
+    return [] unless service_configuration&.active?
+    service_audit_logs
+      .for_service(service_name)
+      .successful
+      .where('completed_at < ?', service_configuration.refresh_interval_hours.hours.ago)
+  end
+
   # Class methods
-  class_methods do
-    def with_service_audit(service_name, action: 'process', **options)
-      all.each do |record|
-        record.audit_service_operation(service_name, action: action, **options) do |audit_log|
-          yield(record, audit_log)
-        end
+  def self.with_service_audit(records, service_name, action = 'process')
+    records.find_each do |record|
+      record.audit_service_operation(service_name, action) do |audit_log|
+        yield(record, audit_log)
       end
     end
+  end
 
-    def needing_service(service_name)
-      config = ServiceConfiguration.find_by(service_name: service_name)
-      return [] unless config&.active?
+  def self.needing_service(service_name)
+    service_config = ServiceConfiguration.find_by(service_name: service_name)
+    return [] unless service_config&.active?
 
-      refresh_threshold = config.refresh_interval_hours.hours.ago
-
-      # Find records that either:
-      # 1. Have never been processed by this service
-      # 2. Have only failed attempts
-      # 3. Have a successful run older than the refresh interval
-      where.not(
-        id: ServiceAuditLog
-          .where(auditable_type: name, service_name: service_name, status: ServiceAuditLog.statuses[:success])
-          .where('completed_at > ?', refresh_threshold)
-          .select(:auditable_id)
-      )
-    end
+    # Use a robust join for all AR models
+    left = arel_table
+    logs = ServiceAuditLog.arel_table
+    join_cond = logs[:auditable_type].eq(name)
+      .and(logs[:auditable_id].eq(left[:id]))
+      .and(logs[:service_name].eq(service_name))
+      .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
+    
+    joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
+      .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?", 
+             service_config.refresh_interval_hours.hours.ago)
   end
 
   private
 
   def audit_creation
+    return unless audit_enabled?
     service_audit_logs.create!(
       service_name: 'automatic_audit',
       action: 'create',
-      context: {
-        'model_class' => self.class.name,
-        'record_id' => id
-      }
+      status: :success,
+      auditable: self,
+      context: attributes,
+      changed_fields: [],
+      started_at: created_at,
+      completed_at: created_at
     )
   end
 
   def audit_update
+    return unless audit_enabled?
     service_audit_logs.create!(
       service_name: 'automatic_audit',
       action: 'update',
-      context: {
-        'model_class' => self.class.name,
-        'record_id' => id
-      },
-      changed_fields: changed
+      status: :success,
+      auditable: self,
+      context: attributes,
+      changed_fields: saved_changes.keys,
+      started_at: updated_at,
+      completed_at: updated_at
     )
   end
 end

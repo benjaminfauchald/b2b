@@ -7,20 +7,50 @@ class DomainTestingService < ApplicationService
   DNS_TIMEOUT = 5 # seconds
   
   def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    super(action: 'test_dns')
+    super(service_name: 'domain_testing', action: 'test_dns')
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
   end
   
   def call
-    return test_single_domain if domain
-    test_domains_in_batches
+    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
+    Domain.needing_service(service_name).find_each(batch_size: batch_size) do |domain|
+      audit_log = ServiceAuditLog.create!(
+        auditable: domain,
+        service_name: service_name,
+        action: action,
+        status: :pending
+      )
+      begin
+        outcome = test_domain_dns(domain, audit_log)
+        if outcome[:status] == :success
+          results[:successful] += 1
+        else
+          results[:failed] += 1
+        end
+        results[:processed] += 1
+      rescue => e
+        audit_log.mark_failed!(e.message)
+        results[:errors] += 1
+      end
+    end
+    results
   end
   
   # Legacy class methods for backward compatibility
-  def self.test_dns(domain)
-    new(domain: domain).send(:perform_dns_test)[:records]
+  def self.test_dns(domain_or_name)
+    domain_name = domain_or_name.is_a?(String) ? domain_or_name : domain_or_name.domain
+    result = begin
+      Resolv::DNS.open { |dns| dns.getaddress(domain_name) }
+      true
+    rescue Resolv::ResolvError, SocketError
+      false
+    end
+    if domain_or_name.is_a?(Domain)
+      domain_or_name.update_columns(dns: result)
+    end
+    result
   end
   
   def self.queue_all_domains
@@ -28,7 +58,7 @@ class DomainTestingService < ApplicationService
     count = 0
     
     domains.find_each do |domain|
-      DomainDnsTestingWorker.perform_async(domain.id)
+      DomainTestJob.perform_later(domain.id)
       count += 1
     end
     
@@ -40,7 +70,7 @@ class DomainTestingService < ApplicationService
     count = 0
     
     domains.each do |domain|
-      DomainDnsTestingWorker.perform_async(domain.id)
+      DomainTestJob.perform_later(domain.id)
       count += 1
     end
     
@@ -60,49 +90,91 @@ class DomainTestingService < ApplicationService
     end
   end
 
-  def test_domain_dns(domain, audit_log = nil)
+  def test_domain_dns(domain, audit_log)
     start_time = Time.current
-    result = perform_dns_test_for_domain(domain)
-    duration = Time.current - start_time
-    context = {
-      'test_duration_ms' => (duration * 1000).to_i,
-      'domain_name' => domain.domain
-    }
-
-    if audit_log
+    begin
+      result = self.class.test_dns(domain.domain)
+      duration = ((Time.current - start_time) * 1000).round(2)
+      context = {
+        'dns_result' => result,
+        'domain_name' => domain.domain,
+        'dns_status' => result ? 'active' : 'inactive',
+        'test_duration_ms' => duration
+      }
+      if result
+        domain.update_columns(dns: true)
+        audit_log.add_context(context)
+        audit_log.mark_success!
+        { status: :success, context: context }
+      else
+        domain.update_columns(dns: false)
+        audit_log.add_context(context)
+        audit_log.mark_failed!('DNS test failed')
+        { status: :failed, context: context }
+      end
+    rescue Resolv::ResolvError => e
+      duration = ((Time.current - start_time) * 1000).round(2)
+      context = {
+        'dns_result' => false,
+        'domain_name' => domain.domain,
+        'dns_status' => 'inactive',
+        'test_duration_ms' => duration,
+        'error_type' => 'resolve_error'
+      }
+      domain.update_columns(dns: false)
       audit_log.add_context(context)
+      audit_log.mark_failed!(e.message)
+      { status: :failed, context: context }
+    rescue Timeout::Error => e
+      duration = ((Time.current - start_time) * 1000).round(2)
+      context = {
+        'dns_result' => false,
+        'domain_name' => domain.domain,
+        'dns_status' => 'inactive',
+        'test_duration_ms' => duration,
+        'error_type' => 'timeout_error'
+      }
+      domain.update_columns(dns: false)
+      audit_log.add_context(context)
+      audit_log.mark_failed!(e.message)
+      { status: :failed, context: context }
+    rescue StandardError => e
+      duration = ((Time.current - start_time) * 1000).round(2)
+      context = {
+        'dns_result' => false,
+        'domain_name' => domain.domain,
+        'dns_status' => 'inactive',
+        'test_duration_ms' => duration,
+        'error_type' => 'network_error'
+      }
+      domain.update_columns(dns: nil)
+      audit_log.add_context(context)
+      audit_log.mark_failed!(e.message)
+      { status: :failed, context: context }
     end
-
-    if result[:status] == 'success'
-      domain.update!(dns: true)
-      context['dns_result'] = true
-      context['dns_status'] = 'active'
-      status = :successful
-    else
-      domain.update!(dns: false)
-      context['dns_result'] = false
-      context['dns_status'] = 'inactive'
-      status = :failed
+  end
+  
+  def test_domains_in_batches(domains)
+    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
+    domains.find_each(batch_size: batch_size) do |domain|
+      audit_log = ServiceAuditLog.create!(
+        auditable: domain,
+        service_name: service_name,
+        action: action,
+        status: :pending
+      )
+      result = test_domain_dns(domain, audit_log)
+      if result[:status] == :success
+        results[:successful] += 1
+      else
+        results[:failed] += 1
+      end
+      results[:processed] += 1
+    rescue StandardError => e
+      audit_log.mark_failed!(e.message)
+      results[:errors] += 1
     end
-
-    { status: status, context: context }
-  rescue Resolv::ResolvError => e
-    if audit_log
-      audit_log.mark_failed!(e.message, { 'error_type' => 'resolve_error' })
-    end
-    domain.update!(dns: false)
-    { status: :failed, context: context.merge('dns_result' => false, 'error_type' => 'resolve_error') }
-  rescue Timeout::Error => e
-    if audit_log
-      audit_log.mark_failed!("DNS resolution timed out after #{DNS_TIMEOUT} seconds", { 'error_type' => 'timeout_error' })
-    end
-    domain.update!(dns: false)
-    { status: :failed, context: context.merge('dns_result' => false, 'error_type' => 'timeout_error') }
-  rescue StandardError => e
-    if audit_log
-      audit_log.mark_failed!(e.message, { 'error_type' => e.class.name })
-    end
-    { status: :failed, context: context.merge('dns_result' => false, 'error_type' => e.class.name) }
+    results
   end
   
   private
@@ -117,17 +189,6 @@ class DomainTestingService < ApplicationService
       records: result[:records],
       duration: duration
     }
-  end
-
-  def test_domains_in_batches
-    Domain.untested.find_each(batch_size: batch_size) do |domain|
-      produce_message_with_retry(
-        topic: 'domain_testing',
-        payload: { domain: domain.domain }.to_json,
-        key: domain.id.to_s,
-        max_retries: max_retries
-      )
-    end
   end
 
   def perform_dns_test
@@ -167,49 +228,6 @@ class DomainTestingService < ApplicationService
     end
   end
 
-  def produce_message(topic:, payload:, key:)
-    Karafka.producer.produce_sync(
-      topic: topic,
-      payload: payload.to_json,
-      key: key
-    )
-  end
-
-  def produce_message_with_retry(topic:, payload:, key:, max_retries: 3)
-    retries = 0
-    begin
-      produce_message(topic: topic, payload: payload, key: key)
-    rescue StandardError => e
-      retries += 1
-      if retries <= max_retries
-        sleep(2 ** retries) # Exponential backoff
-        retry
-      else
-        raise e
-      end
-    end
-  end
-
-  def test_domains_in_batches(domains)
-    domains.each_slice(batch_size) do |batch|
-      batch.each do |domain|
-        result = test_domain_dns(domain)
-        next unless result
-
-        payload = {
-          domain_id: domain.id,
-          result: result
-        }
-
-        produce_message_with_retry(
-          topic: 'domain_test_results',
-          payload: payload,
-          key: domain.id.to_s
-        )
-      end
-    end
-  end
-
   def log_error(domain, error)
     Rails.logger.error(
       message: "Domain testing error",
@@ -219,5 +237,9 @@ class DomainTestingService < ApplicationService
       error_type: error.class.name,
       timestamp: Time.current
     )
+  end
+
+  def service_active?
+    ServiceConfiguration.active?(service_name)
   end
 end 

@@ -193,11 +193,8 @@ RSpec.describe DomainARecordTestingService, type: :service do
     end
 
     context 'when A record test succeeds' do
-      before do
-        allow(service).to receive(:test_a_record).with(domain).and_return(true)
-      end
-
       it 'creates success audit log' do
+        allow(service).to receive(:test_single_domain_for).with(domain).and_return(true)
         expect {
           service.send(:process_domain, domain)
         }.to change(ServiceAuditLog, :count).by(1)
@@ -210,11 +207,8 @@ RSpec.describe DomainARecordTestingService, type: :service do
     end
 
     context 'when A record test fails' do
-      before do
-        allow(service).to receive(:test_a_record).with(domain).and_return(false)
-      end
-
       it 'creates failure audit log' do
+        allow(service).to receive(:test_single_domain_for).with(domain).and_return(false)
         expect {
           service.send(:process_domain, domain)
         }.to change(ServiceAuditLog, :count).by(1)

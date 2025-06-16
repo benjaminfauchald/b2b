@@ -1,14 +1,45 @@
 class ServiceConfiguration < ApplicationRecord
+  self.primary_key = 'service_name'
+
+  has_many :service_audit_logs, foreign_key: 'service_name', primary_key: 'service_name'
+  has_many :service_performance_stats, foreign_key: 'service_name', primary_key: 'service_name'
+  has_many :latest_service_runs, foreign_key: 'service_name', primary_key: 'service_name'
+  has_many :records_needing_refresh, foreign_key: 'service_name', primary_key: 'service_name'
+
   # Validations
   validates :service_name, presence: true, uniqueness: true, length: { maximum: 100 }
-  validates :refresh_interval_hours, numericality: { greater_than: 0 }
+  validates :refresh_interval_hours, presence: true, numericality: { greater_than: 0 }
   validates :batch_size, numericality: { greater_than: 0 }
   validates :retry_attempts, numericality: { greater_than_or_equal_to: 0 }
+  validates :active, inclusion: { in: [true, false] }
 
   # Scopes
   scope :active, -> { where(active: true) }
   scope :inactive, -> { where(active: false) }
   scope :frequent_refresh, ->(hours) { where('refresh_interval_hours < ?', hours) }
+
+  # Class methods
+  def self.active?(service_name)
+    find_by(service_name: service_name)&.active?
+  end
+
+  def self.find_or_create_by_service_name(service_name, attributes = {})
+    find_or_create_by(service_name: service_name) do |config|
+      config.assign_attributes(attributes)
+    end
+  end
+
+  def self.enable_service(service_name)
+    find_or_create_by_service_name(service_name).update(active: true)
+  end
+
+  def self.disable_service(service_name)
+    find_or_create_by_service_name(service_name).update(active: false)
+  end
+
+  def self.set_refresh_interval(service_name, hours)
+    find_or_create_by_service_name(service_name).update(refresh_interval_hours: hours)
+  end
 
   # Instance methods
   def activate!
@@ -80,6 +111,49 @@ class ServiceConfiguration < ApplicationRecord
         config.update_setting(key, value)
       end
     end
+  end
+
+  def performance_stats
+    ServicePerformanceStat.find_by_service_name(service_name)
+  end
+
+  def latest_runs
+    LatestServiceRun.where(service_name: service_name)
+  end
+
+  def records_needing_refresh
+    RecordsNeedingRefresh.where(service_name: service_name)
+  end
+
+  def audit_logs
+    service_audit_logs
+  end
+
+  def success_rate
+    stats = performance_stats
+    stats&.success_rate
+  end
+
+  def failure_rate
+    stats = performance_stats
+    stats&.failure_rate
+  end
+
+  def health_status
+    stats = performance_stats
+    stats&.health_status
+  end
+
+  def healthy?
+    health_status == 'healthy'
+  end
+
+  def needs_attention?
+    health_status == 'needs_attention'
+  end
+
+  def critical?
+    health_status == 'critical'
   end
 
   private

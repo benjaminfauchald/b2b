@@ -1,7 +1,7 @@
 class KafkaService < ApplicationService
   class << self
     def topic_name
-      name.underscore.gsub('_service', '')
+      name.underscore
     end
 
     def produce(message, key: nil)

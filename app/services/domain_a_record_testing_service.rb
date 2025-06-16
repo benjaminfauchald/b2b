@@ -7,20 +7,16 @@ class DomainARecordTestingService < ApplicationService
   DNS_TIMEOUT = 5 # seconds
   
   def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    super(action: 'test_a_record')
+    super(service_name: 'domain_a_record_testing', action: 'test_a_record')
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
   end
   
   def call
-    if domain
-      if domain.needs_www_testing?(service_name)
-        process_domain(domain)
-      end
-    else
-      test_domains_in_batches
-    end
+    return unless domain
+    return unless needs_www_testing?(domain)
+    process_domain(domain)
   end
   
   # Legacy class methods for backward compatibility
@@ -53,23 +49,37 @@ class DomainARecordTestingService < ApplicationService
   end
   
   def process_domain(domain)
-    result = test_a_record(domain)
-    ServiceAuditLog.create!(
+    audit_log = ServiceAuditLog.create!(
       auditable: domain,
-      service_name: 'domain_a_record_testing',
-      action: 'test_a_record',
-      status: result ? :success : :failed,
-      context: {
-        domain_name: domain.domain,
-        www_status: result ? 'active' : 'inactive'
-      }
+      service_name: service_name,
+      action: action,
+      status: :pending
     )
+    result = test_single_domain_for(domain)
+    if result == true
+      audit_log.mark_success!
+    else
+      audit_log.mark_failed!('A record test failed')
+    end
   end
 
-  def test_a_record(domain)
-    # Simulate A record test logic here
-    # For now, return true for simplicity
-    true
+  def test_single_domain_for(domain)
+    begin
+      Timeout.timeout(DNS_TIMEOUT) do
+        a_record = Resolv.getaddress("www.#{domain.domain}")
+        domain.update(www: true)
+        return true
+      end
+    rescue Resolv::ResolvError
+      domain.update(www: false)
+      return false
+    rescue Timeout::Error
+      domain.update(www: false)
+      return false
+    rescue StandardError
+      domain.update(www: nil)
+      return nil
+    end
   end
   
   private
@@ -93,23 +103,21 @@ class DomainARecordTestingService < ApplicationService
     end
   end
 
-  def test_domains_in_batches
+  def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
     
-    Domain.find_in_batches(batch_size: batch_size) do |batch|
-      batch.each do |domain|
-        result = self.class.test_a_record(domain)
-        results[:processed] += 1
-        case result
-        when true
-          results[:successful] += 1
-        when false
-          results[:failed] += 1
-        else
-          results[:errors] += 1
-        end
-        produce_message_with_retry(domain.domain, result)
+    domains.find_each do |domain|
+      result = self.class.test_a_record(domain)
+      results[:processed] += 1
+      case result
+      when true
+        results[:successful] += 1
+      when false
+        results[:failed] += 1
+      else
+        results[:errors] += 1
       end
+      produce_message_with_retry(domain.domain, result)
     end
     
     results
@@ -145,5 +153,13 @@ class DomainARecordTestingService < ApplicationService
       error: error.message,
       error_type: error.class.name
     )
+  end
+
+  def service_active?
+    ServiceConfiguration.active?(service_name)
+  end
+
+  def needs_www_testing?(domain)
+    domain.dns? && domain.www.nil?
   end
 end 

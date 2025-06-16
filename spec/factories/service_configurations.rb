@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :service_configuration do
-    sequence(:service_name) { |n| "test_service_#{n}_service" }
+    sequence(:service_name) { |n| "test_service_#{n}" }
     refresh_interval_hours { 720 }
     depends_on_services { [] }
     active { true }
@@ -21,7 +21,7 @@ FactoryBot.define do
     end
 
     trait :with_dependencies do
-      depends_on_services { ['user_enhancement_service', 'domain_testing_service'] }
+      depends_on_services { ['user_enhancement', 'domain_testing'] }
     end
 
     trait :with_settings do
@@ -50,8 +50,8 @@ FactoryBot.define do
       retry_attempts { 10 }
     end
 
-    trait :user_service do
-      service_name { "user_enhancement_service_#{SecureRandom.hex(8)}" }
+    trait :user do
+      service_name { generate(:service_name) }
       refresh_interval_hours { 168 } # 1 week
       settings do
         {
@@ -61,10 +61,10 @@ FactoryBot.define do
       end
     end
 
-    trait :domain_service do
-      service_name { "domain_testing_service_#{SecureRandom.hex(8)}" }
+    trait :domain do
+      service_name { generate(:service_name) }
       refresh_interval_hours { 24 } # daily
-      depends_on_services { ['dns_resolution_service'] }
+      depends_on_services { ['dns_resolution'] }
       settings do
         {
           'timeout_seconds' => 5,

@@ -30,10 +30,11 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'scopes' do
     let!(:recent_log) { create(:service_audit_log, created_at: 1.hour.ago) }
     let!(:old_log) { create(:service_audit_log, created_at: 1.week.ago) }
-    let!(:user_log) { create(:service_audit_log, service_name: 'user_enhancement_service') }
-    let!(:domain_log) { create(:service_audit_log, service_name: 'domain_testing_service') }
+    let!(:user_log) { create(:service_audit_log, service_name: 'user_enhancement') }
+    let!(:domain_log) { create(:service_audit_log, service_name: 'domain_testing') }
     let!(:success_log) { create(:service_audit_log, :success) }
     let!(:failed_log) { create(:service_audit_log, :failed) }
+    let!(:log2) { create(:service_audit_log, service_name: 'other') }
 
     describe '.recent' do
       it 'orders by created_at desc' do
@@ -182,7 +183,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'creates audit logs for batch processing' do
         expect do
-          ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
+          ServiceAuditLog.batch_audit(users, service_name: 'test') do |user, audit_log|
             audit_log.mark_success!
           end
         end.to change(ServiceAuditLog, :count).by(3)
@@ -190,7 +191,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'yields each record with its audit log' do
         yielded_pairs = []
-        ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
+        ServiceAuditLog.batch_audit(users, service_name: 'test') do |user, audit_log|
           yielded_pairs << [user, audit_log]
           audit_log.mark_success!
         end
@@ -205,7 +206,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'handles errors and marks failed logs' do
         expect do
-          ServiceAuditLog.batch_audit(users, service_name: 'test_service') do |user, audit_log|
+          ServiceAuditLog.batch_audit(users, service_name: 'test') do |user, audit_log|
             raise 'Test error'
           end
         end.to change(ServiceAuditLog, :count).by(3)

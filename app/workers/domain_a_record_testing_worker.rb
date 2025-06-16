@@ -23,7 +23,7 @@ class DomainARecordTestingWorker
     end
     ServiceAuditLog.create!(
       auditable: domain,
-      service_name: 'domain_a_record_testing_service',
+      service_name: 'domain_a_record_testing',
       action: 'test_a_record',
       status: result ? :success : :failed,
       context: context

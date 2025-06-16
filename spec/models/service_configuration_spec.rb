@@ -85,23 +85,23 @@ RSpec.describe ServiceConfiguration, type: :model do
 
     describe '#add_dependency' do
       it 'adds service to depends_on_services array' do
-        config.add_dependency('user_enhancement_service')
-        expect(config.depends_on_services).to include('user_enhancement_service')
+        config.add_dependency('user_enhancement')
+        expect(config.depends_on_services).to include('user_enhancement')
       end
 
       it 'does not add duplicate dependencies' do
-        config.add_dependency('user_enhancement_service')
-        config.add_dependency('user_enhancement_service')
-        expect(config.depends_on_services.count('user_enhancement_service')).to eq(1)
+        config.add_dependency('user_enhancement')
+        config.add_dependency('user_enhancement')
+        expect(config.depends_on_services.count('user_enhancement')).to eq(1)
       end
     end
 
     describe '#remove_dependency' do
       it 'removes service from depends_on_services array' do
-        config.update!(depends_on_services: ['user_enhancement_service', 'domain_testing_service'])
-        config.remove_dependency('user_enhancement_service')
-        expect(config.depends_on_services).not_to include('user_enhancement_service')
-        expect(config.depends_on_services).to include('domain_testing_service')
+        config.update!(depends_on_services: ['user_enhancement', 'domain_testing'])
+        config.remove_dependency('user_enhancement')
+        expect(config.depends_on_services).not_to include('user_enhancement')
+        expect(config.depends_on_services).to include('domain_testing')
       end
     end
 
@@ -155,7 +155,7 @@ RSpec.describe ServiceConfiguration, type: :model do
       let!(:dep2_config) { create(:service_configuration, service_name: "dependency_2_service_#{SecureRandom.hex(8)}") }
 
       before do
-        config.update!(depends_on_services: ['dependency_1_service', 'dependency_2_service'])
+        config.update!(depends_on_services: ['dependency_1', 'dependency_2'])
       end
 
       it 'returns true when all dependencies are active' do
@@ -189,8 +189,8 @@ RSpec.describe ServiceConfiguration, type: :model do
 
     describe '.create_default' do
       it 'creates configuration with default values' do
-        config = ServiceConfiguration.create_default('new_service')
-        expect(config.service_name).to eq('new_service')
+        config = ServiceConfiguration.create_default('new')
+        expect(config.service_name).to eq('new')
         expect(config.active).to be true
         expect(config.refresh_interval_hours).to eq(720)
         expect(config.batch_size).to eq(1000)
@@ -198,7 +198,7 @@ RSpec.describe ServiceConfiguration, type: :model do
       end
 
       it 'allows overriding default values' do
-        config = ServiceConfiguration.create_default('new_service', batch_size: 500, active: false)
+        config = ServiceConfiguration.create_default('new', batch_size: 500, active: false)
         expect(config.batch_size).to eq(500)
         expect(config.active).to be false
       end

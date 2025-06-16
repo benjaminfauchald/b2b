@@ -12,7 +12,7 @@
 puts "Setting up Service Audit System configurations..."
 
 # User Enhancement Service Configuration
-ServiceConfiguration.find_or_create_by(service_name: 'user_enhancement_service') do |config|
+ServiceConfiguration.find_or_create_by(service_name: 'user_enhancement') do |config|
   config.refresh_interval_hours = 720  # 30 days
   config.batch_size = 1000
   config.retry_attempts = 3
@@ -26,7 +26,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'user_enhancement_service')
 end
 
 # Domain DNS Testing Service Configuration  
-ServiceConfiguration.find_or_create_by(service_name: 'domain_testing_service') do |config|
+ServiceConfiguration.find_or_create_by(service_name: 'domain_testing') do |config|
   config.refresh_interval_hours = 168  # 7 days
   config.batch_size = 500
   config.retry_attempts = 2
@@ -41,12 +41,12 @@ ServiceConfiguration.find_or_create_by(service_name: 'domain_testing_service') d
 end
 
 # Domain A Record Testing Service Configuration
-ServiceConfiguration.find_or_create_by(service_name: 'domain_a_record_testing_service') do |config|
+ServiceConfiguration.find_or_create_by(service_name: 'domain_a_record_testing') do |config|
   config.refresh_interval_hours = 168  # 7 days
   config.batch_size = 500
   config.retry_attempts = 2
   config.active = true
-  config.depends_on_services = ['domain_testing_service']  # Depends on DNS testing
+  config.depends_on_services = ['domain_testing']  # Depends on DNS testing
   config.settings = {
     www_timeout_seconds: 5,
     treat_timeout_as_failure: true,
@@ -56,7 +56,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'domain_a_record_testing_se
 end
 
 # Automatic Audit Configuration
-ServiceConfiguration.find_or_create_by(service_name: 'automatic_audit_service') do |config|
+ServiceConfiguration.find_or_create_by(service_name: 'automatic_audit') do |config|
   config.refresh_interval_hours = 0  # No refresh needed for automatic audits
   config.batch_size = 1
   config.retry_attempts = 1

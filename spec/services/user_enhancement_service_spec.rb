@@ -7,7 +7,7 @@ RSpec.describe UserEnhancementService, type: :service do
   describe '#initialize' do
     it 'sets default service name and action' do
       service = UserEnhancementService.new
-      expect(service.service_name).to eq('user_enhancement_service')
+      expect(service.service_name).to eq('user_enhancement')
       expect(service.action).to eq('enhance')
     end
 
@@ -18,7 +18,7 @@ RSpec.describe UserEnhancementService, type: :service do
   end
 
   describe '#call' do
-    let(:service_name) { 'user_enhancement_service' }
+    let(:service_name) { 'user_enhancement' }
     let!(:service_config) do
       create(:service_configuration, 
              service_name: service_name,
@@ -26,7 +26,7 @@ RSpec.describe UserEnhancementService, type: :service do
              active: true)
     end
 
-    context 'when users need enhancement' do
+    context 'with users needing enhancement' do
       let!(:users) { create_list(:user, 3) }
       
       it 'processes all users needing enhancement' do
@@ -57,7 +57,7 @@ RSpec.describe UserEnhancementService, type: :service do
       end
 
       it 'handles users without email' do
-        user = create(:user, name: 'Jane Doe', email: nil)
+        user = create(:user, :without_email)
         service = UserEnhancementService.new
         
         expect { service.call }.not_to raise_error
@@ -72,7 +72,7 @@ RSpec.describe UserEnhancementService, type: :service do
       end
 
       it 'handles users without name' do
-        user = create(:user, name: nil, email: "test_#{SecureRandom.hex(4)}@yahoo.com")
+        user = create(:user, :without_name)
         service = UserEnhancementService.new
         
         expect { service.call }.not_to raise_error
@@ -91,6 +91,7 @@ RSpec.describe UserEnhancementService, type: :service do
       it 'handles empty result gracefully' do
         # Create users that were recently processed
         user = create(:user)
+        user.update_columns(last_enhanced_at: 1.hour.ago)
         create(:service_audit_log,
                auditable: user,
                service_name: service_name,
@@ -158,7 +159,7 @@ RSpec.describe UserEnhancementService, type: :service do
   describe 'error handling' do
     let!(:service_config) do
       create(:service_configuration, 
-             service_name: 'user_enhancement_service',
+             service_name: 'user_enhancement',
              active: true)
     end
     let!(:user) { create(:user, email: 'test@gmail.com') }

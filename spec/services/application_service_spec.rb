@@ -63,7 +63,7 @@ RSpec.describe ApplicationService, type: :service do
     end
 
     it 'accepts valid service_name format' do
-      service = ApplicationService.new(service_name: 'user_enhancement_service')
+      service = ApplicationService.new(service_name: 'user_enhancement')
       expect(service).to be_valid
     end
   end

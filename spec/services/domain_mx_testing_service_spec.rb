@@ -15,8 +15,9 @@ RSpec.describe DomainMxTestingService, type: :service do
       let!(:domains) { create_list(:domain, 3, dns: true, www: true, mx: nil) }
 
       before do
-        # Mock successful MX resolution
+        # Mock successful MX resolution for all domains
         allow_any_instance_of(DomainMxTestingService).to receive(:check_mx_record).and_return(true)
+        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: ['mail.example.com'], duration: 0.01 })
       end
 
       it 'processes all domains needing testing' do
@@ -129,22 +130,20 @@ RSpec.describe DomainMxTestingService, type: :service do
     end
 
     context 'when DNS resolution times out' do
-      before do
-        allow(Resolv::DNS).to receive(:new).and_raise(Timeout::Error)
-      end
-
       it 'returns false on timeout' do
+        resolver_double = double('Resolv::DNS')
+        allow(resolver_double).to receive(:getresources).and_raise(Timeout::Error)
+        allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
         result = service.send(:check_mx_record, domain.domain)
         expect(result).to be false
       end
     end
 
     context 'when DNS resolution fails' do
-      before do
-        allow(Resolv::DNS).to receive(:new).and_raise(Resolv::ResolvError)
-      end
-
       it 'returns false on ResolvError' do
+        resolver_double = double('Resolv::DNS')
+        allow(resolver_double).to receive(:getresources).and_raise(Resolv::ResolvError)
+        allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
         result = service.send(:check_mx_record, domain.domain)
         expect(result).to be false
       end
@@ -157,6 +156,7 @@ RSpec.describe DomainMxTestingService, type: :service do
     describe '.test_mx' do
       before do
         allow_any_instance_of(DomainMxTestingService).to receive(:check_mx_record).and_return(true)
+        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: ['mail.example.com'], duration: 0.01 })
       end
 
       it 'maintains backward compatibility' do
