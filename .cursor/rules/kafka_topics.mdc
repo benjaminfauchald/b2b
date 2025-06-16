@@ -1,0 +1,78 @@
+# Kafka Topics & Service Integration Documentation
+
+## Quick Reference Table
+
+| Topic Name              | Purpose                        | Producers                | Consumers                | Schema Location         | DLQ Topic                |
+|------------------------|--------------------------------|--------------------------|--------------------------|-------------------------|--------------------------|
+| company_financials      | Financial data updates         | FinancialsProducer       | FinancialsConsumer       | event_schemas/company_financials.json | company_financials_dlq   |
+| domain_testing          | Domain DNS testing             | DomainTestingProducer    | DomainTestingConsumer    | event_schemas/domain_testing.json     | domain_testing_dlq       |
+| ...                    | ...                            | ...                      | ...                      | ...                     | ...                      |
+
+---
+
+## Topic Details
+
+### company_financials
+- **Purpose:** Used for queuing company financial data update jobs.
+- **Producers:** FinancialsProducer (see app/services/financials_producer.rb)
+- **Consumers:** FinancialsConsumer (see app/consumers/financials_consumer.rb)
+- **Message Schema:** See [event_schemas/company_financials.json](event_schemas/company_financials.json)
+- **DLQ Policy:** Messages failing 3 times are sent to `company_financials_dlq`.
+- **Notes:**
+  - All messages must include `company_id` and `requested_at` fields.
+  - Schema validation is enforced in the consumer.
+
+#### Example Message
+```json
+{
+  "company_id": 12345,
+  "requested_at": "2025-06-16T12:00:00Z"
+}
+```
+
+---
+
+### domain_testing
+- **Purpose:** Used for queuing domain DNS testing jobs.
+- **Producers:** DomainTestingProducer
+- **Consumers:** DomainTestingConsumer
+- **Message Schema:** See [event_schemas/domain_testing.json](event_schemas/domain_testing.json)
+- **DLQ Policy:** Messages failing 3 times are sent to `domain_testing_dlq`.
+- **Notes:**
+  - All messages must include `domain_id` and `requested_at` fields.
+
+#### Example Message
+```json
+{
+  "domain_id": 67890,
+  "requested_at": "2025-06-16T12:00:00Z"
+}
+```
+
+---
+
+## How to Add a New Topic
+1. Add the topic to `config/kafka.yml` and `config/karafka.rb`.
+2. Document the topic in the table above and add a detailed section.
+3. Create a JSON schema in `docs/event_schemas/`.
+4. Update producers and consumers to use the schema.
+5. Add DLQ policy and notes as needed.
+
+---
+
+## Schema Registry (Recommended)
+- Store all message schemas in `docs/event_schemas/` as JSON files.
+- Reference the schema in both producer and consumer code.
+- Validate messages against the schema before producing/consuming.
+
+---
+
+## DLQ (Dead Letter Queue) Policy
+- All critical topics must have a DLQ configured in `karafka.rb`.
+- Consumers should log and alert on DLQ events.
+
+---
+
+## Monitoring
+- Track consumer lag, error rates, and DLQ usage.
+- Use centralized logging for all Kafka events. 

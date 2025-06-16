@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CompanyFinancialsMessage",
+  "type": "object",
+  "required": ["company_id", "requested_at"],
+  "properties": {
+    "company_id": {
+      "type": "integer",
+      "description": "The ID of the company to update."
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The time the update was requested."
+    }
+  },
+  "example": {
+    "company_id": 12345,
+    "requested_at": "2025-06-16T12:00:00Z"
+  }
+} 

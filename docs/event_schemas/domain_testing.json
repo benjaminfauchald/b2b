@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DomainTestingMessage",
+  "type": "object",
+  "required": ["domain_id", "requested_at"],
+  "properties": {
+    "domain_id": {
+      "type": "integer",
+      "description": "The ID of the domain to test."
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The time the test was requested."
+    }
+  },
+  "example": {
+    "domain_id": 67890,
+    "requested_at": "2025-06-16T12:00:00Z"
+  }
+} 
