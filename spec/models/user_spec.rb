@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe User, type: :model do
   describe 'validations' do
     it "is valid with valid attributes" do
-      user = User.new(name: "Example", email: "user@example.com")
+      user = User.new(name: "Example", email: "user_#{SecureRandom.hex(4)}@example.com", password: 'Password123!')
       expect(user).to be_valid
     end
   end
@@ -23,7 +23,7 @@ RSpec.describe User, type: :model do
     describe 'automatic auditing' do
       it 'creates audit log on creation' do
         expect {
-          User.create!(name: "Test User", email: "test@example.com")
+          User.create!(name: "Test User", email: "test_#{SecureRandom.hex(4)}@example.com", password: 'Password123!')
         }.to change(ServiceAuditLog, :count).by(1)
         
         audit_log = ServiceAuditLog.last

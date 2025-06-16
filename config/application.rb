@@ -19,6 +19,10 @@ module B2b
     # Configure Active Job to use Sidekiq
     config.active_job.queue_adapter = :sidekiq
 
+    # Custom auditing flags
+    config.service_auditing_enabled = true
+    config.automatic_auditing_enabled = true
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

@@ -40,16 +40,34 @@ class KarafkaApp < Karafka::App
   end
 
   routes.draw do
-    topic 'domain_testing' do
-      consumer DomainTestingConsumer
-    end
+    consumer_group KAFKA_CONFIG['consumer']['group_id'] do
+      # Domain testing topics
+      topic 'domain_testing' do
+        consumer DomainTestingConsumer
+      end
 
-    topic 'domain_a_record_testing' do
-      consumer DomainARecordTestingConsumer
-    end
+      topic 'domain_a_record_testing' do
+        consumer DomainARecordTestingConsumer
+      end
+      
+      # Financials topics
+      topic 'company_financials' do
+        consumer FinancialsConsumer
+        dead_letter_queue(
+          topic: 'company_financials_dlq',
+          max_retries: 3
+        )
+        manual_offset_commits false
+        start_from_beginning Rails.env.development?
+      end
 
-    topic 'domain_mx_testing' do
-      consumer DomainMXTestingConsumer
+      topic 'domain_mx_testing' do
+        consumer DomainMXTestingConsumer
+      end
+
+      topic 'brreg_migration' do
+        consumer BrregMigrationConsumer
+      end
     end
   end
 end
@@ -58,20 +76,4 @@ end
 require Rails.root.join('app', 'consumers', 'domain_testing_consumer')
 require Rails.root.join('app', 'consumers', 'domain_a_record_testing_consumer')
 require Rails.root.join('app', 'consumers', 'domain_mx_testing_consumer')
-
-# Configure routing
-KarafkaApp.routes.draw do
-  consumer_group KAFKA_CONFIG['consumer']['group_id'] do
-    topic 'domain_testing' do
-      consumer DomainTestingConsumer
-    end
-
-    topic 'domain_a_record_testing' do
-      consumer DomainARecordTestingConsumer
-    end
-
-    topic 'domain_mx_testing' do
-      consumer DomainMXTestingConsumer
-    end
-  end
-end 
+require Rails.root.join('app', 'consumers', 'brreg_migration_consumer') 

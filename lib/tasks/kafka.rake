@@ -32,6 +32,26 @@ namespace :kafka do
           'retention.ms' => 30.days.to_i * 1000, # 30 days retention for DLQ
           'cleanup.policy' => 'delete'
         }
+      },
+      'company_financials' => {
+        num_partitions: 3,
+        replication_factor: 1,
+        configs: {
+          'retention.ms' => 30.days.to_i * 1000, # 30 days retention
+          'cleanup.policy' => 'delete',
+          'max.message.bytes' => 5_000_000, # 5MB max message size (larger financial data)
+          'compression.type' => 'snappy',
+          'message.timestamp.type' => 'LogAppendTime',
+          'segment.bytes' => 100_000_000 # 100MB segments
+        }
+      },
+      'company_financials_dlq' => { # Dead Letter Queue for financials
+        num_partitions: 1,
+        replication_factor: 1,
+        configs: {
+          'retention.ms' => 90.days.to_i * 1000, # 90 days retention for DLQ
+          'cleanup.policy' => 'delete'
+        }
       }
     }
     

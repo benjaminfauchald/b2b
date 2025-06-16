@@ -28,6 +28,30 @@ development:
       partitions: 1
       replication_factor: 1
       retention_ms: 604800000
+    brreg_migration:
+      name: brreg_migration
+      partitions: 3
+      replication_factor: 1
+      retention_ms: 604800000  # 7 days
+    brreg_migration_dlq:
+      name: brreg_migration_dlq
+      partitions: 1
+      replication_factor: 1
+      retention_ms: 1209600000  # 14 days
+    
+    company_financials:
+      name: company_financials
+      partitions: 3
+      replication_factor: 1
+      retention_ms: 2592000000  # 30 days
+      max_message_bytes: 5000000  # 5MB
+      compression_type: snappy
+      
+    company_financials_dlq:
+      name: company_financials_dlq
+      partitions: 1
+      replication_factor: 1
+      retention_ms: 7776000000  # 90 days
 
 production:
   client_id: b2b_production
@@ -58,4 +82,14 @@ production:
     domain_a_record_testing_dlq:
       partitions: 3
       replication_factor: 3
-      retention_ms: 604800000 
+      retention_ms: 604800000
+    brreg_migration:
+      name: brreg_migration
+      partitions: 10
+      replication_factor: 3
+      retention_ms: 604800000  # 7 days
+    brreg_migration_dlq:
+      name: brreg_migration_dlq
+      partitions: 3
+      replication_factor: 3
+      retention_ms: 1209600000  # 14 days 

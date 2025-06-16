@@ -1,0 +1,1394 @@
+
+BrregMigrationConsumer
+  enqueues a Sidekiq job for a valid message
+  logs error for invalid JSON
+
+FinancialsConsumer
+  #consume
+    processes the message and updates the company
+    when the company does not exist
+      raises an error
+    when the message is invalid
+      raises a JSON parse error
+  #process_message
+    handles unknown event types
+
+DomainsHelper
+  add some examples to (or delete) /home/benjamin/b2b/spec/helpers/domains_helper_spec.rb (PENDING: Not yet implemented)
+
+Service Audit System Integration
+  end-to-end service auditing workflow
+    with fresh users needing processing
+      processes users through the complete audit cycle (FAILED - 1)
+      updates service performance statistics (FAILED - 2)
+      creates latest service run records (FAILED - 3)
+    with error handling
+      handles partial failures gracefully (FAILED - 4)
+    with automatic model auditing
+      automatically creates audit logs for model changes (FAILED - 5)
+    with service configuration management
+No users need enhancement at this time.
+      respects inactive service configurations
+      respects refresh interval settings (FAILED - 6)
+    with database views
+      provides accurate latest service run data
+      accurately tracks service performance (FAILED - 7)
+      identifies records needing refresh correctly (FAILED - 8)
+  rake task integration
+    provides service statistics via rake task (FAILED - 9)
+    supports audit log cleanup functionality (FAILED - 10)
+
+DomainARecordTestJob
+  job configuration
+    is configured to use DomainARecordTestingService queue (FAILED - 11)
+    has retry set to 0
+  #perform
+    calls DomainARecordTestingService.test_a_record with correct domain
+    finds domain by id and passes to service
+    when domain is not found
+      raises ActiveRecord::RecordNotFound (FAILED - 12)
+    integration test
+      successfully processes domain A record test
+    when service raises error
+      allows error to bubble up (no retry)
+
+DomainTestJob
+  #perform
+    with valid domain ID
+      calls DomainTestingService.test_dns
+      updates domain record with result (FAILED - 13)
+    with invalid domain ID
+      handles missing domain gracefully
+      does not raise error
+    when service raises error
+      does not re-raise error
+  job configuration
+    has retry count of 0
+    uses DomainTestingService queue
+
+ServiceAuditable
+  associations
+    has many service_audit_logs
+  callbacks
+    when audit is enabled
+      audits creation
+      audits updates
+    when audit is disabled
+      does not audit creation
+      does not audit updates
+  instance methods
+    #audit_service_operation
+      creates audit log and yields with it
+      creates audit log with default action
+      returns result from block
+    #needs_service?
+      returns true when no successful run exists
+      returns false when successful run exists within refresh interval
+      returns true when last successful run is older than refresh interval (FAILED - 14)
+    #last_service_run
+      returns the most recent successful run
+    #audit_enabled?
+      returns true by default (FAILED - 15)
+      when Rails configuration disables auditing
+        returns false (FAILED - 16)
+  class methods
+    .with_service_audit
+      processes records with audit logging
+      processes records with default action
+    .needing_service
+      returns users needing service (FAILED - 17)
+  private methods
+    #audit_creation
+      creates audit log for creation (FAILED - 18)
+    #audit_update
+      creates audit log for update with changed fields (FAILED - 19)
+
+Domain
+  validations
+    is expected to validate that :domain cannot be empty/falsy
+    is expected to validate that :domain is case-sensitively unique
+  ServiceAuditable concern
+    includes ServiceAuditable module
+    has many service_audit_logs
+  scopes
+    .dns_active
+      returns domains with active DNS
+    .dns_inactive
+      returns domains with inactive DNS
+    .untested
+      returns domains with untested DNS
+    .www_active
+      returns domains with active WWW
+    .www_inactive
+      returns domains with inactive WWW
+    .www_untested
+      returns domains with untested WWW
+  #needs_testing?
+    when DNS has never been tested
+      returns true
+    when DNS was tested recently
+      returns false (FAILED - 20)
+    when DNS was tested long ago
+      returns true
+  #needs_www_testing?
+    when WWW has never been tested
+      returns true
+    when WWW was tested recently
+      returns false
+    when WWW was tested long ago
+      returns true
+    when DNS is inactive
+      returns false
+  .needing_service
+    returns domains needing testing
+  #test_status
+    returns "active" for domains with dns: true
+    returns "inactive" for domains with dns: false
+    returns "untested" for domains with dns: nil
+
+ServiceAuditLog
+  associations
+    is expected to belong to auditable required: true
+  validations
+    is expected to validate that :service_name cannot be empty/falsy
+    is expected to validate that :action cannot be empty/falsy
+    is expected to validate that the length of :service_name is at most 100
+    is expected to validate that the length of :action is at most 50
+  enums
+    is expected to define :status as an enum backed by an integer with values ‹{pending: 0, success: 1, failed: 2}›, prefix: true
+  scopes
+    .recent
+      orders by created_at desc
+    .for_service
+      filters by service name
+    .successful
+      returns only successful logs
+    .failed
+      returns only failed logs
+    .for_auditable
+      returns logs for specific auditable record
+  instance methods
+    sets service_name (FAILED - 21)
+    #mark_started!
+      sets started_at timestamp
+    #mark_completed!
+      sets completed_at timestamp and calculates duration (FAILED - 22)
+    #mark_success!
+      sets status to success and marks completed
+    #mark_failed!
+      sets status to failed and marks completed
+    #add_context
+      merges context data
+    #track_changes
+      tracks changed fields (FAILED - 23)
+  class methods
+    .batch_audit
+      creates audit logs for batch processing
+      yields each record with its audit log
+      handles errors and marks failed logs (FAILED - 24)
+    .cleanup_old_logs
+      removes logs older than specified days
+  callbacks
+    before_create
+      sets default values
+
+ServiceConfiguration
+  validations
+    is expected to validate that :service_name cannot be empty/falsy
+    is expected to validate that :service_name is case-sensitively unique
+    is expected to validate that the length of :service_name is at most 100
+    is expected to validate that :refresh_interval_hours looks like a number greater than 0
+    is expected to validate that :batch_size looks like a number greater than 0
+    is expected to validate that :retry_attempts looks like a number greater than or equal to 0
+  default values
+    sets default refresh_interval_hours to 720
+    sets default active to true
+    sets default batch_size to 1000
+    sets default retry_attempts to 3
+    sets default depends_on_services to empty array
+    sets default settings to empty hash
+  scopes
+    .active
+      returns only active configurations
+    .inactive
+      returns only inactive configurations
+    .frequent_refresh
+      returns configurations with refresh interval less than specified hours
+  instance methods
+    #activate!
+      sets active to true
+    #deactivate!
+      sets active to false
+    #add_dependency
+      adds service to depends_on_services array
+      does not add duplicate dependencies
+    #remove_dependency
+      removes service from depends_on_services array
+    #update_setting
+      updates a specific setting
+      merges with existing settings
+    #get_setting
+      returns setting value
+      returns default value when setting does not exist
+    #needs_refresh?
+      returns true when last run is older than refresh interval
+      returns false when last run is within refresh interval
+      returns true when last_run_time is nil
+    #dependencies_met?
+      returns true when all dependencies are active
+      returns false when any dependency is inactive (FAILED - 25)
+      returns true when no dependencies are specified
+  class methods
+    .for_service
+      finds configuration by service name (FAILED - 26)
+      returns nil for non-existent service
+    .create_default
+      creates configuration with default values
+      allows overriding default values
+    .bulk_update_settings
+      updates settings for multiple services (FAILED - 27)
+  callbacks
+    after_create
+      logs configuration creation
+    after_update
+      logs configuration updates
+
+User
+  validations
+    is valid with valid attributes
+  ServiceAuditable concern
+    includes ServiceAuditable module
+    has many service_audit_logs
+    automatic auditing
+      creates audit log on creation (FAILED - 28)
+      creates audit log on update (FAILED - 29)
+    .with_service_audit
+      processes users with audit logging (FAILED - 30)
+      handles errors during processing
+    .needing_service
+      when user has never been processed
+        returns the user
+      when user was processed recently
+        does not return the user
+      when user was processed long ago
+        returns the user
+    #needs_service?
+      returns true when service has never been run
+      returns false when service was run recently
+      returns true when service was run long ago
+      returns false when service configuration is inactive
+
+/domains
+  GET /index
+    renders a successful response (PENDING: Add a hash of attributes valid for your model)
+  GET /show
+    renders a successful response (PENDING: Add a hash of attributes valid for your model)
+  GET /new
+    renders a successful response
+  GET /edit
+    renders a successful response (PENDING: Add a hash of attributes valid for your model)
+  POST /create
+    with valid parameters
+      creates a new Domain (PENDING: Add a hash of attributes valid for your model)
+      redirects to the created domain (PENDING: Add a hash of attributes valid for your model)
+    with invalid parameters
+      does not create a new Domain (PENDING: Add a hash of attributes invalid for your model)
+      renders a response with 422 status (i.e. to display the 'new' template) (PENDING: Add a hash of attributes invalid for your model)
+  PATCH /update
+    with valid parameters
+      updates the requested domain (PENDING: Add a hash of attributes valid for your model)
+      redirects to the domain (PENDING: Add a hash of attributes valid for your model)
+    with invalid parameters
+      renders a response with 422 status (i.e. to display the 'edit' template) (PENDING: Add a hash of attributes valid for your model)
+  DELETE /destroy
+    destroys the requested domain (PENDING: Add a hash of attributes valid for your model)
+    redirects to the domains list (PENDING: Add a hash of attributes valid for your model)
+
+DomainsController
+  routing
+    routes to #index
+    routes to #new
+    routes to #show
+    routes to #edit
+    routes to #create
+    routes to #update via PUT
+    routes to #update via PATCH
+    routes to #destroy
+
+ApplicationService
+  attributes
+    has service_name attribute
+    has action attribute with default
+    has batch_size attribute
+  validations
+    validates presence of service_name (FAILED - 31)
+    validates service_name format
+    accepts valid service_name format
+  #call
+    with valid service
+      validates before performing
+      calls perform method
+      returns result from perform
+    with invalid service
+      raises validation error (FAILED - 32)
+    when perform raises error
+      propagates the error
+  #validate!
+    raises ValidationError when invalid (FAILED - 33)
+    does not raise when valid
+  #configuration
+    returns service configuration (FAILED - 34)
+    returns nil for non-existent service
+  #batch_process
+    processes records in batches with audit logging (FAILED - 35)
+    handles batch_size configuration (FAILED - 36)
+  class methods
+    .call
+      creates instance and calls it
+      passes all arguments to new
+  protected methods
+    #perform
+      raises NotImplementedError in base class
+    #log_service_start
+      logs service start
+    #log_service_completion
+      logs service completion
+    #log_service_error
+      logs service error
+  integration with ServiceConfiguration
+    uses configuration values when not explicitly set (FAILED - 37)
+    allows overriding configuration values (FAILED - 38)
+
+BatchFinancialsUpdater
+  .update_all
+    enqueues jobs for companies that need updates (FAILED - 39)
+    respects the limit parameter (FAILED - 40)
+    respects the batch_size parameter (FAILED - 41)
+  .update_stale
+    enqueues jobs for companies with stale financial data (FAILED - 42)
+  error handling
+    logs errors but continues processing (FAILED - 43)
+
+CompanyFinancialsUpdater
+  #call
+    when the API request is successful
+      updates the company with financial data (FAILED - 44)
+    when the API returns a rate limit error
+      raises a RateLimitError with retry_after (FAILED - 45)
+    when the API returns an error
+      raises an ApiError (FAILED - 46)
+    when the API returns invalid JSON
+      raises an InvalidResponseError (FAILED - 47)
+    when the company has no registration number
+ Service Name: company_financials_updater
+      does not make an API request
+  retry logic
+    retries on rate limit (FAILED - 48)
+
+DomainARecordTestingService
+  returns the correct service name
+  .test_a_record
+    when www.domain resolves successfully
+      updates domain www field to true
+      returns true
+    when www.domain fails to resolve (ResolvError)
+      updates domain www field to false
+      returns false
+    when www.domain times out
+      updates domain www field to false
+      returns false
+    when other network error occurs
+      updates domain www field to nil
+      returns nil
+  .queue_all_domains
+    queues only domains with dns=true and www=nil
+    does not queue domains with dns=false
+    does not queue domains with dns=nil
+    does not queue domains already tested (www not nil)
+    returns count of queued domains
+  .queue_100_domains
+    only queues domains with dns=true and www=nil
+    when there are more than 100 domains to test
+      queues exactly 100 domains
+    when there are fewer than 100 domains to test
+      queues all available domains
+    when there are no domains to test
+      queues no domains
+  #call
+    when domain needs testing
+      processes the domain
+    when domain does not need testing
+      skips the domain
+  #process_domain
+    when A record test succeeds
+      creates success audit log
+    when A record test fails
+      creates failure audit log
+
+DomainTestingService
+  #initialize
+    sets the correct service name
+    sets the correct action
+    allows custom attributes
+  #call
+    when domains need testing
+      processes all domains needing testing (FAILED - 49)
+      creates audit logs for each domain (FAILED - 50)
+      updates domain dns status (FAILED - 51)
+      stores DNS test details in audit log context (FAILED - 52)
+    when no domains need testing
+      handles empty result gracefully (FAILED - 53)
+    when service configuration is inactive
+      does not process any domains (FAILED - 54)
+  #test_domain_dns
+    when DNS resolution succeeds
+      updates domain with successful result
+      includes timing information in context
+    when DNS resolution fails
+      handles Resolv::ResolvError correctly (FAILED - 55)
+    when DNS resolution times out
+      handles Timeout::Error correctly (FAILED - 56)
+    when network error occurs
+      handles network errors correctly (FAILED - 57)
+  legacy class methods
+    .test_dns
+      maintains backward compatibility (FAILED - 58)
+    .queue_all_domains
+      queues all domains needing testing (FAILED - 59)
+    .queue_100_domains
+      queues only 100 domains (FAILED - 60)
+  #has_dns?
+    returns true for valid domains
+    returns false for invalid domains
+    returns false on timeout
+  audit log integration
+    marks audit log as successful on success (FAILED - 61)
+    marks audit log as failed on DNS error (FAILED - 62)
+
+UserEnhancementService
+  #initialize
+    sets default service name and action (FAILED - 63)
+    allows custom attributes
+  #call
+    when users need enhancement
+No users need enhancement at this time.
+      processes all users needing enhancement (FAILED - 64)
+No users need enhancement at this time.
+      stores enhancement data in audit log context (FAILED - 65)
+      handles users without email (FAILED - 66)
+No users need enhancement at this time.
+      handles users without name (FAILED - 67)
+    when no users need enhancement
+      handles empty result gracefully
+    when service configuration is inactive
+      does not process any users
+  #classify_email_provider
+    classifies Google domains
+    classifies Yahoo domains
+    classifies Microsoft domains
+    classifies Apple domains
+    classifies unknown domains as Other
+    handles case insensitive domains
+  error handling
+No users need enhancement at this time.
+    marks audit log as failed when error occurs (FAILED - 68)
+
+domains/edit
+  renders the edit domain form
+
+domains/index
+  renders a list of domains (FAILED - 69)
+
+domains/new
+  renders new domain form
+
+domains/show
+  renders attributes in <p>
+
+BrregMigrationWorker
+  is queued in the brreg_migration queue
+  creates or updates a Company from a BRreg record
+  does nothing if BRreg record is missing
+  logs and raises errors for Sidekiq retry (FAILED - 70)
+
+UpdateCompanyFinancialsWorker
+  #perform
+    when the company exists
+      calls the CompanyFinancialsUpdater service
+      handles RateLimitError with retry
+    when the company does not exist
+      does not raise an error
+      does not call the CompanyFinancialsUpdater service
+  sidekiq_options
+    uses the financials queue
+    has a retry limit of 5
+  sidekiq_retry_in
+    uses retry_after for RateLimitError
+    uses exponential backoff for other errors
+  sidekiq_retries_exhausted
+    updates the company status when retries are exhausted (FAILED - 71)
+    does not raise an error if company is not found
+
+Pending: (Failures listed here are expected and do not affect your suite's status)
+
+  1) DomainsHelper add some examples to (or delete) /home/benjamin/b2b/spec/helpers/domains_helper_spec.rb
+     # Not yet implemented
+     # ./spec/helpers/domains_helper_spec.rb:14
+
+  2) /domains GET /index renders a successful response
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:29
+
+  3) /domains GET /show renders a successful response
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:37
+
+  4) /domains GET /edit renders a successful response
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:52
+
+  5) /domains POST /create with valid parameters creates a new Domain
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:61
+
+  6) /domains POST /create with valid parameters redirects to the created domain
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:67
+
+  7) /domains POST /create with invalid parameters does not create a new Domain
+     # Add a hash of attributes invalid for your model
+     # ./spec/requests/domains_spec.rb:74
+
+  8) /domains POST /create with invalid parameters renders a response with 422 status (i.e. to display the 'new' template)
+     # Add a hash of attributes invalid for your model
+     # ./spec/requests/domains_spec.rb:81
+
+  9) /domains PATCH /update with valid parameters updates the requested domain
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:95
+
+  10) /domains PATCH /update with valid parameters redirects to the domain
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:102
+
+  11) /domains PATCH /update with invalid parameters renders a response with 422 status (i.e. to display the 'edit' template)
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:112
+
+  12) /domains DELETE /destroy destroys the requested domain
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:122
+
+  13) /domains DELETE /destroy redirects to the domains list
+     # Add a hash of attributes valid for your model
+     # ./spec/requests/domains_spec.rb:129
+
+Failures:
+
+  1) Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing processes users through the complete audit cycle
+     Failure/Error: expect(log.duration_ms).to be_present
+       expected `nil.present?` to be truthy, got false
+     # ./spec/integration/service_audit_system_spec.rb:63:in `block (5 levels) in <main>'
+     # ./spec/integration/service_audit_system_spec.rb:58:in `block (4 levels) in <main>'
+
+  2) Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing updates service performance statistics
+     Failure/Error: stat = ServicePerformanceStat.find_by(service_name: 'user_enhancement')
+
+     ActiveRecord::StatementInvalid:
+       PG::UndefinedTable: ERROR:  relation "service_performance_stats" does not exist
+       LINE 10:  WHERE a.attrelid = '"service_performance_stats"'::regclass
+                                    ^
+     # ./spec/integration/service_audit_system_spec.rb:76:in `block (4 levels) in <main>'
+     # ------------------
+     # --- Caused by: ---
+     # PG::UndefinedTable:
+     #   ERROR:  relation "service_performance_stats" does not exist
+     #   LINE 10:  WHERE a.attrelid = '"service_performance_stats"'::regclass
+     #                                ^
+     #   ./spec/integration/service_audit_system_spec.rb:76:in `block (4 levels) in <main>'
+
+  3) Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing creates latest service run records
+     Failure/Error: expect(latest_runs.count).to eq(5)
+
+       expected: 5
+            got: 0
+
+       (compared using ==)
+     # ./spec/integration/service_audit_system_spec.rb:94:in `block (4 levels) in <main>'
+
+  4) Service Audit System Integration end-to-end service auditing workflow with error handling handles partial failures gracefully
+     Failure/Error:
+       expect {
+         User.with_service_audit('error_test_service') do |user, audit_log|
+           user.update!(name: "Processed #{user.name}")
+         end
+       }.to raise_error(StandardError, 'Processing failed')
+
+       expected StandardError with "Processing failed" but nothing was raised
+     # ./spec/integration/service_audit_system_spec.rb:116:in `block (4 levels) in <main>'
+
+  5) Service Audit System Integration end-to-end service auditing workflow with automatic model auditing automatically creates audit logs for model changes
+     Failure/Error:
+       expect {
+         user = User.create!(name: 'Auto Audit Test', email: "auto_#{SecureRandom.hex(4)}@test.com", password: 'Password123!')
+       }.to change(ServiceAuditLog, :count).by(1)
+
+       expected `ServiceAuditLog.count` to have changed by 1, but was changed by 0
+     # ./spec/integration/service_audit_system_spec.rb:140:in `block (4 levels) in <main>'
+
+  6) Service Audit System Integration end-to-end service auditing workflow with service configuration management respects refresh interval settings
+     Failure/Error: expect(user.needs_service?('user_enhancement')).to be true
+
+       expected true
+            got false
+     # ./spec/integration/service_audit_system_spec.rb:196:in `block (4 levels) in <main>'
+
+  7) Service Audit System Integration end-to-end service auditing workflow with database views accurately tracks service performance
+     Failure/Error: allow(ServicePerformanceStat).to receive(:find_by).and_return(double(successful_runs: 2))
+
+     ActiveRecord::StatementInvalid:
+       PG::UndefinedTable: ERROR:  relation "service_performance_stats" does not exist
+       LINE 10:  WHERE a.attrelid = '"service_performance_stats"'::regclass
+                                    ^
+     # ./spec/integration/service_audit_system_spec.rb:233:in `block (4 levels) in <main>'
+     # ------------------
+     # --- Caused by: ---
+     # PG::UndefinedTable:
+     #   ERROR:  relation "service_performance_stats" does not exist
+     #   LINE 10:  WHERE a.attrelid = '"service_performance_stats"'::regclass
+     #                                ^
+     #   ./spec/integration/service_audit_system_spec.rb:233:in `block (4 levels) in <main>'
+
+  8) Service Audit System Integration end-to-end service auditing workflow with database views identifies records needing refresh correctly
+     Failure/Error: expect(result.first['needs_refresh']).to be true
+
+       expected true
+            got nil
+     # ./spec/integration/service_audit_system_spec.rb:244:in `block (4 levels) in <main>'
+
+  9) Service Audit System Integration rake task integration provides service statistics via rake task
+     Failure/Error: expect(stats.count).to be > 0
+
+     ActiveRecord::StatementInvalid:
+       PG::UndefinedTable: ERROR:  relation "service_performance_stats" does not exist
+       LINE 1: SELECT COUNT(*) FROM "service_performance_stats"
+                                    ^
+     # ./spec/integration/service_audit_system_spec.rb:263:in `block (3 levels) in <main>'
+     # ------------------
+     # --- Caused by: ---
+     # PG::UndefinedTable:
+     #   ERROR:  relation "service_performance_stats" does not exist
+     #   LINE 1: SELECT COUNT(*) FROM "service_performance_stats"
+     #                                ^
+     #   ./spec/integration/service_audit_system_spec.rb:263:in `block (3 levels) in <main>'
+
+  10) Service Audit System Integration rake task integration supports audit log cleanup functionality
+      Failure/Error: ActiveRecord::Base.connection.execute('REFRESH MATERIALIZED VIEW service_performance_stats')
+
+      ActiveRecord::StatementInvalid:
+        PG::UndefinedTable: ERROR:  relation "service_performance_stats" does not exist
+      # ./app/models/service_performance_stat.rb:35:in `refresh'
+      # ./spec/integration/service_audit_system_spec.rb:282:in `block (3 levels) in <main>'
+      # ------------------
+      # --- Caused by: ---
+      # PG::UndefinedTable:
+      #   ERROR:  relation "service_performance_stats" does not exist
+      #   ./app/models/service_performance_stat.rb:35:in `refresh'
+
+  11) DomainARecordTestJob job configuration is configured to use DomainARecordTestingService queue
+      Failure/Error: expect(DomainARecordTestJob.queue_name).to eq('DomainARecordTestingService')
+
+        expected: #<Encoding:UTF-8> "DomainARecordTestingService"
+             got: #<Encoding:US-ASCII> "default"
+
+        (compared using ==)
+      # ./spec/jobs/domain_a_record_test_job_spec.rb:13:in `block (3 levels) in <main>'
+
+  12) DomainARecordTestJob#perform when domain is not found raises ActiveRecord::RecordNotFound
+      Failure/Error:
+        expect {
+          DomainARecordTestJob.perform_now(99999)
+        }.to raise_error(ActiveRecord::RecordNotFound)
+
+        expected ActiveRecord::RecordNotFound but nothing was raised
+      # ./spec/jobs/domain_a_record_test_job_spec.rb:37:in `block (4 levels) in <main>'
+
+  13) DomainTestJob#perform with valid domain ID updates domain record with result
+      Failure/Error: expect(domain.reload.dns).to be true
+
+        expected true
+             got nil
+      # ./spec/jobs/domain_test_job_spec.rb:17:in `block (4 levels) in <main>'
+
+  14) ServiceAuditable instance methods #needs_service? returns true when last successful run is older than refresh interval
+      Failure/Error: expect(auditable_user.needs_service?(service_name)).to be true
+
+        expected true
+             got false
+      # ./spec/models/concerns/service_auditable_spec.rb:112:in `block (4 levels) in <main>'
+
+  15) ServiceAuditable instance methods #audit_enabled? returns true by default
+      Failure/Error: expect(auditable_user.audit_enabled?).to be true
+
+        expected true
+             got false
+      # ./spec/models/concerns/service_auditable_spec.rb:128:in `block (4 levels) in <main>'
+
+  16) ServiceAuditable instance methods #audit_enabled? when Rails configuration disables auditing returns false
+      Failure/Error: allow(Rails.application.config).to receive(:service_auditing_enabled).and_return(false)
+
+        #<Rails::Application::Configuration:0x00000000011e68> received :respond_to? with unexpected arguments
+          expected: (:service_auditing_enabled)
+               got: (:service_auditing_enabled, true)
+        Diff:
+        @@ -1 +1 @@
+        -[:service_auditing_enabled]
+        +[:service_auditing_enabled, true]
+
+         Please stub a default value first if message might be received with other args as well. 
+      # ./spec/models/concerns/service_auditable_spec.rb:134:in `block (5 levels) in <main>'
+
+  17) ServiceAuditable class methods .needing_service returns users needing service
+      Failure/Error: expect(needing_users).to include(user1, user3)
+
+        expected #<ActiveRecord::Relation [#<User id: 44, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:19.825350000 +0000", updated_at: "2025-06-16 04:31:19.825350000 +0000", role: nil>]> to include #<User id: 46, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:19.837692000 +0000", updated_at: "2025-06-16 04:31:19.837692000 +0000", role: nil>
+        Diff:
+        @@ -1,2 +1 @@
+        -[#<User id: 44, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:19.825350000 +0000", updated_at: "2025-06-16 04:31:19.825350000 +0000", role: nil>,
+        - #<User id: 46, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:19.837692000 +0000", updated_at: "2025-06-16 04:31:19.837692000 +0000", role: nil>]
+        +[#<User id: 44, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:19.825350000 +0000", updated_at: "2025-06-16 04:31:19.825350000 +0000", role: nil>]
+      # ./spec/models/concerns/service_auditable_spec.rb:186:in `block (4 levels) in <main>'
+
+  18) ServiceAuditable private methods #audit_creation creates audit log for creation
+      Failure/Error: expect(audit_log.service_name).to eq("automatic_audit_#{SecureRandom.hex(8)}")
+
+        expected: "automatic_audit_53e12596d0f269b1"
+             got: "automatic_audit"
+
+        (compared using ==)
+      # ./spec/models/concerns/service_auditable_spec.rb:205:in `block (4 levels) in <main>'
+
+  19) ServiceAuditable private methods #audit_update creates audit log for update with changed fields
+      Failure/Error: expect(audit_log.service_name).to eq("model_lifecycle_#{SecureRandom.hex(8)}")
+
+        expected: "model_lifecycle_71458ce1702f28c3"
+             got: "automatic_audit"
+
+        (compared using ==)
+      # ./spec/models/concerns/service_auditable_spec.rb:222:in `block (4 levels) in <main>'
+
+  20) Domain#needs_testing? when DNS was tested recently returns false
+      Failure/Error: expect(domain.needs_testing?(service_name)).to be false
+
+        expected false
+             got true
+      # ./spec/models/domain_spec.rb:96:in `block (4 levels) in <main>'
+
+  21) ServiceAuditLog instance methods sets service_name
+      Failure/Error: expect(audit_log.service_name).to eq(service_name)
+
+        expected: "service_audit_log_9f81870e3fc45fed"
+             got: "test_service"
+
+        (compared using ==)
+      # ./spec/models/service_audit_log_spec.rb:121:in `block (3 levels) in <main>'
+
+  22) ServiceAuditLog instance methods #mark_completed! sets completed_at timestamp and calculates duration
+      Failure/Error: expect(audit_log.duration_ms).to be > 0
+
+        expected: > 0
+             got:   nil
+      # ./spec/models/service_audit_log_spec.rb:78:in `block (4 levels) in <main>'
+
+  23) ServiceAuditLog instance methods #track_changes tracks changed fields
+      Failure/Error: audit_log.track_changes(user)
+
+      NoMethodError:
+        private method `track_changes' called for an instance of ServiceAuditLog
+      # ./spec/models/service_audit_log_spec.rb:115:in `block (4 levels) in <main>'
+
+  24) ServiceAuditLog class methods .batch_audit handles errors and marks failed logs
+      Failure/Error: raise 'Test error'
+
+      RuntimeError:
+        Test error
+      # ./spec/models/service_audit_log_spec.rb:155:in `block (6 levels) in <main>'
+      # ./app/models/service_audit_log.rb:111:in `block (3 levels) in batch_audit'
+      # ./app/models/service_audit_log.rb:151:in `process_audit_record'
+      # ./app/models/service_audit_log.rb:111:in `block (2 levels) in batch_audit'
+      # ./app/models/service_audit_log.rb:110:in `each'
+      # ./app/models/service_audit_log.rb:110:in `block in batch_audit'
+      # ./app/models/concerns/service_auditable.rb:151:in `with_automatic_auditing_disabled'
+      # ./app/models/service_audit_log.rb:104:in `batch_audit'
+      # ./spec/models/service_audit_log_spec.rb:154:in `block (5 levels) in <main>'
+      # ./spec/models/service_audit_log_spec.rb:153:in `block (4 levels) in <main>'
+
+  25) ServiceConfiguration instance methods #dependencies_met? returns false when any dependency is inactive
+      Failure/Error: expect(config.dependencies_met?).to be false
+
+        expected false
+             got true
+      # ./spec/models/service_configuration_spec.rb:167:in `block (4 levels) in <main>'
+
+  26) ServiceConfiguration class methods .for_service finds configuration by service name
+      Failure/Error: expect(ServiceConfiguration.for_service('test_service')).to eq(config)
+
+        expected: #<ServiceConfiguration id: 64, service_name: "test_service_8621f226cc3795c9", refresh_interval_hours:...reated_at: "2025-06-16 04:31:21.310496000 +0000", updated_at: "2025-06-16 04:31:21.310496000 +0000">
+             got: nil
+
+        (compared using ==)
+      # ./spec/models/service_configuration_spec.rb:182:in `block (4 levels) in <main>'
+
+  27) ServiceConfiguration class methods .bulk_update_settings updates settings for multiple services
+      Failure/Error: expect(config1.reload.settings['timeout']).to eq(30)
+
+        expected: 30
+             got: nil
+
+        (compared using ==)
+      # ./spec/models/service_configuration_spec.rb:217:in `block (4 levels) in <main>'
+
+  28) User ServiceAuditable concern automatic auditing creates audit log on creation
+      Failure/Error:
+        expect {
+          User.create!(name: "Test User", email: "test_#{SecureRandom.hex(4)}@example.com", password: 'Password123!')
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        expected `ServiceAuditLog.count` to have changed by 1, but was changed by 0
+      # ./spec/models/user_spec.rb:25:in `block (4 levels) in <main>'
+
+  29) User ServiceAuditable concern automatic auditing creates audit log on update
+      Failure/Error:
+        expect {
+          user.update!(name: "New Name")
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        expected `ServiceAuditLog.count` to have changed by 1, but was changed by 0
+      # ./spec/models/user_spec.rb:38:in `block (4 levels) in <main>'
+
+  30) User ServiceAuditable concern .with_service_audit processes users with audit logging
+      Failure/Error:
+        expect {
+          User.with_service_audit('test_service', action: 'bulk_process') do |user, audit_log|
+            user.update!(name: "Processed #{user.name}")
+          end
+        }.to change(ServiceAuditLog, :count).by(6) # 3 for service + 3 for automatic auditing
+
+        expected `ServiceAuditLog.count` to have changed by 6, but was changed by 3
+      # ./spec/models/user_spec.rb:56:in `block (4 levels) in <main>'
+
+  31) ApplicationService validations validates presence of service_name
+      Failure/Error: expect(service).not_to be_valid
+        expected #<ApplicationService:0x00007f835099c318 @attributes=#<ActiveModel::AttributeSet:0x00007f835099c2c8 @attributes={"action"=>#<ActiveModel::Attribute::UserProvidedDefault:0x00007f83503883a0 @user_provided_value="process", @name="action", @value_before_type_cast="process", @type=#<ActiveModel::Type::String:0x00007f83517e5cd0 @true="t", @false="f", @precision=nil, @scale=nil, @limit=nil>, @original_attribute=nil, @value="process">, "batch_size"=>#<ActiveModel::Attribute::WithCastValue:0x00007f8350388350 @name="batch_size", @value_before_type_cast=nil, @type=#<ActiveModel::Type::Integer:0x00007f83517e56e0 @precision=nil, @scale=nil, @limit=nil, @range=-2147483648...2147483648>, @original_attribute=nil>}>, @context_for_validation=#<ActiveModel::ValidationContext:0x00007f835099c0e8 @context=nil>, @errors=#<ActiveModel::Errors []>> not to be valid
+      # ./spec/services/application_service_spec.rb:55:in `block (3 levels) in <main>'
+
+  32) ApplicationService#call with invalid service raises validation error
+      Failure/Error: expect { service.call }.to raise_error(ActiveModel::ValidationError)
+
+        expected ActiveModel::ValidationError, got #<NotImplementedError: ApplicationService must implement #perform> with backtrace:
+          # ./app/services/application_service.rb:76:in `perform'
+          # ./app/services/application_service.rb:24:in `call'
+          # ./spec/services/application_service_spec.rb:96:in `block (5 levels) in <main>'
+          # ./spec/services/application_service_spec.rb:96:in `block (4 levels) in <main>'
+      # ./spec/services/application_service_spec.rb:96:in `block (4 levels) in <main>'
+
+  33) ApplicationService#validate! raises ValidationError when invalid
+      Failure/Error: expect { service.validate! }.to raise_error(ActiveModel::ValidationError)
+        expected ActiveModel::ValidationError but nothing was raised
+      # ./spec/services/application_service_spec.rb:112:in `block (3 levels) in <main>'
+
+  34) ApplicationService#configuration returns service configuration
+      Failure/Error: expect(service.configuration.service_name).to start_with('application_service_')
+
+      NoMethodError:
+        undefined method `service_name' for nil
+      # ./spec/services/application_service_spec.rb:126:in `block (3 levels) in <main>'
+
+  35) ApplicationService#batch_process processes records in batches with audit logging
+      Failure/Error: expect(audit_log.service_name).to eq('test_service')
+
+        expected: "test_service"
+             got: "test_service_f39a2fc43a26546e"
+
+        (compared using ==)
+      # ./spec/services/application_service_spec.rb:145:in `block (4 levels) in <main>'
+      # ./app/services/application_service.rb:63:in `block in batch_process'
+      # ./app/models/service_audit_log.rb:111:in `block (3 levels) in batch_audit'
+      # ./app/models/service_audit_log.rb:151:in `process_audit_record'
+      # ./app/models/service_audit_log.rb:111:in `block (2 levels) in batch_audit'
+      # ./app/models/service_audit_log.rb:110:in `each'
+      # ./app/models/service_audit_log.rb:110:in `block in batch_audit'
+      # ./app/models/concerns/service_auditable.rb:151:in `with_automatic_auditing_disabled'
+      # ./app/models/service_audit_log.rb:104:in `batch_audit'
+      # ./app/services/application_service.rb:62:in `batch_process'
+      # ./spec/services/application_service_spec.rb:142:in `block (3 levels) in <main>'
+
+  36) ApplicationService#batch_process handles batch_size configuration
+      Failure/Error:
+        ServiceAuditLog.batch_audit(records, service_name: service_name, action: action, **audit_options) do |record, audit_log|
+          yield(record, audit_log)
+        end
+
+        #<ServiceAuditLog(id: integer, auditable_type: string, auditable_id: integer, service_name: string, action: string, status: integer, changed_fields: text, error_message: text, duration_ms: integer, context: jsonb, job_id: string, queue_name: string, scheduled_at: datetime, started_at: datetime, completed_at: datetime, created_at: datetime, updated_at: datetime) (class)> received :batch_audit with unexpected arguments
+          expected: ([#<User id: 119, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:21.951641000 ...2025-06-16 04:31:21.965529000 +0000", updated_at: "2025-06-16 04:31:21.965529000 +0000", role: nil>], {:action=>"test_action", :batch_size=>2, :service_name=>"test_service"})
+               got: ([#<User id: 119, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:21.951641000 ...2025-06-16 04:31:21.965529000 +0000", updated_at: "2025-06-16 04:31:21.965529000 +0000", role: nil>], {:action=>"test_action", :service_name=>"test_service_1d12176d78ec1e6b"})
+        Diff:
+        @@ -1,4 +1,4 @@
+         [[#<User id: 119, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:21.951641000 +0000", updated_at: "2025-06-16 04:31:21.951641000 +0000", role: nil>,
+           #<User id: 120, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:21.959031000 +0000", updated_at: "2025-06-16 04:31:21.959031000 +0000", role: nil>,
+           #<User id: 121, name: "Example User", email: [FILTERED], created_at: "2025-06-16 04:31:21.965529000 +0000", updated_at: "2025-06-16 04:31:21.965529000 +0000", role: nil>],
+        - {:action=>"test_action", :batch_size=>2, :service_name=>"test_service"}]
+        + {:action=>"test_action", :service_name=>"test_service_1d12176d78ec1e6b"}]
+      # ./app/services/application_service.rb:62:in `batch_process'
+      # ./spec/services/application_service_spec.rb:164:in `block (3 levels) in <main>'
+
+  37) ApplicationService integration with ServiceConfiguration uses configuration values when not explicitly set
+      Failure/Error: expect(result[:batch_size]).to eq(100)
+
+        expected: 100
+             got: nil
+
+        (compared using ==)
+      # ./spec/services/application_service_spec.rb:247:in `block (3 levels) in <main>'
+
+  38) ApplicationService integration with ServiceConfiguration allows overriding configuration values
+      Failure/Error: expect(result[:timeout]).to eq(30)
+
+        expected: 30
+             got: nil
+
+        (compared using ==)
+      # ./spec/services/application_service_spec.rb:256:in `block (3 levels) in <main>'
+
+  39) BatchFinancialsUpdater.update_all enqueues jobs for companies that need updates
+      Failure/Error: let!(:company_without_financials) { create(:company, financial_data_status: nil) }
+
+      NoMethodError:
+        undefined method `financial_data_status=' for an instance of Company
+      # ./spec/services/batch_financials_updater_spec.rb:8:in `block (3 levels) in <main>'
+
+  40) BatchFinancialsUpdater.update_all respects the limit parameter
+      Failure/Error: let!(:company_without_financials) { create(:company, financial_data_status: nil) }
+
+      NoMethodError:
+        undefined method `financial_data_status=' for an instance of Company
+      # ./spec/services/batch_financials_updater_spec.rb:8:in `block (3 levels) in <main>'
+
+  41) BatchFinancialsUpdater.update_all respects the batch_size parameter
+      Failure/Error: let!(:company_without_financials) { create(:company, financial_data_status: nil) }
+
+      NoMethodError:
+        undefined method `financial_data_status=' for an instance of Company
+      # ./spec/services/batch_financials_updater_spec.rb:8:in `block (3 levels) in <main>'
+
+  42) BatchFinancialsUpdater.update_stale enqueues jobs for companies with stale financial data
+      Failure/Error:
+        companies.find_each do |company|
+          begin
+            company.update_financials_async
+            processed += 1
+            @logger.info "[#{processed}/#{total}] Enqueued update for #{company.registration_number}" if (processed % 100).zero?
+          rescue => e
+            @logger.error "Error enqueuing update for company #{company.id}: #{e.message}"
+          end
+
+      NoMethodError:
+        undefined method `find_each' for an instance of Array
+      # ./app/services/batch_financials_updater.rb:54:in `update_companies'
+      # ./app/services/batch_financials_updater.rb:42:in `block in update_stale'
+      # ./app/services/batch_financials_updater.rb:42:in `instance_exec'
+      # ./app/services/batch_financials_updater.rb:42:in `update_stale'
+      # ./spec/services/batch_financials_updater_spec.rb:61:in `block (3 levels) in <main>'
+
+  43) BatchFinancialsUpdater error handling logs errors but continues processing
+      Failure/Error: let!(:company1) { create(:company, financial_data_status: nil) }
+
+      NoMethodError:
+        undefined method `financial_data_status=' for an instance of Company
+      # ./spec/services/batch_financials_updater_spec.rb:70:in `block (3 levels) in <main>'
+
+  44) CompanyFinancialsUpdater#call when the API request is successful updates the company with financial data
+      Failure/Error:
+        stub_request(:get, api_url)
+          .to_return(status: 200, body: success_response, headers: { 'Content-Type' => 'application/json' })
+
+      NoMethodError:
+        undefined method `stub_request' for #<RSpec::ExampleGroups::CompanyFinancialsUpdater::Call::WhenTheAPIRequestIsSuccessful:0x00007f8350106898>
+      # ./spec/services/company_financials_updater_spec.rb:29:in `block (4 levels) in <main>'
+
+  45) CompanyFinancialsUpdater#call when the API returns a rate limit error raises a RateLimitError with retry_after
+      Failure/Error:
+        stub_request(:get, api_url)
+          .to_return(status: 429, headers: { 'Retry-After' => '10' })
+
+      NoMethodError:
+        undefined method `stub_request' for #<RSpec::ExampleGroups::CompanyFinancialsUpdater::Call::WhenTheAPIReturnsARateLimitError:0x00007f83501ae250>
+      # ./spec/services/company_financials_updater_spec.rb:44:in `block (4 levels) in <main>'
+
+  46) CompanyFinancialsUpdater#call when the API returns an error raises an ApiError
+      Failure/Error:
+        stub_request(:get, api_url)
+          .to_return(status: 500, body: 'Internal Server Error')
+
+      NoMethodError:
+        undefined method `stub_request' for #<RSpec::ExampleGroups::CompanyFinancialsUpdater::Call::WhenTheAPIReturnsAnError:0x00007f8350206860>
+      # ./spec/services/company_financials_updater_spec.rb:57:in `block (4 levels) in <main>'
+
+  47) CompanyFinancialsUpdater#call when the API returns invalid JSON raises an InvalidResponseError
+      Failure/Error:
+        stub_request(:get, api_url)
+          .to_return(status: 200, body: 'invalid json')
+
+      NoMethodError:
+        undefined method `stub_request' for #<RSpec::ExampleGroups::CompanyFinancialsUpdater::Call::WhenTheAPIReturnsInvalidJSON:0x00007f835036f170>
+      # ./spec/services/company_financials_updater_spec.rb:68:in `block (4 levels) in <main>'
+
+  48) CompanyFinancialsUpdater retry logic retries on rate limit
+      Failure/Error:
+        stub_request(:get, api_url)
+          .to_return(
+            { status: 429, headers: { 'Retry-After' => '1' } },
+            { status: 200, body: success_response, headers: { 'Content-Type' => 'application/json' } }
+          )
+
+      NoMethodError:
+        undefined method `stub_request' for #<RSpec::ExampleGroups::CompanyFinancialsUpdater::RetryLogic:0x00007f8350584898>
+      # ./spec/services/company_financials_updater_spec.rb:90:in `block (3 levels) in <main>'
+
+  49) DomainTestingService#call when domains need testing processes all domains needing testing
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:44:in `block (4 levels) in <main>'
+
+  50) DomainTestingService#call when domains need testing creates audit logs for each domain
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:56:in `block (5 levels) in <main>'
+      # ./spec/services/domain_testing_service_spec.rb:55:in `block (4 levels) in <main>'
+
+  51) DomainTestingService#call when domains need testing updates domain dns status
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:67:in `block (4 levels) in <main>'
+
+  52) DomainTestingService#call when domains need testing stores DNS test details in audit log context
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:77:in `block (4 levels) in <main>'
+
+  53) DomainTestingService#call when no domains need testing handles empty result gracefully
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:100:in `block (4 levels) in <main>'
+
+  54) DomainTestingService#call when service configuration is inactive does not process any domains
+      Failure/Error:
+          def test_domains_in_batches(domains)
+            domains.each_slice(batch_size) do |batch|
+              batch.each do |domain|
+                result = test_domain_dns(domain)
+                next unless result
+        
+                payload = {
+                  domain_id: domain.id,
+                  result: result
+                }
+
+      ArgumentError:
+        wrong number of arguments (given 0, expected 1)
+      # ./app/services/domain_testing_service.rb:193:in `test_domains_in_batches'
+      # ./app/services/domain_testing_service.rb:18:in `call'
+      # ./spec/services/domain_testing_service_spec.rb:113:in `block (4 levels) in <main>'
+
+  55) DomainTestingService#test_domain_dns when DNS resolution fails handles Resolv::ResolvError correctly
+      Failure/Error: expect(domain.dns).to be false
+
+        expected false
+             got true
+      # ./spec/services/domain_testing_service_spec.rb:154:in `block (4 levels) in <main>'
+
+  56) DomainTestingService#test_domain_dns when DNS resolution times out handles Timeout::Error correctly
+      Failure/Error: expect(domain.dns).to be false
+
+        expected false
+             got true
+      # ./spec/services/domain_testing_service_spec.rb:169:in `block (4 levels) in <main>'
+
+  57) DomainTestingService#test_domain_dns when network error occurs handles network errors correctly
+      Failure/Error: expect(domain.dns).to be nil  # Keep as untested for network errors
+
+        expected nil
+             got true
+      # ./spec/services/domain_testing_service_spec.rb:184:in `block (4 levels) in <main>'
+
+  58) DomainTestingService legacy class methods .test_dns maintains backward compatibility
+      Failure/Error: expect(result).to be true
+
+        expected true
+             got #<Hash:62900> => {:a=>[#<Resolv::IPv4 23.192.228.80>, #<Resolv::IPv4 96.7.128.198>, #<Resolv::IPv4 96.7.128.175>, #<Re...228.84>], :mx=>[#<Resolv::DNS::Name: .>], :txt=>["_k2n1y4vw3qtb4skdx9e7dxt97qrmmq9", "v=spf1 -all"]}
+      # ./spec/services/domain_testing_service_spec.rb:201:in `block (4 levels) in <main>'
+
+  59) DomainTestingService legacy class methods .queue_all_domains queues all domains needing testing
+      Failure/Error: expect(count).to eq(5)
+
+        expected: 5
+             got: 0
+
+        (compared using ==)
+      # ./spec/services/domain_testing_service_spec.rb:217:in `block (4 levels) in <main>'
+
+  60) DomainTestingService legacy class methods .queue_100_domains queues only 100 domains
+      Failure/Error: expect(count).to eq(100)
+
+        expected: 100
+             got: 0
+
+        (compared using ==)
+      # ./spec/services/domain_testing_service_spec.rb:231:in `block (4 levels) in <main>'
+
+  61) DomainTestingService audit log integration marks audit log as successful on success
+      Failure/Error: expect(audit_log.status_success?).to be true
+
+        expected true
+             got false
+      # ./spec/services/domain_testing_service_spec.rb:273:in `block (3 levels) in <main>'
+
+  62) DomainTestingService audit log integration marks audit log as failed on DNS error
+      Failure/Error: expect(audit_log.status_failed?).to be true
+
+        expected true
+             got false
+      # ./spec/services/domain_testing_service_spec.rb:283:in `block (3 levels) in <main>'
+
+  63) UserEnhancementService#initialize sets default service name and action
+      Failure/Error: expect(service.service_name).to eq('user_enhancement_service')
+
+        expected: "user_enhancement_service"
+             got: "user_enhancement"
+
+        (compared using ==)
+      # ./spec/services/user_enhancement_service_spec.rb:7:in `block (3 levels) in <main>'
+
+  64) UserEnhancementService#call when users need enhancement processes all users needing enhancement
+      Failure/Error:
+        expect {
+          service.call
+        }.to change(ServiceAuditLog, :count).by(3)
+
+        expected `ServiceAuditLog.count` to have changed by 3, but was changed by 0
+      # ./spec/services/user_enhancement_service_spec.rb:32:in `block (4 levels) in <main>'
+
+  65) UserEnhancementService#call when users need enhancement stores enhancement data in audit log context
+      Failure/Error:
+        expect(audit_log.context).to include(
+          'email_domain' => 'gmail.com',
+          'email_provider' => 'Google',
+          'name_length' => 8,
+          'name_words' => 2
+        )
+
+      NoMethodError:
+        undefined method `context' for nil
+      # ./spec/services/user_enhancement_service_spec.rb:48:in `block (4 levels) in <main>'
+
+  66) UserEnhancementService#call when users need enhancement handles users without email
+      Failure/Error: user = create(:user, name: 'Jane Doe', email: nil)
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Email can't be blank
+      # ./spec/services/user_enhancement_service_spec.rb:57:in `block (4 levels) in <main>'
+
+  67) UserEnhancementService#call when users need enhancement handles users without name
+      Failure/Error: expect(audit_log.status_success?).to be true
+
+      NoMethodError:
+        undefined method `status_success?' for nil
+      # ./spec/services/user_enhancement_service_spec.rb:78:in `block (4 levels) in <main>'
+
+  68) UserEnhancementService error handling marks audit log as failed when error occurs
+      Failure/Error: expect { service.call }.to raise_error(StandardError, 'Test error')
+        expected StandardError with "Test error" but nothing was raised
+      # ./spec/services/user_enhancement_service_spec.rb:173:in `block (3 levels) in <main>'
+
+  69) domains/index renders a list of domains
+      Failure/Error:
+        Domain.create!(
+          domain: "Domain Name",
+          www: false,
+          mx: false
+        )
+
+      ActiveRecord::RecordInvalid:
+        Validation failed: Domain has already been taken
+      # ./spec/views/domains/index.html.erb_spec.rb:11:in `block (2 levels) in <main>'
+
+  70) BrregMigrationWorker logs and raises errors for Sidekiq retry
+      Failure/Error: expect(Rails.logger).to receive(:error).with(/Error processing Brreg organisasjonsnummer/)
+
+        (#<ActiveSupport::BroadcastLogger:0x00007f8352eabe10 @broadcasts=[#<ActiveSupport::Logger:0x00007f8352ec9348 @level=0, @progname=nil, @default_formatter=#<Logger::Formatter:0x00007f8352eac3d8 @datetime_format=nil>, @formatter=#<ActiveSupport::Logger::SimpleFormatter:0x00007f8352eac0e0 @datetime_format=nil, @thread_key="activesupport_tagged_logging_tags:25340">, @logdev=#<Logger::LogDevice:0x00007f8354517280 @shift_period_suffix="%Y%m%d", @shift_size=104857600, @shift_age=1, @filename="/home/benjamin/b2b/log/test.log", @dev=#<File:/home/benjamin/b2b/log/test.log>, @binmode=false, @reraise_write_errors=[], @skip_header=false, @mon_data=#<Monitor:0x00007f8352eac338>, @mon_data_owner_object_id=9200>, @level_override={}, @local_level_key=:logger_thread_safe_level_25120>], @progname="Broadcast", @formatter=#<ActiveSupport::Logger::SimpleFormatter:0x00007f8352eac0e0 @datetime_format=nil, @thread_key="activesupport_tagged_logging_tags:25340">>).error(/Error processing Brreg organisasjonsnummer/)
+            expected: 1 time with arguments: (/Error processing Brreg organisasjonsnummer/)
+            received: 0 times
+      # ./spec/workers/brreg_migration_worker_spec.rb:26:in `block (2 levels) in <main>'
+
+  71) UpdateCompanyFinancialsWorker sidekiq_retries_exhausted updates the company status when retries are exhausted
+      Failure/Error:
+        log_to_sct('WORKER_RETRIES_EXHAUSTED', [], 'FAILED', 0, ex.message, {
+          company_id: company_id,
+          registration_number: company.registration_number,
+          error_class: ex.class.name,
+          retry_count: msg['retry_count']
+        })
+
+      NoMethodError:
+        undefined method `log_to_sct' for class UpdateCompanyFinancialsWorker
+      # ./app/workers/update_company_financials_worker.rb:11:in `block in <class:UpdateCompanyFinancialsWorker>'
+      # ./spec/workers/update_company_financials_worker_spec.rb:76:in `block (4 levels) in <main>'
+      # ./spec/workers/update_company_financials_worker_spec.rb:75:in `block (3 levels) in <main>'
+
+Finished in 8.78 seconds (files took 3.23 seconds to load)
+281 examples, 71 failures, 13 pending
+
+Failed examples:
+
+rspec ./spec/integration/service_audit_system_spec.rb:36 # Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing processes users through the complete audit cycle
+rspec ./spec/integration/service_audit_system_spec.rb:71 # Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing updates service performance statistics
+rspec ./spec/integration/service_audit_system_spec.rb:88 # Service Audit System Integration end-to-end service auditing workflow with fresh users needing processing creates latest service run records
+rspec ./spec/integration/service_audit_system_spec.rb:111 # Service Audit System Integration end-to-end service auditing workflow with error handling handles partial failures gracefully
+rspec ./spec/integration/service_audit_system_spec.rb:137 # Service Audit System Integration end-to-end service auditing workflow with automatic model auditing automatically creates audit logs for model changes
+rspec ./spec/integration/service_audit_system_spec.rb:184 # Service Audit System Integration end-to-end service auditing workflow with service configuration management respects refresh interval settings
+rspec ./spec/integration/service_audit_system_spec.rb:232 # Service Audit System Integration end-to-end service auditing workflow with database views accurately tracks service performance
+rspec ./spec/integration/service_audit_system_spec.rb:240 # Service Audit System Integration end-to-end service auditing workflow with database views identifies records needing refresh correctly
+rspec ./spec/integration/service_audit_system_spec.rb:259 # Service Audit System Integration rake task integration provides service statistics via rake task
+rspec ./spec/integration/service_audit_system_spec.rb:273 # Service Audit System Integration rake task integration supports audit log cleanup functionality
+rspec ./spec/jobs/domain_a_record_test_job_spec.rb:12 # DomainARecordTestJob job configuration is configured to use DomainARecordTestingService queue
+rspec ./spec/jobs/domain_a_record_test_job_spec.rb:36 # DomainARecordTestJob#perform when domain is not found raises ActiveRecord::RecordNotFound
+rspec ./spec/jobs/domain_test_job_spec.rb:13 # DomainTestJob#perform with valid domain ID updates domain record with result
+rspec ./spec/models/concerns/service_auditable_spec.rb:110 # ServiceAuditable instance methods #needs_service? returns true when last successful run is older than refresh interval
+rspec ./spec/models/concerns/service_auditable_spec.rb:127 # ServiceAuditable instance methods #audit_enabled? returns true by default
+rspec ./spec/models/concerns/service_auditable_spec.rb:137 # ServiceAuditable instance methods #audit_enabled? when Rails configuration disables auditing returns false
+rspec ./spec/models/concerns/service_auditable_spec.rb:184 # ServiceAuditable class methods .needing_service returns users needing service
+rspec ./spec/models/concerns/service_auditable_spec.rb:199 # ServiceAuditable private methods #audit_creation creates audit log for creation
+rspec ./spec/models/concerns/service_auditable_spec.rb:216 # ServiceAuditable private methods #audit_update creates audit log for update with changed fields
+rspec ./spec/models/domain_spec.rb:95 # Domain#needs_testing? when DNS was tested recently returns false
+rspec ./spec/models/service_audit_log_spec.rb:120 # ServiceAuditLog instance methods sets service_name
+rspec ./spec/models/service_audit_log_spec.rb:75 # ServiceAuditLog instance methods #mark_completed! sets completed_at timestamp and calculates duration
+rspec ./spec/models/service_audit_log_spec.rb:113 # ServiceAuditLog instance methods #track_changes tracks changed fields
+rspec ./spec/models/service_audit_log_spec.rb:152 # ServiceAuditLog class methods .batch_audit handles errors and marks failed logs
+rspec ./spec/models/service_configuration_spec.rb:165 # ServiceConfiguration instance methods #dependencies_met? returns false when any dependency is inactive
+rspec ./spec/models/service_configuration_spec.rb:181 # ServiceConfiguration class methods .for_service finds configuration by service name
+rspec ./spec/models/service_configuration_spec.rb:211 # ServiceConfiguration class methods .bulk_update_settings updates settings for multiple services
+rspec ./spec/models/user_spec.rb:24 # User ServiceAuditable concern automatic auditing creates audit log on creation
+rspec ./spec/models/user_spec.rb:35 # User ServiceAuditable concern automatic auditing creates audit log on update
+rspec ./spec/models/user_spec.rb:52 # User ServiceAuditable concern .with_service_audit processes users with audit logging
+rspec ./spec/services/application_service_spec.rb:53 # ApplicationService validations validates presence of service_name
+rspec ./spec/services/application_service_spec.rb:95 # ApplicationService#call with invalid service raises validation error
+rspec ./spec/services/application_service_spec.rb:110 # ApplicationService#validate! raises ValidationError when invalid
+rspec ./spec/services/application_service_spec.rb:125 # ApplicationService#configuration returns service configuration
+rspec ./spec/services/application_service_spec.rb:139 # ApplicationService#batch_process processes records in batches with audit logging
+rspec ./spec/services/application_service_spec.rb:153 # ApplicationService#batch_process handles batch_size configuration
+rspec ./spec/services/application_service_spec.rb:243 # ApplicationService integration with ServiceConfiguration uses configuration values when not explicitly set
+rspec ./spec/services/application_service_spec.rb:251 # ApplicationService integration with ServiceConfiguration allows overriding configuration values
+rspec ./spec/services/batch_financials_updater_spec.rb:16 # BatchFinancialsUpdater.update_all enqueues jobs for companies that need updates
+rspec ./spec/services/batch_financials_updater_spec.rb:34 # BatchFinancialsUpdater.update_all respects the limit parameter
+rspec ./spec/services/batch_financials_updater_spec.rb:40 # BatchFinancialsUpdater.update_all respects the batch_size parameter
+rspec ./spec/services/batch_financials_updater_spec.rb:60 # BatchFinancialsUpdater.update_stale enqueues jobs for companies with stale financial data
+rspec ./spec/services/batch_financials_updater_spec.rb:78 # BatchFinancialsUpdater error handling logs errors but continues processing
+rspec ./spec/services/company_financials_updater_spec.rb:33 # CompanyFinancialsUpdater#call when the API request is successful updates the company with financial data
+rspec ./spec/services/company_financials_updater_spec.rb:48 # CompanyFinancialsUpdater#call when the API returns a rate limit error raises a RateLimitError with retry_after
+rspec ./spec/services/company_financials_updater_spec.rb:61 # CompanyFinancialsUpdater#call when the API returns an error raises an ApiError
+rspec ./spec/services/company_financials_updater_spec.rb:72 # CompanyFinancialsUpdater#call when the API returns invalid JSON raises an InvalidResponseError
+rspec ./spec/services/company_financials_updater_spec.rb:97 # CompanyFinancialsUpdater retry logic retries on rate limit
+rspec ./spec/services/domain_testing_service_spec.rb:41 # DomainTestingService#call when domains need testing processes all domains needing testing
+rspec ./spec/services/domain_testing_service_spec.rb:52 # DomainTestingService#call when domains need testing creates audit logs for each domain
+rspec ./spec/services/domain_testing_service_spec.rb:64 # DomainTestingService#call when domains need testing updates domain dns status
+rspec ./spec/services/domain_testing_service_spec.rb:73 # DomainTestingService#call when domains need testing stores DNS test details in audit log context
+rspec ./spec/services/domain_testing_service_spec.rb:90 # DomainTestingService#call when no domains need testing handles empty result gracefully
+rspec ./spec/services/domain_testing_service_spec.rb:109 # DomainTestingService#call when service configuration is inactive does not process any domains
+rspec ./spec/services/domain_testing_service_spec.rb:150 # DomainTestingService#test_domain_dns when DNS resolution fails handles Resolv::ResolvError correctly
+rspec ./spec/services/domain_testing_service_spec.rb:165 # DomainTestingService#test_domain_dns when DNS resolution times out handles Timeout::Error correctly
+rspec ./spec/services/domain_testing_service_spec.rb:180 # DomainTestingService#test_domain_dns when network error occurs handles network errors correctly
+rspec ./spec/services/domain_testing_service_spec.rb:199 # DomainTestingService legacy class methods .test_dns maintains backward compatibility
+rspec ./spec/services/domain_testing_service_spec.rb:214 # DomainTestingService legacy class methods .queue_all_domains queues all domains needing testing
+rspec ./spec/services/domain_testing_service_spec.rb:228 # DomainTestingService legacy class methods .queue_100_domains queues only 100 domains
+rspec ./spec/services/domain_testing_service_spec.rb:267 # DomainTestingService audit log integration marks audit log as successful on success
+rspec ./spec/services/domain_testing_service_spec.rb:277 # DomainTestingService audit log integration marks audit log as failed on DNS error
+rspec ./spec/services/user_enhancement_service_spec.rb:5 # UserEnhancementService#initialize sets default service name and action
+rspec ./spec/services/user_enhancement_service_spec.rb:29 # UserEnhancementService#call when users need enhancement processes all users needing enhancement
+rspec ./spec/services/user_enhancement_service_spec.rb:41 # UserEnhancementService#call when users need enhancement stores enhancement data in audit log context
+rspec ./spec/services/user_enhancement_service_spec.rb:56 # UserEnhancementService#call when users need enhancement handles users without email
+rspec ./spec/services/user_enhancement_service_spec.rb:71 # UserEnhancementService#call when users need enhancement handles users without name
+rspec ./spec/services/user_enhancement_service_spec.rb:163 # UserEnhancementService error handling marks audit log as failed when error occurs
+rspec ./spec/views/domains/index.html.erb_spec.rb:19 # domains/index renders a list of domains
+rspec ./spec/workers/brreg_migration_worker_spec.rb:24 # BrregMigrationWorker logs and raises errors for Sidekiq retry
+rspec ./spec/workers/update_company_financials_worker_spec.rb:74 # UpdateCompanyFinancialsWorker sidekiq_retries_exhausted updates the company status when retries are exhausted
+

@@ -5,10 +5,13 @@
 :logfile: log/sidekiq.log
 
 :queues:
+  - [financials, 3]  # Higher priority for financial updates
+  - [brreg, 2]
   - [DomainTestingService, 2]
   - [DomainARecordTestingService, 2]
   - [default, 1]
 
 :limits:
+  financials: 5  # Allow more concurrent financial jobs
   DomainTestingService: 3
-  DomainARecordTestingService: 3 
+  DomainARecordTestingService: 3

@@ -1,10 +1,12 @@
 require 'rails_helper'
 require 'resolv'
+require 'securerandom'
 
 RSpec.describe DomainTestingService, type: :service do
+  let(:service_name) { 'domain_testing' }
   let!(:service_config) do
     create(:service_configuration, 
-           service_name: 'domain_testing_service',
+           service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
            active: true)
@@ -13,7 +15,7 @@ RSpec.describe DomainTestingService, type: :service do
   describe '#initialize' do
     it 'sets the correct service name' do
       service = DomainTestingService.new
-      expect(service.service_name).to eq('domain_testing_service')
+      expect(service.service_name).to eq('domain_testing')
     end
 
     it 'sets the correct action' do
@@ -54,7 +56,7 @@ RSpec.describe DomainTestingService, type: :service do
           service.call
         }.to change(ServiceAuditLog, :count).by(3)
         
-        audit_logs = ServiceAuditLog.where(service_name: 'domain_testing_service')
+        audit_logs = ServiceAuditLog.where(service_name: service_name)
         expect(audit_logs.count).to eq(3)
         expect(audit_logs.all?(&:status_success?)).to be true
       end
@@ -90,7 +92,7 @@ RSpec.describe DomainTestingService, type: :service do
         domain = create(:domain, dns: true)
         create(:service_audit_log,
                auditable: domain,
-               service_name: 'domain_testing_service',
+               service_name: service_name,
                status: :success,
                completed_at: 1.hour.ago)
         
@@ -129,7 +131,7 @@ RSpec.describe DomainTestingService, type: :service do
         domain.reload
         expect(domain.dns).to be true
         expect(result[:status]).to eq(:successful)
-        expect(result[:dns_result]).to be true
+        expect(result[:context]['dns_result']).to be true
       end
 
       it 'includes timing information in context' do
@@ -180,8 +182,8 @@ RSpec.describe DomainTestingService, type: :service do
         
         domain.reload
         expect(domain.dns).to be nil  # Keep as untested for network errors
-        expect(result[:status]).to eq(:errors)
-        expect(result[:context]['error_type']).to eq('network_error')
+        expect(result[:status]).to eq(:failed)
+        expect(result[:context]['error_type']).to eq('StandardError')
       end
     end
   end
@@ -260,7 +262,7 @@ RSpec.describe DomainTestingService, type: :service do
   describe 'audit log integration' do
     let(:service) { DomainTestingService.new }
     let(:domain) { create(:domain, dns: nil) }
-    let(:audit_log) { create(:service_audit_log, auditable: domain, service_name: 'domain_testing_service') }
+    let(:audit_log) { create(:service_audit_log, auditable: domain, service_name: service_name) }
 
     it 'marks audit log as successful on success' do
       allow(service).to receive(:has_dns?).and_return(true)

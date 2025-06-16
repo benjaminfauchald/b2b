@@ -1,12 +1,12 @@
 class DomainDnsTestingWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: :DomainTestingService, retry: 3
+  sidekiq_options queue: 'domain_dns_testing', retry: 3
 
   def perform(domain_id)
     domain = Domain.find(domain_id)
     
-    domain.audit_service_operation('domain_testing_service', action: 'test_dns') do |audit_log|
+    domain.audit_service_operation('domain_testing', action: 'test_dns') do |audit_log|
       begin
         start_time = Time.current
         service = DomainTestingService.new(domain: domain)

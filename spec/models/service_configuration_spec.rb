@@ -13,7 +13,7 @@ RSpec.describe ServiceConfiguration, type: :model do
   end
 
   describe 'default values' do
-    let(:config) { ServiceConfiguration.new(service_name: 'test_service_v1') }
+    let(:config) { ServiceConfiguration.new(service_name: "test_service_#{SecureRandom.hex(8)}") }
 
     it 'sets default refresh_interval_hours to 720' do
       expect(config.refresh_interval_hours).to eq(720)
@@ -41,10 +41,10 @@ RSpec.describe ServiceConfiguration, type: :model do
   end
 
   describe 'scopes' do
-    let!(:active_config) { create(:service_configuration, active: true) }
-    let!(:inactive_config) { create(:service_configuration, active: false) }
-    let!(:frequent_config) { create(:service_configuration, refresh_interval_hours: 24) }
-    let!(:infrequent_config) { create(:service_configuration, refresh_interval_hours: 720) }
+    let!(:active_config) { create(:service_configuration, active: true, service_name: "active_config_#{SecureRandom.hex(8)}") }
+    let!(:inactive_config) { create(:service_configuration, active: false, service_name: "inactive_config_#{SecureRandom.hex(8)}") }
+    let!(:frequent_config) { create(:service_configuration, refresh_interval_hours: 24, service_name: "frequent_config_#{SecureRandom.hex(8)}") }
+    let!(:infrequent_config) { create(:service_configuration, refresh_interval_hours: 720, service_name: "infrequent_config_#{SecureRandom.hex(8)}") }
 
     describe '.active' do
       it 'returns only active configurations' do
@@ -66,7 +66,7 @@ RSpec.describe ServiceConfiguration, type: :model do
   end
 
   describe 'instance methods' do
-    let(:config) { create(:service_configuration, service_name: 'test_service_v1') }
+    let(:config) { ServiceConfiguration.new(service_name: "test_service_#{SecureRandom.hex(8)}") }
 
     describe '#activate!' do
       it 'sets active to true' do
@@ -85,23 +85,23 @@ RSpec.describe ServiceConfiguration, type: :model do
 
     describe '#add_dependency' do
       it 'adds service to depends_on_services array' do
-        config.add_dependency('user_enhancement_v1')
-        expect(config.depends_on_services).to include('user_enhancement_v1')
+        config.add_dependency('user_enhancement_service')
+        expect(config.depends_on_services).to include('user_enhancement_service')
       end
 
       it 'does not add duplicate dependencies' do
-        config.add_dependency('user_enhancement_v1')
-        config.add_dependency('user_enhancement_v1')
-        expect(config.depends_on_services.count('user_enhancement_v1')).to eq(1)
+        config.add_dependency('user_enhancement_service')
+        config.add_dependency('user_enhancement_service')
+        expect(config.depends_on_services.count('user_enhancement_service')).to eq(1)
       end
     end
 
     describe '#remove_dependency' do
       it 'removes service from depends_on_services array' do
-        config.update!(depends_on_services: ['user_enhancement_v1', 'domain_testing_v1'])
-        config.remove_dependency('user_enhancement_v1')
-        expect(config.depends_on_services).not_to include('user_enhancement_v1')
-        expect(config.depends_on_services).to include('domain_testing_v1')
+        config.update!(depends_on_services: ['user_enhancement_service', 'domain_testing_service'])
+        config.remove_dependency('user_enhancement_service')
+        expect(config.depends_on_services).not_to include('user_enhancement_service')
+        expect(config.depends_on_services).to include('domain_testing_service')
       end
     end
 
@@ -151,11 +151,11 @@ RSpec.describe ServiceConfiguration, type: :model do
     end
 
     describe '#dependencies_met?' do
-      let!(:dep1_config) { create(:service_configuration, service_name: 'dependency_1_v1') }
-      let!(:dep2_config) { create(:service_configuration, service_name: 'dependency_2_v1') }
+      let!(:dep1_config) { create(:service_configuration, service_name: "dependency_1_service_#{SecureRandom.hex(8)}") }
+      let!(:dep2_config) { create(:service_configuration, service_name: "dependency_2_service_#{SecureRandom.hex(8)}") }
 
       before do
-        config.update!(depends_on_services: ['dependency_1_v1', 'dependency_2_v1'])
+        config.update!(depends_on_services: ['dependency_1_service', 'dependency_2_service'])
       end
 
       it 'returns true when all dependencies are active' do
@@ -176,10 +176,10 @@ RSpec.describe ServiceConfiguration, type: :model do
 
   describe 'class methods' do
     describe '.for_service' do
-      let!(:config) { create(:service_configuration, service_name: 'test_service_v1') }
+      let!(:config) { create(:service_configuration, service_name: "test_service_#{SecureRandom.hex(8)}") }
 
       it 'finds configuration by service name' do
-        expect(ServiceConfiguration.for_service('test_service_v1')).to eq(config)
+        expect(ServiceConfiguration.for_service('test_service')).to eq(config)
       end
 
       it 'returns nil for non-existent service' do
@@ -189,8 +189,8 @@ RSpec.describe ServiceConfiguration, type: :model do
 
     describe '.create_default' do
       it 'creates configuration with default values' do
-        config = ServiceConfiguration.create_default('new_service_v1')
-        expect(config.service_name).to eq('new_service_v1')
+        config = ServiceConfiguration.create_default('new_service')
+        expect(config.service_name).to eq('new_service')
         expect(config.active).to be true
         expect(config.refresh_interval_hours).to eq(720)
         expect(config.batch_size).to eq(1000)
@@ -198,20 +198,20 @@ RSpec.describe ServiceConfiguration, type: :model do
       end
 
       it 'allows overriding default values' do
-        config = ServiceConfiguration.create_default('new_service_v1', batch_size: 500, active: false)
+        config = ServiceConfiguration.create_default('new_service', batch_size: 500, active: false)
         expect(config.batch_size).to eq(500)
         expect(config.active).to be false
       end
     end
 
     describe '.bulk_update_settings' do
-      let!(:config1) { create(:service_configuration, service_name: 'service_1_v1') }
-      let!(:config2) { create(:service_configuration, service_name: 'service_2_v1') }
+      let!(:config1) { create(:service_configuration, service_name: "service_1_#{SecureRandom.hex(8)}") }
+      let!(:config2) { create(:service_configuration, service_name: "service_2_#{SecureRandom.hex(8)}") }
 
       it 'updates settings for multiple services' do
         ServiceConfiguration.bulk_update_settings(
-          'service_1_v1' => { 'timeout' => 30 },
-          'service_2_v1' => { 'retries' => 5 }
+          'service_1' => { 'timeout' => 30 },
+          'service_2' => { 'retries' => 5 }
         )
 
         expect(config1.reload.settings['timeout']).to eq(30)
@@ -224,7 +224,7 @@ RSpec.describe ServiceConfiguration, type: :model do
     describe 'after_create' do
       it 'logs configuration creation' do
         expect(Rails.logger).to receive(:info).with(/Service configuration created for/)
-        create(:service_configuration, service_name: 'test_service_v1')
+        create(:service_configuration, service_name: 'test_service')
       end
     end
 

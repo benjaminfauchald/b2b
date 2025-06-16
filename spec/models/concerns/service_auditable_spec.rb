@@ -1,168 +1,159 @@
 require 'rails_helper'
 
-RSpec.describe ServiceAuditable, type: :concern do
-  # Create a test model that includes the concern
-  let(:test_class) do
-    Class.new(ApplicationRecord) do
-      self.table_name = 'users'
-      include ServiceAuditable
-    end
+RSpec.describe ServiceAuditable, type: :model do
+  let(:service_name) { 'domain_testing' }
+  let!(:service_config) do
+    create(:service_configuration, 
+           service_name: service_name,
+           refresh_interval_hours: 24,
+           batch_size: 100,
+           active: true)
   end
 
-  let(:test_instance) { test_class.new(name: 'Test User', email: 'test@example.com') }
-
   describe 'associations' do
-    it 'has many service_audit_logs' do
-      expect(test_class.reflect_on_association(:service_audit_logs)).to be_present
-      expect(test_class.reflect_on_association(:service_audit_logs).macro).to eq(:has_many)
-      expect(test_class.reflect_on_association(:service_audit_logs).options[:as]).to eq(:auditable)
-      expect(test_class.reflect_on_association(:service_audit_logs).options[:dependent]).to eq(:destroy)
-    end
+    it { should have_many(:service_audit_logs) }
   end
 
   describe 'callbacks' do
     context 'when audit is enabled' do
       before do
-        allow(test_instance).to receive(:audit_enabled?).and_return(true)
+        allow_any_instance_of(described_class).to receive(:audit_enabled?).and_return(true)
       end
 
       it 'audits creation' do
-        expect(test_instance).to receive(:audit_creation)
-        test_instance.run_callbacks(:create)
+        expect {
+          create(:domain)
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        audit_log = ServiceAuditLog.last
+        expect(audit_log.service_name).to eq('automatic_audit')
+        expect(audit_log.action).to eq('create')
       end
 
       it 'audits updates' do
-        expect(test_instance).to receive(:audit_update)
-        test_instance.run_callbacks(:update)
+        domain = create(:domain)
+        expect {
+          domain.update!(name: 'Updated Name')
+        }.to change(ServiceAuditLog, :count).by(1)
+
+        audit_log = ServiceAuditLog.last
+        expect(audit_log.service_name).to eq('automatic_audit')
+        expect(audit_log.action).to eq('update')
+        expect(audit_log.changed_fields).to include('name')
       end
     end
 
     context 'when audit is disabled' do
       before do
-        allow(test_instance).to receive(:audit_enabled?).and_return(false)
+        allow_any_instance_of(described_class).to receive(:audit_enabled?).and_return(false)
       end
 
       it 'does not audit creation' do
-        expect(test_instance).not_to receive(:audit_creation)
-        test_instance.run_callbacks(:create)
+        expect {
+          create(:domain)
+        }.not_to change(ServiceAuditLog, :count)
       end
 
       it 'does not audit updates' do
-        expect(test_instance).not_to receive(:audit_update)
-        test_instance.run_callbacks(:update)
+        domain = create(:domain)
+        expect {
+          domain.update!(name: 'Updated Name')
+        }.not_to change(ServiceAuditLog, :count)
       end
     end
   end
 
   describe 'instance methods' do
-    let(:user) { create(:user) }
-    let(:auditable_user) do
-      user.extend(ServiceAuditable)
-    end
-
     describe '#audit_service_operation' do
+      let(:domain) { create(:domain) }
+
       it 'creates audit log and yields with it' do
-        expect do
-          auditable_user.audit_service_operation('test_service_v1', action: 'custom') do |audit_log|
+        expect {
+          domain.audit_service_operation(service_name, action: 'test_dns') do |audit_log|
             expect(audit_log).to be_a(ServiceAuditLog)
-            expect(audit_log.service_name).to eq('test_service_v1')
-            expect(audit_log.action).to eq('custom')
-            expect(audit_log.auditable).to eq(auditable_user)
-            audit_log.mark_success!
+            expect(audit_log.service_name).to eq(service_name)
+            expect(audit_log.action).to eq('test_dns')
+            expect(audit_log.auditable).to eq(domain)
           end
-        end.to change(ServiceAuditLog, :count).by(1)
+        }.to change(ServiceAuditLog, :count).by(1)
       end
 
-      it 'handles exceptions and marks as failed' do
-        expect do
-          auditable_user.audit_service_operation('test_service_v1') do |audit_log|
-            raise StandardError, 'Test error'
+      it 'creates audit log with default action' do
+        expect {
+          domain.audit_service_operation(service_name) do |audit_log|
+            expect(audit_log.action).to eq('process')
           end
-        end.to raise_error(StandardError, 'Test error')
-
-        audit_log = ServiceAuditLog.last
-        expect(audit_log.status_failed?).to be true
-        expect(audit_log.error_message).to eq('Test error')
+        }.to change(ServiceAuditLog, :count).by(1)
       end
 
-      it 'returns context data from block' do
-        result = auditable_user.audit_service_operation('test_service_v1') do |audit_log|
-          audit_log.mark_success!
-          { processed: true, count: 5 }
+      it 'returns result from block' do
+        result = domain.audit_service_operation(service_name) do |audit_log|
+          'test result'
         end
-
-        expect(result).to eq({ processed: true, count: 5 })
+        expect(result).to eq('test result')
       end
     end
 
     describe '#needs_service?' do
-      let!(:config) { create(:service_configuration, service_name: 'test_service_v1', refresh_interval_hours: 24) }
+      let(:domain) { create(:domain) }
 
-      context 'when no previous run exists' do
-        it 'returns true' do
-          expect(auditable_user.needs_service?('test_service_v1')).to be true
-        end
+      it 'returns true when no successful run exists' do
+        expect(domain.needs_service?(service_name)).to be true
       end
 
-      context 'when previous run is within refresh interval' do
-        before do
-          create(:service_audit_log, :success, 
-                 auditable: auditable_user, 
-                 service_name: 'test_service_v1',
-                 completed_at: 12.hours.ago)
-        end
-
-        it 'returns false' do
-          expect(auditable_user.needs_service?('test_service_v1')).to be false
-        end
+      it 'returns false when successful run exists within refresh interval' do
+        create(:service_audit_log, :success, 
+               auditable: domain, 
+               service_name: service_name, 
+               completed_at: 1.hour.ago)
+        expect(domain.needs_service?(service_name)).to be false
       end
 
-      context 'when previous run is outside refresh interval' do
-        before do
-          create(:service_audit_log, :success,
-                 auditable: auditable_user,
-                 service_name: 'test_service_v1', 
-                 completed_at: 25.hours.ago)
-        end
-
-        it 'returns true' do
-          expect(auditable_user.needs_service?('test_service_v1')).to be true
-        end
-      end
-
-      context 'when service configuration does not exist' do
-        it 'returns true' do
-          expect(auditable_user.needs_service?('nonexistent_service')).to be true
-        end
+      it 'returns true when last successful run is older than refresh interval' do
+        create(:service_audit_log, :success, 
+               auditable: domain, 
+               service_name: service_name, 
+               completed_at: 25.hours.ago)
+        expect(domain.needs_service?(service_name)).to be true
       end
     end
 
     describe '#last_service_run' do
-      let!(:old_run) { create(:service_audit_log, :success, auditable: auditable_user, service_name: 'test_service_v1', completed_at: 2.days.ago) }
-      let!(:recent_run) { create(:service_audit_log, :success, auditable: auditable_user, service_name: 'test_service_v1', completed_at: 1.day.ago) }
+      let(:domain) { create(:domain) }
 
-      it 'returns the most recent successful run for the service' do
-        expect(auditable_user.last_service_run('test_service_v1')).to eq(recent_run)
-      end
+      it 'returns the most recent successful run' do
+        old_log = create(:service_audit_log, :success, 
+                        auditable: domain, 
+                        service_name: service_name, 
+                        completed_at: 2.hours.ago)
+        new_log = create(:service_audit_log, :success, 
+                        auditable: domain, 
+                        service_name: service_name, 
+                        completed_at: 1.hour.ago)
+        create(:service_audit_log, :failed, 
+               auditable: domain, 
+               service_name: service_name, 
+               completed_at: 30.minutes.ago)
 
-      it 'returns nil if no successful runs exist' do
-        expect(auditable_user.last_service_run('nonexistent_service')).to be_nil
+        expect(domain.last_service_run(service_name)).to eq(new_log)
       end
     end
 
     describe '#audit_enabled?' do
       it 'returns true by default' do
-        expect(auditable_user.audit_enabled?).to be true
+        domain = create(:domain)
+        expect(domain.audit_enabled?).to be true
       end
 
       context 'when Rails configuration disables auditing' do
         before do
-          allow(Rails.application.config).to receive(:respond_to?).with(:service_auditing_enabled).and_return(true)
-          allow(Rails.application.config).to receive(:service_auditing_enabled).and_return(false)
+          allow(Rails.configuration).to receive(:respond_to?).with(:service_auditing_enabled).and_return(true)
+          allow(Rails.configuration).to receive(:service_auditing_enabled).and_return(false)
         end
 
         it 'returns false' do
-          expect(auditable_user.audit_enabled?).to be false
+          domain = create(:domain)
+          expect(domain.audit_enabled?).to be false
         end
       end
     end
@@ -170,90 +161,82 @@ RSpec.describe ServiceAuditable, type: :concern do
 
   describe 'class methods' do
     describe '.with_service_audit' do
-      let(:users) { create_list(:user, 3) }
-      let(:auditable_class) do
-        Class.new(User) do
-          include ServiceAuditable
-        end
-      end
+      it 'processes records with audit logging' do
+        domains = create_list(:domain, 3)
+        processed = []
 
-      it 'creates audit logs for batch processing' do
-        expect do
-          auditable_class.with_service_audit('batch_test_v1', action: 'batch_process') do |user, audit_log|
-            audit_log.mark_success!
-          end
-        end.to change(ServiceAuditLog, :count).by(auditable_class.count)
-      end
-
-      it 'yields each record with its audit log' do
-        yielded_pairs = []
-        auditable_class.with_service_audit('batch_test_v1') do |user, audit_log|
-          yielded_pairs << [user, audit_log]
-          audit_log.mark_success!
-        end
-
-        expect(yielded_pairs.size).to eq(auditable_class.count)
-        yielded_pairs.each do |user, audit_log|
-          expect(user).to be_a(auditable_class)
+        Domain.with_service_audit(service_name, action: 'test_dns') do |domain, audit_log|
+          processed << domain
           expect(audit_log).to be_a(ServiceAuditLog)
-          expect(audit_log.auditable).to eq(user)
+          expect(audit_log.service_name).to eq(service_name)
+          expect(audit_log.action).to eq('test_dns')
         end
+
+        expect(processed).to match_array(domains)
+        expect(ServiceAuditLog.count).to eq(3)
+      end
+
+      it 'processes records with default action' do
+        domains = create_list(:domain, 3)
+        processed = []
+
+        Domain.with_service_audit(service_name) do |domain, audit_log|
+          processed << domain
+          expect(audit_log.action).to eq('process')
+        end
+
+        expect(processed).to match_array(domains)
+        expect(ServiceAuditLog.count).to eq(3)
       end
     end
 
     describe '.needing_service' do
-      let!(:config) { create(:service_configuration, service_name: 'test_service_v1', refresh_interval_hours: 24) }
-      let!(:user1) { create(:user) }
-      let!(:user2) { create(:user) }
-      let!(:user3) { create(:user) }
+      let!(:domain1) { create(:domain) }
+      let!(:domain2) { create(:domain) }
+      let!(:domain3) { create(:domain) }
 
       before do
-        # user1 has no runs - needs service
-        # user2 has recent run - doesn't need service
-        create(:service_audit_log, :success, auditable: user2, service_name: 'test_service_v1', completed_at: 12.hours.ago)
-        # user3 has old run - needs service
-        create(:service_audit_log, :success, auditable: user3, service_name: 'test_service_v1', completed_at: 25.hours.ago)
+        create(:service_audit_log, :success, 
+               auditable: domain2, 
+               service_name: service_name, 
+               completed_at: 1.hour.ago)
+        create(:service_audit_log, :success, 
+               auditable: domain3, 
+               service_name: service_name, 
+               completed_at: 25.hours.ago)
       end
 
-      it 'returns records that need the service' do
-        needing_users = User.needing_service('test_service_v1')
-        expect(needing_users).to include(user1, user3)
-        expect(needing_users).not_to include(user2)
+      it 'returns domains needing service' do
+        needing_domains = Domain.needing_service(service_name)
+        expect(needing_domains).to include(domain1, domain3)
+        expect(needing_domains).not_to include(domain2)
       end
     end
   end
 
   describe 'private methods' do
-    let(:user) { create(:user) }
-    let(:auditable_user) do
-      user.extend(ServiceAuditable)
-    end
-
     describe '#audit_creation' do
       it 'creates audit log for creation' do
-        expect do
-          auditable_user.send(:audit_creation)
-        end.to change(ServiceAuditLog, :count).by(1)
+        expect {
+          create(:domain)
+        }.to change(ServiceAuditLog, :count).by(1)
 
         audit_log = ServiceAuditLog.last
-        expect(audit_log.service_name).to eq('model_lifecycle')
+        expect(audit_log.service_name).to eq('automatic_audit')
         expect(audit_log.action).to eq('create')
-        expect(audit_log.auditable).to eq(auditable_user)
       end
     end
 
     describe '#audit_update' do
-      before do
-        auditable_user.name = 'Updated Name'
-      end
+      let(:domain) { create(:domain) }
 
       it 'creates audit log for update with changed fields' do
-        expect do
-          auditable_user.send(:audit_update)
-        end.to change(ServiceAuditLog, :count).by(1)
+        expect {
+          domain.update!(name: 'Updated Name')
+        }.to change(ServiceAuditLog, :count).by(1)
 
         audit_log = ServiceAuditLog.last
-        expect(audit_log.service_name).to eq('model_lifecycle')
+        expect(audit_log.service_name).to eq('automatic_audit')
         expect(audit_log.action).to eq('update')
         expect(audit_log.changed_fields).to include('name')
       end

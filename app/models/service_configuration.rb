@@ -55,6 +55,7 @@ class ServiceConfiguration < ApplicationRecord
 
   # Class methods
   def self.for_service(service_name)
+    return nil if service_name.blank?
     find_by(service_name: service_name)
   end
 

@@ -1,17 +1,16 @@
 namespace :domain_a_record_testing do
   desc 'Test A records for a sample of domains'
   task sample: :environment do
-    domains = Domain.order('RANDOM()').limit(10)
+    domains = Domain.dns_active.where(www: nil).order('RANDOM()').limit(10)
     puts "Testing A records for #{domains.count} domains..."
     
     domains.each do |domain|
-      service = DomainARecordTestingService.new(domain)
+      service = DomainARecordTestingService.new(domain: domain)
       result = service.call
       
       puts "Domain: #{domain.domain}"
-      puts "Status: #{result[:status]}"
-      puts "A Records: #{result[:a_records].join(', ')}" if result[:a_records].any?
-      puts "Error: #{result[:error]}" if result[:error]
+      puts "Status: #{result ? 'Success' : 'Failed'}"
+      puts "WWW Status: #{domain.reload.www ? 'Active' : 'Inactive'}"
       puts "---"
     end
   end
@@ -21,17 +20,13 @@ namespace :domain_a_record_testing do
     batch_size = ENV['BATCH_SIZE']&.to_i || 100
     puts "Queueing all domains for A record testing in batches of #{batch_size}..."
     
-    Domain.find_in_batches(batch_size: batch_size) do |batch|
-      batch.each do |domain|
-        DomainARecordTestingWorker.perform_async(domain.id)
-      end
-      puts "Queued batch of #{batch.size} domains"
-    end
+    count = DomainARecordTestingService.queue_all_domains
+    puts "Queued #{count} domains for A record testing"
   end
 
   desc 'Show domains that need A record testing'
   task show_pending: :environment do
-    domains = Domain.where(www: nil).or(Domain.where('updated_at < ?', 1.day.ago))
+    domains = Domain.dns_active.where(www: nil)
     puts "Found #{domains.count} domains needing A record testing:"
     domains.each do |domain|
       puts "#{domain.domain} (Last updated: #{domain.updated_at})"

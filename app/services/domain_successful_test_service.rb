@@ -5,7 +5,7 @@ class DomainMxTestingService < ApplicationService
   MX_TIMEOUT = 5 # 5 second timeout for MX lookups
 
   def initialize(attributes = {})
-    super(service_name: 'domain_mx_testing_v1', action: 'test_mx', **attributes)
+    super(service_name: 'domain_mx_testing', action: 'test_mx', **attributes)
   end
 
   private

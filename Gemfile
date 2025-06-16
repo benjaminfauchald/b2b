@@ -91,7 +91,7 @@ group :test do
   gem "selenium-webdriver"
   
   # Shoulda matchers for RSpec
-  gem 'shoulda-matchers'
+  gem 'shoulda-matchers', '~> 5.0'
 end
 
 gem "rubocop", "~> 1.76", group: :development
@@ -109,3 +109,6 @@ gem 'ruby-kafka', '~> 1.5.0'  # Kafka client
 gem 'waterdrop', '~> 2.8.4'   # Kafka producer
 gem 'karafka', '~> 2.4.0'     # Kafka consumer framework
 gem 'dry-monitor'           # For monitoring Kafka operations
+
+gem 'httparty'              # For making HTTP requests
+gem 'nokogiri'              # For XML parsing

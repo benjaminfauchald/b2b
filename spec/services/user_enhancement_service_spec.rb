@@ -1,10 +1,13 @@
 require 'rails_helper'
 
 RSpec.describe UserEnhancementService, type: :service do
+  before(:all) { ENV['ENABLE_AUTOMATIC_AUDITING'] = 'false' }
+  before(:each) { ServiceConfiguration.delete_all }
+
   describe '#initialize' do
     it 'sets default service name and action' do
       service = UserEnhancementService.new
-      expect(service.service_name).to eq('user_enhancement_v1')
+      expect(service.service_name).to eq('user_enhancement_service')
       expect(service.action).to eq('enhance')
     end
 
@@ -15,15 +18,16 @@ RSpec.describe UserEnhancementService, type: :service do
   end
 
   describe '#call' do
+    let(:service_name) { 'user_enhancement_service' }
     let!(:service_config) do
       create(:service_configuration, 
-             service_name: 'user_enhancement_v1',
+             service_name: service_name,
              refresh_interval_hours: 24,
              active: true)
     end
 
     context 'when users need enhancement' do
-      let!(:users) { create_list(:user, 3, email: 'test@gmail.com') }
+      let!(:users) { create_list(:user, 3) }
       
       it 'processes all users needing enhancement' do
         service = UserEnhancementService.new
@@ -32,13 +36,13 @@ RSpec.describe UserEnhancementService, type: :service do
           service.call
         }.to change(ServiceAuditLog, :count).by(3)
         
-        audit_logs = ServiceAuditLog.where(service_name: 'user_enhancement_v1')
+        audit_logs = ServiceAuditLog.where(service_name: service_name)
         expect(audit_logs.count).to eq(3)
         expect(audit_logs.all?(&:status_success?)).to be true
       end
 
       it 'stores enhancement data in audit log context' do
-        user = create(:user, name: 'John Doe', email: 'john@gmail.com')
+        user = create(:user, name: 'John Doe', email: "john_#{SecureRandom.hex(4)}@gmail.com")
         service = UserEnhancementService.new
         
         service.call
@@ -68,7 +72,7 @@ RSpec.describe UserEnhancementService, type: :service do
       end
 
       it 'handles users without name' do
-        user = create(:user, name: nil, email: 'test@yahoo.com')
+        user = create(:user, name: nil, email: "test_#{SecureRandom.hex(4)}@yahoo.com")
         service = UserEnhancementService.new
         
         expect { service.call }.not_to raise_error
@@ -89,7 +93,7 @@ RSpec.describe UserEnhancementService, type: :service do
         user = create(:user)
         create(:service_audit_log,
                auditable: user,
-               service_name: 'user_enhancement_v1',
+               service_name: service_name,
                status: :success,
                completed_at: 1.hour.ago)
         
@@ -154,7 +158,7 @@ RSpec.describe UserEnhancementService, type: :service do
   describe 'error handling' do
     let!(:service_config) do
       create(:service_configuration, 
-             service_name: 'user_enhancement_v1',
+             service_name: 'user_enhancement_service',
              active: true)
     end
     let!(:user) { create(:user, email: 'test@gmail.com') }

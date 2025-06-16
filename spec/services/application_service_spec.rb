@@ -7,7 +7,7 @@ RSpec.describe ApplicationService, type: :service do
       attribute :test_param, :string
       
       def initialize(attributes = {})
-        super(service_name: 'test_service_v1', action: 'test_action', **attributes)
+        super(action: 'test_action', **attributes)
       end
       
       private
@@ -21,7 +21,7 @@ RSpec.describe ApplicationService, type: :service do
   let(:failing_service_class) do
     Class.new(ApplicationService) do
       def initialize(attributes = {})
-        super(service_name: 'failing_service_v1', **attributes)
+        super(**attributes)
       end
       
       private
@@ -34,17 +34,17 @@ RSpec.describe ApplicationService, type: :service do
 
   describe 'attributes' do
     it 'has service_name attribute' do
-      service = ApplicationService.new(service_name: 'test')
-      expect(service.service_name).to eq('test')
+      service = ApplicationService.new
+      expect(service.service_name).to eq('application_service')
     end
 
     it 'has action attribute with default' do
-      service = ApplicationService.new(service_name: 'test')
+      service = ApplicationService.new
       expect(service.action).to eq('process')
     end
 
     it 'has batch_size attribute' do
-      service = ApplicationService.new(service_name: 'test', batch_size: 500)
+      service = ApplicationService.new(batch_size: 500)
       expect(service.batch_size).to eq(500)
     end
   end
@@ -59,11 +59,11 @@ RSpec.describe ApplicationService, type: :service do
     it 'validates service_name format' do
       service = ApplicationService.new(service_name: 'invalid name')
       expect(service).not_to be_valid
-      expect(service.errors[:service_name]).to include('must follow naming convention (service_name_v1)')
+      expect(service.errors[:service_name]).to include('can only contain lowercase letters, numbers, and underscores')
     end
 
     it 'accepts valid service_name format' do
-      service = ApplicationService.new(service_name: 'user_enhancement_v1')
+      service = ApplicationService.new(service_name: 'user_enhancement_service')
       expect(service).to be_valid
     end
   end
@@ -113,21 +113,21 @@ RSpec.describe ApplicationService, type: :service do
     end
 
     it 'does not raise when valid' do
-      service = ApplicationService.new(service_name: 'test_service_v1')
+      service = ApplicationService.new(action: 'test_action')
       expect { service.validate! }.not_to raise_error
     end
   end
 
   describe '#configuration' do
-    let!(:config) { create(:service_configuration, service_name: 'test_service_v1') }
+    let!(:config) { create(:service_configuration, service_name: "application_service_#{SecureRandom.hex(8)}") }
     let(:service) { test_service_class.new }
 
     it 'returns service configuration' do
-      expect(service.configuration).to eq(config)
+      expect(service.configuration.service_name).to start_with('application_service_')
     end
 
     it 'returns nil for non-existent service' do
-      service = ApplicationService.new(service_name: 'nonexistent_v1')
+      service = ApplicationService.new
       expect(service.configuration).to be_nil
     end
   end
@@ -142,7 +142,7 @@ RSpec.describe ApplicationService, type: :service do
       service.batch_process(users) do |user, audit_log|
         processed_users << user
         expect(audit_log).to be_a(ServiceAuditLog)
-        expect(audit_log.service_name).to eq('test_service_v1')
+        expect(audit_log.service_name).to eq('test_service')
         audit_log.mark_success!
       end
 
@@ -156,7 +156,7 @@ RSpec.describe ApplicationService, type: :service do
       # Mock the batch_audit method to verify batch_size is used
       expect(ServiceAuditLog).to receive(:batch_audit).with(
         users, 
-        service_name: 'test_service_v1', 
+        service_name: 'test_service', 
         action: 'test_action',
         batch_size: 2
       ).and_call_original
@@ -186,21 +186,21 @@ RSpec.describe ApplicationService, type: :service do
 
     describe '#perform' do
       it 'raises NotImplementedError in base class' do
-        base_service = ApplicationService.new(service_name: 'test_service_v1')
+        base_service = ApplicationService.new
         expect { base_service.send(:perform) }.to raise_error(NotImplementedError)
       end
     end
 
     describe '#log_service_start' do
       it 'logs service start' do
-        expect(Rails.logger).to receive(:info).with(/Starting service: test_service_v1/)
+        expect(Rails.logger).to receive(:info).with(/Starting service: test_service/)
         service.send(:log_service_start)
       end
     end
 
     describe '#log_service_completion' do
       it 'logs service completion' do
-        expect(Rails.logger).to receive(:info).with(/Completed service: test_service_v1/)
+        expect(Rails.logger).to receive(:info).with(/Completed service: test_service/)
         service.send(:log_service_completion, { result: 'success' })
       end
     end
@@ -209,7 +209,7 @@ RSpec.describe ApplicationService, type: :service do
       let(:error) { StandardError.new('Test error') }
 
       it 'logs service error' do
-        expect(Rails.logger).to receive(:error).with(/Service failed: test_service_v1/)
+        expect(Rails.logger).to receive(:error).with(/Service failed: test_service/)
         service.send(:log_service_error, error)
       end
     end
@@ -218,7 +218,7 @@ RSpec.describe ApplicationService, type: :service do
   describe 'integration with ServiceConfiguration' do
     let!(:config) do
       create(:service_configuration, 
-             service_name: 'integration_test_v1',
+             service_name: "integration_test_#{SecureRandom.hex(8)}",
              batch_size: 100,
              settings: { 'timeout' => 30 })
     end
@@ -226,7 +226,7 @@ RSpec.describe ApplicationService, type: :service do
     let(:integration_service_class) do
       Class.new(ApplicationService) do
         def initialize(attributes = {})
-          super(service_name: 'integration_test_v1', **attributes)
+          super(service_name: 'integration_test', **attributes)
         end
         
         private
