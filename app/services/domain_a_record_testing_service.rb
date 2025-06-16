@@ -52,7 +52,7 @@ class DomainARecordTestingService < ApplicationService
     audit_log = ServiceAuditLog.create!(
       auditable: domain,
       service_name: service_name,
-      action: action,
+      operation_type: 'test_a_record',
       status: :pending,
       columns_affected: ['www'],
       metadata: { domain_name: domain.domain }

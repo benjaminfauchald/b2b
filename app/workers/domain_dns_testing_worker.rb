@@ -6,7 +6,7 @@ class DomainDnsTestingWorker
   def perform(domain_id)
     domain = Domain.find(domain_id)
     
-    domain.audit_service_operation('domain_testing', action: 'test_dns') do |audit_log|
+    domain.audit_service_operation('domain_testing', operation_type: 'test_dns') do |audit_log|
       begin
         start_time = Time.current
         service = DomainTestingService.new(domain: domain)

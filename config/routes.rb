@@ -18,9 +18,16 @@ Rails.application.routes.draw do
     post '/instantly', to: 'instantly_webhook#create'
   end
 
-  # Sidekiq Web UI with authentication
+  # Sidekiq Web UI with environment-specific authentication
   require 'sidekiq/web'
-  authenticate :user, lambda { |u| u.admin? } do
+  
+  if Rails.env.development?
+    # In development, allow access without authentication for easier debugging
     mount Sidekiq::Web => '/sidekiq'
+  else
+    # In production, require admin authentication
+    authenticate :user, lambda { |u| u.admin? } do
+      mount Sidekiq::Web => '/sidekiq'
+    end
   end
 end

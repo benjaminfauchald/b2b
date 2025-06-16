@@ -5,7 +5,13 @@ class DomainARecordTestJob < ApplicationJob
 
   def perform(domain_id)
     domain = Domain.find(domain_id)
-    result = DomainARecordTestingService.test_a_record(domain)
+    
+    Rails.logger.info "Starting A record test for domain: #{domain.domain}"
+    
+    service = DomainARecordTestingService.new(domain: domain)
+    result = service.call
+    
+    Rails.logger.info "Completed A record test for domain: #{domain.domain}, result: #{result}"
     
     # Update domain with A record test result
     domain.update!(www: result)
@@ -22,15 +28,41 @@ class DomainARecordTestJob < ApplicationJob
     ServiceAuditLog.create!(
       auditable: domain,
       service_name: 'domain_a_record_testing',
-      action: 'test_a_record',
+      operation_type: 'test_a_record',
       status: result ? :success : :failed,
       columns_affected: ['www'],
-      metadata: (context.presence || { error: 'no metadata' })
+      metadata: {
+        domain_name: domain.domain,
+        result: result,
+        job: self.class.name,
+        job_id: job_id
+      }
     )
-  rescue ActiveRecord::RecordNotFound
+    
+  rescue ActiveRecord::RecordNotFound => e
     Rails.logger.error "Domain not found: #{domain_id}"
+    raise e
   rescue StandardError => e
-    Rails.logger.error "Error processing A record test for domain #{domain_id}: #{e.message}"
-    raise
+    Rails.logger.error "Error in A record test job for domain #{domain_id}: #{e.message}"
+    
+    # Create error audit log
+    if domain
+      ServiceAuditLog.create!(
+        auditable: domain,
+        service_name: 'domain_a_record_testing',
+        operation_type: 'test_a_record',
+        status: :failed,
+        error_message: e.message,
+        columns_affected: ['www'],
+        metadata: {
+          domain_name: domain.domain,
+          error: e.message,
+          job: self.class.name,
+          job_id: job_id
+        }
+      )
+    end
+    
+    raise e
   end
 end 

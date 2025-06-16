@@ -6,10 +6,17 @@ module Webhooks
     def create
       audit_log = ServiceAuditLog.create!(
         service_name: 'instantly_webhook',
-        action: 'process_webhook',
+        operation_type: 'process_webhook',
         status: :pending,
-        context: { payload: webhook_params },
-        started_at: Time.current
+        table_name: 'webhooks',
+        record_id: SecureRandom.uuid,
+        columns_affected: ['payload'],
+        metadata: {
+          webhook_payload: params.to_unsafe_h,
+          headers: request.headers.to_h.select { |k, v| k.start_with?('HTTP_') },
+          ip_address: request.remote_ip,
+          user_agent: request.user_agent
+        }
       )
 
       begin

@@ -66,7 +66,7 @@ class ApplicationService
 
   # Batch processing with audit logging
   def batch_process(records)
-    ServiceAuditLog.batch_audit(records, service_name: service_name, action: action, batch_size: batch_size) do |record, audit_log|
+    ServiceAuditLog.batch_audit(records, service_name: service_name, operation_type: action, batch_size: batch_size) do |record, audit_log|
       yield(record, audit_log)
     end
   end
@@ -110,7 +110,7 @@ class ApplicationService
     audit_log = ServiceAuditLog.create!(
       auditable: auditable,
       service_name: service_name,
-      action: action,
+      operation_type: action,
       status: :pending,
       columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : ['none']),
       metadata: (defined?(context) && context.present? ? context : { error: 'no metadata' })

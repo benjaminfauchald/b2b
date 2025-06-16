@@ -71,7 +71,7 @@ class DomainMxTestingService < KafkaService
         audit_log = ServiceAuditLog.create!(
           auditable: domain,
           service_name: service_name,
-          action: action,
+          operation_type: action,
           status: :pending,
           columns_affected: ['mx'],
           metadata: { domain_name: domain.domain }

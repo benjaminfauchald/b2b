@@ -24,14 +24,33 @@ class DomainARecordTestingWorker
     ServiceAuditLog.create!(
       auditable: domain,
       service_name: 'domain_a_record_testing',
-      action: 'test_a_record',
+      operation_type: 'test_a_record',
       status: result ? :success : :failed,
       context: context
     )
-  rescue ActiveRecord::RecordNotFound
+  rescue ActiveRecord::RecordNotFound => e
     Rails.logger.error "Domain not found: #{domain_id}"
+    raise e
   rescue StandardError => e
-    Rails.logger.error "Error processing A record test for domain #{domain_id}: #{e.message}"
-    raise
+    Rails.logger.error "Error processing domain #{domain_id}: #{e.message}"
+    
+    # Create audit log for the error
+    if domain
+      ServiceAuditLog.create!(
+        auditable: domain,
+        service_name: 'domain_a_record_testing',
+        operation_type: 'test_a_record',
+        status: :failed,
+        error_message: e.message,
+        columns_affected: ['www'],
+        metadata: { 
+          domain_name: domain.domain,
+          error: e.message,
+          worker: self.class.name
+        }
+      )
+    end
+    
+    raise e
   end
 end 

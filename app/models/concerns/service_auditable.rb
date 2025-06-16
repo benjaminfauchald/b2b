@@ -3,7 +3,7 @@ module ServiceAuditable
 
   included do
     # Polymorphic association to service audit logs
-    has_many :service_audit_logs, as: :auditable, dependent: :destroy
+    has_many :service_audit_logs, as: :auditable, dependent: :nullify
     has_many :latest_service_runs, as: :auditable
     has_many :records_needing_refresh, as: :auditable
 
@@ -15,29 +15,23 @@ module ServiceAuditable
   end
 
   # Instance methods
-  def audit_service_operation(service_name, action = 'process', context = {})
-    return unless audit_enabled?
-
-    audit_log = service_audit_logs.create!(
-      service_name: service_name,
-      action: action,
-      status: :pending,
+  def audit_service_operation(service_name, operation_type: 'process', **options)
+    audit_log = ServiceAuditLog.create!(
       auditable: self,
-      context: context,
-      columns_affected: (saved_changes.keys.presence || ['none']),
-      metadata: (context.presence || { error: 'no metadata' }),
-      started_at: Time.current
+      service_name: service_name,
+      operation_type: operation_type,
+      status: :pending,
+      columns_affected: options[:columns_affected] || [],
+      metadata: options[:metadata] || {}
     )
-    
-    audit_log.mark_started!
-    
+
     begin
       result = yield(audit_log)
-      audit_log.mark_success!(context, saved_changes.keys)
+      audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e.message, context.merge('error' => e.message), [])
-      raise
+      audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+      raise e
     end
   end
 
@@ -76,17 +70,51 @@ module ServiceAuditable
     end
   end
 
-  def with_service_audit(service_name, action = 'process', context = {})
-    audit_log = audit_service_operation(service_name, action, context)
-    return yield unless audit_log
+  def with_service_audit(service_name, operation_type: 'process', **options)
+    records = options[:scope] || all
+    
+    records.find_each do |record|
+      audit_log = ServiceAuditLog.create!(
+        auditable: record,
+        service_name: service_name,
+        operation_type: operation_type,
+        status: :pending,
+        columns_affected: options[:columns_affected] || [],
+        metadata: options[:metadata] || {}
+      )
 
-    begin
-      result = yield
-      audit_log.mark_success!(context)
-      result
-    rescue => e
-      audit_log.mark_failed!(e.message, context)
-      raise
+      begin
+        result = yield(record, audit_log)
+        audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
+        result
+      rescue StandardError => e
+        audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+        raise e
+      end
+    end
+  end
+
+  def audit_update(service_name, operation_type: 'update', **options)
+    records = options[:scope] || all
+    
+    records.find_each do |record|
+      audit_log = ServiceAuditLog.create!(
+        auditable: record,
+        service_name: service_name,
+        operation_type: operation_type,
+        status: :pending,
+        columns_affected: options[:columns_affected] || [],
+        metadata: options[:metadata] || {}
+      )
+
+      begin
+        result = yield(record, audit_log)
+        audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
+        result
+      rescue StandardError => e
+        audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+        raise e
+      end
     end
   end
 
@@ -100,14 +128,6 @@ module ServiceAuditable
   end
 
   # Class methods
-  def self.with_service_audit(records, service_name, action = 'process')
-    records.find_each do |record|
-      record.audit_service_operation(service_name, action) do |audit_log|
-        yield(record, audit_log)
-      end
-    end
-  end
-
   def self.needing_service(service_name)
     service_config = ServiceConfiguration.find_by(service_name: service_name)
     return [] unless service_config&.active?
@@ -131,7 +151,7 @@ module ServiceAuditable
     return unless audit_enabled?
     service_audit_logs.create!(
       service_name: 'automatic_audit',
-      action: 'create',
+      operation_type: 'create',
       status: :success,
       auditable: self,
       context: attributes,
@@ -147,7 +167,7 @@ module ServiceAuditable
     return unless audit_enabled?
     service_audit_logs.create!(
       service_name: 'automatic_audit',
-      action: 'update',
+      operation_type: 'update',
       status: :success,
       auditable: self,
       context: attributes,
