@@ -20,18 +20,26 @@ class DomainTestingService < ApplicationService
         auditable: domain,
         service_name: service_name,
         action: action,
-        status: :pending
+        status: :pending,
+        columns_affected: ['dns'],
+        metadata: { domain_name: domain.domain }
       )
       begin
         outcome = test_domain_dns(domain, audit_log)
         if outcome[:status] == :success
+          audit_log.mark_success!({
+            'domain_name' => domain.domain,
+            'dns_status' => domain.dns,
+            'test_duration_ms' => outcome[:context]['test_duration_ms']
+          }, ['dns'])
           results[:successful] += 1
         else
+          audit_log.mark_failed!('DNS test failed', { 'error' => 'DNS test failed', 'domain_name' => domain.domain }, [])
           results[:failed] += 1
         end
         results[:processed] += 1
       rescue => e
-        audit_log.mark_failed!(e.message)
+        audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, [])
         results[:errors] += 1
       end
     end
@@ -98,18 +106,22 @@ class DomainTestingService < ApplicationService
       context = {
         'dns_result' => result,
         'domain_name' => domain.domain,
-        'dns_status' => result ? 'active' : 'inactive',
+        'dns_status' => domain.dns,
         'test_duration_ms' => duration
       }
       if result
         domain.update_columns(dns: true)
         audit_log.add_context(context)
-        audit_log.mark_success!
+        audit_log.mark_success!({
+          'domain_name' => domain.domain,
+          'dns_status' => domain.dns,
+          'test_duration_ms' => duration
+        }, ['dns'])
         { status: :success, context: context }
       else
         domain.update_columns(dns: false)
         audit_log.add_context(context)
-        audit_log.mark_failed!('DNS test failed')
+        audit_log.mark_failed!('DNS test failed', { 'error' => 'DNS test failed', 'domain_name' => domain.domain }, [])
         { status: :failed, context: context }
       end
     rescue Resolv::ResolvError => e
@@ -123,7 +135,7 @@ class DomainTestingService < ApplicationService
       }
       domain.update_columns(dns: false)
       audit_log.add_context(context)
-      audit_log.mark_failed!(e.message)
+      audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, [])
       { status: :failed, context: context }
     rescue Timeout::Error => e
       duration = ((Time.current - start_time) * 1000).round(2)
@@ -136,7 +148,7 @@ class DomainTestingService < ApplicationService
       }
       domain.update_columns(dns: false)
       audit_log.add_context(context)
-      audit_log.mark_failed!(e.message)
+      audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, [])
       { status: :failed, context: context }
     rescue StandardError => e
       duration = ((Time.current - start_time) * 1000).round(2)
@@ -149,7 +161,7 @@ class DomainTestingService < ApplicationService
       }
       domain.update_columns(dns: nil)
       audit_log.add_context(context)
-      audit_log.mark_failed!(e.message)
+      audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, [])
       { status: :failed, context: context }
     end
   end
@@ -161,7 +173,9 @@ class DomainTestingService < ApplicationService
         auditable: domain,
         service_name: service_name,
         action: action,
-        status: :pending
+        status: :pending,
+        columns_affected: ['dns'],
+        metadata: { domain_name: domain.domain }
       )
       result = test_domain_dns(domain, audit_log)
       if result[:status] == :success
@@ -171,7 +185,7 @@ class DomainTestingService < ApplicationService
       end
       results[:processed] += 1
     rescue StandardError => e
-      audit_log.mark_failed!(e.message)
+      audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, [])
       results[:errors] += 1
     end
     results

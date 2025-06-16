@@ -24,6 +24,8 @@ module ServiceAuditable
       status: :pending,
       auditable: self,
       context: context,
+      columns_affected: (saved_changes.keys.presence || ['none']),
+      metadata: (context.presence || { error: 'no metadata' }),
       started_at: Time.current
     )
     
@@ -31,10 +33,10 @@ module ServiceAuditable
     
     begin
       result = yield(audit_log)
-      audit_log.mark_success!(context)
+      audit_log.mark_success!(context, saved_changes.keys)
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e.message, context)
+      audit_log.mark_failed!(e.message, context.merge('error' => e.message), [])
       raise
     end
   end
@@ -134,6 +136,8 @@ module ServiceAuditable
       auditable: self,
       context: attributes,
       changed_fields: [],
+      columns_affected: ['none'],
+      metadata: (attributes.presence || { error: 'no metadata' }),
       started_at: created_at,
       completed_at: created_at
     )
@@ -148,6 +152,8 @@ module ServiceAuditable
       auditable: self,
       context: attributes,
       changed_fields: saved_changes.keys,
+      columns_affected: (saved_changes.keys.presence || ['none']),
+      metadata: (attributes.presence || { error: 'no metadata' }),
       started_at: updated_at,
       completed_at: updated_at
     )

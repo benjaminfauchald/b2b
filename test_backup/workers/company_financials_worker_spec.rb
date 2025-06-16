@@ -2,28 +2,28 @@
 
 require 'rails_helper'
 
-RSpec.describe UpdateCompanyFinancialsWorker, type: :worker do
+RSpec.describe CompanyFinancialsWorker, type: :worker do
   let(:company) { create(:company, registration_number: '123456789') }
-  let(:service_double) { instance_double(CompanyFinancialsUpdater, call: true) }
+  let(:service_double) { instance_double(CompanyFinancialsService, call: true) }
   
   before do
-    allow(CompanyFinancialsUpdater).to receive(:new).and_return(service_double)
+    allow(CompanyFinancialsService).to receive(:new).and_return(service_double)
   end
   
   describe '#perform' do
     context 'when the company exists' do
-      it 'calls the CompanyFinancialsUpdater service' do
+      it 'calls the CompanyFinancialsService service' do
         described_class.new.perform(company.id)
-        expect(CompanyFinancialsUpdater).to have_received(:new).with(company)
+        expect(CompanyFinancialsService).to have_received(:new).with(company)
         expect(service_double).to have_received(:call)
       end
       
       it 'handles RateLimitError with retry' do
-        allow(service_double).to receive(:call).and_raise(CompanyFinancialsUpdater::RateLimitError.new('Rate limit exceeded', 10))
+        allow(service_double).to receive(:call).and_raise(CompanyFinancialsService::RateLimitError.new('Rate limit exceeded', 10))
         
         expect {
           described_class.new.perform(company.id)
-        }.to raise_error(CompanyFinancialsUpdater::RateLimitError)
+        }.to raise_error(CompanyFinancialsService::RateLimitError)
       end
     end
     
@@ -34,9 +34,9 @@ RSpec.describe UpdateCompanyFinancialsWorker, type: :worker do
         }.not_to raise_error
       end
       
-      it 'does not call the CompanyFinancialsUpdater service' do
+      it 'does not call the CompanyFinancialsService service' do
         described_class.new.perform(-1)
-        expect(CompanyFinancialsUpdater).not_to have_received(:new)
+        expect(CompanyFinancialsService).not_to have_received(:new)
       end
     end
   end
@@ -55,7 +55,7 @@ RSpec.describe UpdateCompanyFinancialsWorker, type: :worker do
     let(:worker) { described_class.new }
     
     it 'uses retry_after for RateLimitError' do
-      error = CompanyFinancialsUpdater::RateLimitError.new('Rate limit exceeded', 10)
+      error = CompanyFinancialsService::RateLimitError.new('Rate limit exceeded', 10)
       retry_in = described_class.sidekiq_retry_in_block.call(1, error)
       expect(retry_in).to eq(10)
     end

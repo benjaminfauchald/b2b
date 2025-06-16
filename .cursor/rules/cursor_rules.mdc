@@ -10,6 +10,13 @@ alwaysApply: true
 
 **NEVER ADD FIELDS OR CHANGES TO ANY TABLE OR DATABASE WITHOUT ASKING AND COMING WITH A GOOD DESIGN DECSIPON FOR THIS CHANGE AS YOUR ARGUMENT TO PROCEED**
 
+**Rails 8 changed how enums are defined. Use the Correct Rails 8 Syntax
+
+WRONG: enum :status, { pending: 0, success: 1, failed: 2 }
+RIGHT: enum status: { pending: 0, success: 1, failed: 2 }**
+
+**Always check response.body.nil? || response.body.empty? instead of response.nil? when using HTTParty**
+
 
 - **Required Rule Structure:**
   ```markdown

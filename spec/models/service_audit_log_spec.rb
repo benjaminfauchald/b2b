@@ -24,14 +24,14 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'status management' do
     it 'starts with pending status' do
       log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: {}, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: [])
-      expect(log.status).to eq(ServiceAuditLog::STATUS_PENDING)
+      expect(log.status).to eq(:pending)
     end
 
     it 'can be marked as successful' do
       log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: {}, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: [])
       log.mark_success!({ 'result' => 'ok' })
       
-      expect(log.status).to eq(ServiceAuditLog::STATUS_SUCCESS)
+      expect(log.status).to eq(:success)
       expect(log.completed_at).not_to be_nil
       expect(log.execution_time_ms).not_to be_nil
       expect(log.metadata).to include('result' => 'ok')
@@ -42,7 +42,7 @@ RSpec.describe ServiceAuditLog, type: :model do
       error_message = 'Test error'
       log.mark_failed!(error_message)
       
-      expect(log.status).to eq(ServiceAuditLog::STATUS_FAILED)
+      expect(log.status).to eq(:failed)
       expect(log.error_message).to eq('Test error')
       expect(log.completed_at).not_to be_nil
       expect(log.execution_time_ms).not_to be_nil
@@ -84,9 +84,9 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'scopes' do
     before do
       # Create logs with different statuses
-      create(:service_audit_log, service_name: service_name, status: ServiceAuditLog::STATUS_SUCCESS, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
-      create(:service_audit_log, service_name: service_name, status: ServiceAuditLog::STATUS_FAILED, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
-      create(:service_audit_log, service_name: service_name, status: ServiceAuditLog::STATUS_PENDING, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      create(:service_audit_log, service_name: service_name, status: :success, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      create(:service_audit_log, service_name: service_name, status: :failed, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      create(:service_audit_log, service_name: service_name, status: :pending, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
     end
 
     it 'finds successful logs' do

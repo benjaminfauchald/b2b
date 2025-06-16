@@ -94,7 +94,7 @@ namespace :financials do
     if sample.any?
       puts "\nSample of Companies Needing Updates:"
       sample.each do |company|
-        last_updated = company.last_financial_data_fetch_at ? "Last: #{company.last_financial_data_fetch_at}" : "Never updated"
+        last_updated = company.last_financial_update_at ? "Last: #{company.last_financial_update_at}" : "Never updated"
         puts "  - #{company.company_name} (##{company.id}, #{company.registration_number}) - #{last_updated}"
       end
     end

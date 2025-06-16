@@ -8,36 +8,15 @@ class Company < ApplicationRecord
   # Scopes for financial data
   scope :with_financial_data, -> { where.not(ordinary_result: nil, annual_result: nil) }
   scope :without_financial_data, -> { where(ordinary_result: nil, annual_result: nil) }
-  scope :needs_financial_update, -> { 
-    # Find companies that either:
-    # 1. Have no financial data at all, OR
-    # 2. Their last successful financial update was more than 6 months ago
+  scope :needs_financial_update, -> {
     six_months_ago = 6.months.ago
-    
-    # Using Arel for the join to be more Rails-idiomatic
-    companies_table = arel_table
-    audit_logs = ServiceAuditLog.arel_table
-    
-    join_condition = audit_logs[:auditable_id].eq(companies_table[:id])
-      .and(audit_logs[:auditable_type].eq('Company'))
-      .and(audit_logs[:service_name].eq('company_financials'))
-      .and(audit_logs[:status].eq(ServiceAuditLog.statuses[:success]))
-    
-    # Left outer join with conditions
-    query = companies_table
-      .join(audit_logs, Arel::Nodes::OuterJoin)
-      .on(join_condition)
+    left_outer_joins(:service_audit_logs)
       .where(
-        companies_table[:ordinary_result].eq(nil)
-          .or(companies_table[:annual_result].eq(nil))
-          .or(audit_logs[:id].eq(nil))
-          .or(audit_logs[:completed_at].lt(six_months_ago))
+        '(companies.ordinary_result IS NULL OR companies.annual_result IS NULL OR service_audit_logs.id IS NULL OR (service_audit_logs.service_name = ? AND service_audit_logs.status = ? AND service_audit_logs.completed_at < ?))',
+        'company_financials', ServiceAuditLog.statuses[:success], six_months_ago
       )
-      .project(companies_table[Arel.star])
+      .select('companies.*')
       .distinct
-    
-    # Convert back to ActiveRecord relation
-    find_by_sql(query.to_sql)
   }
   
   # Instance Methods

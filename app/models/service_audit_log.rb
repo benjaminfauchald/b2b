@@ -4,6 +4,9 @@ class ServiceAuditLog < ApplicationRecord
   STATUS_SUCCESS = 1
   STATUS_FAILED = 2
 
+  # Rails 8 enum for status
+  enum :status, { pending: 0, success: 1, failed: 2 }
+
   # Associations
   belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name', optional: true
   belongs_to :auditable, polymorphic: true, optional: false
@@ -13,11 +16,13 @@ class ServiceAuditLog < ApplicationRecord
   validates :table_name, presence: true
   validates :operation_type, presence: true, length: { maximum: 50 }
   validates :status, presence: true
-  validates :metadata, absence: false
   validates :auditable, presence: true
-  validates :columns_affected, absence: false
   validates :execution_time_ms, numericality: { allow_nil: true }
   validates :record_id, presence: true
+  validates :columns_affected, presence: true
+  validate :columns_affected_not_empty
+  validates :metadata, presence: true
+  validate :metadata_must_have_error_if_failed
   # target_table is optional (nullable)
 
   # Scopes
@@ -50,23 +55,25 @@ class ServiceAuditLog < ApplicationRecord
     )
   end
 
-  def mark_success!(metadata = {})
+  def mark_success!(metadata = {}, columns_affected = [])
     now = Time.current
     update_columns(
       status: STATUS_SUCCESS,
       completed_at: now,
-      metadata: metadata
+      metadata: metadata,
+      columns_affected: columns_affected
     )
     update_column(:execution_time_ms, calculate_duration)
   end
 
-  def mark_failed!(error_message, metadata = {})
+  def mark_failed!(error_message, metadata = {}, columns_affected = [])
     now = Time.current
     update_columns(
       status: STATUS_FAILED,
       error_message: error_message,
       completed_at: now,
-      metadata: metadata
+      metadata: metadata,
+      columns_affected: columns_affected
     )
     update_column(:execution_time_ms, calculate_duration)
   end
@@ -149,5 +156,17 @@ class ServiceAuditLog < ApplicationRecord
 
   def columns_affected_not_nil
     errors.add(:columns_affected, "can't be nil") if columns_affected.nil?
+  end
+
+  def columns_affected_not_empty
+    if columns_affected.blank? || (columns_affected.respond_to?(:empty?) && columns_affected.empty?)
+      errors.add(:columns_affected, "can't be blank")
+    end
+  end
+
+  def metadata_must_have_error_if_failed
+    if status == "failed" && (!metadata.is_a?(Hash) || !metadata.key?("error") || metadata["error"].blank?)
+      errors.add(:metadata, "must include an 'error' key with the error message when status is failed")
+    end
   end
 end 

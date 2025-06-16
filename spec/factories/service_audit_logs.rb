@@ -2,7 +2,7 @@ FactoryBot.define do
   factory :service_audit_log do
     service_name { 'test_service' }
     operation_type { 'process' }
-    status { ServiceAuditLog::STATUS_PENDING }
+    status { :pending }
     started_at { Time.current }
     association :auditable, factory: :company
     metadata { {} }

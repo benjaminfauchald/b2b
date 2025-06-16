@@ -5,7 +5,6 @@ module HttpartyResponseHelper
 
   # Check if HTTParty response is valid and has content
   def valid_response?(response)
-    return false if response.nil?
     return false if response.body.nil? || response.body.empty?
     return false unless response.respond_to?(:success?) && response.success?
     true
@@ -89,7 +88,6 @@ module HttpartyResponseHelper
 
   # Get response status info
   def response_status_info(response)
-    return { valid: false, message: 'Response is nil' } if response.nil?
     return { valid: false, message: 'Response body is empty' } if response.body.nil? || response.body.empty?
     return { valid: false, message: "HTTP #{response.code}: #{response.message}" } unless response.respond_to?(:success?) && response.success?
     

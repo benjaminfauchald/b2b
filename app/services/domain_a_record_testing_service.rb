@@ -53,7 +53,9 @@ class DomainARecordTestingService < ApplicationService
       auditable: domain,
       service_name: service_name,
       action: action,
-      status: :pending
+      status: :pending,
+      columns_affected: ['www'],
+      metadata: { domain_name: domain.domain }
     )
     result = test_single_domain_for(domain)
     if result == true
