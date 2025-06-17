@@ -89,3 +89,4 @@ node_modules/
 *.env.production
 app/.env.production
 .env.production
+vendor/bundle/

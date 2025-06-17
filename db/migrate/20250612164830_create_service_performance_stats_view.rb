@@ -1,6 +1,7 @@
 class CreateServicePerformanceStatsView < ActiveRecord::Migration[8.0]
   def up
     execute <<-SQL
+      DROP MATERIALIZED VIEW IF EXISTS service_performance_stats;
       CREATE OR REPLACE VIEW service_performance_stats AS
       SELECT 
         service_name,

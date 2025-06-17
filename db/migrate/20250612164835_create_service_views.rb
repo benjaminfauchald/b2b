@@ -1,6 +1,41 @@
 class CreateServiceViews < ActiveRecord::Migration[8.0]
   def up
-    # View for latest successful service runs per record/service combination
+    # Drop dependent view first
+    execute "DROP VIEW IF EXISTS records_needing_refresh;"
+
+    # Drop service_performance_stats as materialized view or view
+    execute <<-SQL
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_matviews WHERE matviewname = 'service_performance_stats'
+        ) THEN
+          EXECUTE 'DROP MATERIALIZED VIEW service_performance_stats';
+        ELSIF EXISTS (
+          SELECT 1 FROM pg_views WHERE viewname = 'service_performance_stats'
+        ) THEN
+          EXECUTE 'DROP VIEW service_performance_stats';
+        END IF;
+      END$$;
+    SQL
+
+    # Drop latest_service_runs as materialized view or view
+    execute <<-SQL
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_matviews WHERE matviewname = 'latest_service_runs'
+        ) THEN
+          EXECUTE 'DROP MATERIALIZED VIEW latest_service_runs';
+        ELSIF EXISTS (
+          SELECT 1 FROM pg_views WHERE viewname = 'latest_service_runs'
+        ) THEN
+          EXECUTE 'DROP VIEW latest_service_runs';
+        END IF;
+      END$$;
+    SQL
+
+    # Create base view first
     execute <<-SQL
       CREATE VIEW latest_service_runs AS
       SELECT DISTINCT ON (auditable_type, auditable_id, service_name)
@@ -17,7 +52,6 @@ class CreateServiceViews < ActiveRecord::Migration[8.0]
       WHERE status = 1 -- success status
       ORDER BY auditable_type, auditable_id, service_name, completed_at DESC;
     SQL
-    
     # View for service performance statistics
     execute <<-SQL
       CREATE VIEW service_performance_stats AS
@@ -39,8 +73,7 @@ class CreateServiceViews < ActiveRecord::Migration[8.0]
       WHERE completed_at IS NOT NULL
       GROUP BY service_name;
     SQL
-    
-    # View for records needing refresh based on service configurations
+    # Create dependent view last
     execute <<-SQL
       CREATE VIEW records_needing_refresh AS
       SELECT DISTINCT
