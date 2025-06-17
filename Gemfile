@@ -67,3 +67,4 @@ end
 gem "sidekiq", "~> 8.0"
 gem "devise", "~> 4.9"
 gem "karafka", "~> 2.4"
+gem "json-schema", "~> 4.0"
