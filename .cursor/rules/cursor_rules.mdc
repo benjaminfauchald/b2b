@@ -4,6 +4,7 @@ globs: .cursor/rules/*.mdc
 alwaysApply: true
 ---
 **Never reset or drop the database unless you are in a disposable test environment.**
+**MAKE SURE WE ALWAYS HAVE Rails 8.0 Version Compatibility**
 
 **Always resolve migration locks by closing other sessions, not by resetting.**
 
