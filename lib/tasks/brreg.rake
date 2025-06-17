@@ -149,24 +149,20 @@ namespace :brreg do
     batch_index = 0
 
     logger.info "\nStarting Brreg to Company migration"
-    logger.info "Total records to process: #{total}"
+    logger.info "Total Brreg records to process: #{total}"
     logger.info "Batch size: #{batch_size}"
+    logger.info "Current Company count: #{Company.count}"
     logger.info "=" * 60
 
-    # Get all organisasjonsnummers first to ensure consistent pagination
-    org_numbers = Brreg.unscoped.order(:organisasjonsnummer).pluck(:organisasjonsnummer)
-    
-    org_numbers.each_slice(batch_size) do |batch_org_numbers|
+    # Process Brreg records in batches
+    Brreg.find_in_batches(batch_size: batch_size) do |batch|
       batch_index += 1
-      batch = Brreg.where(organisasjonsnummer: batch_org_numbers)
-                  .index_by(&:organisasjonsnummer)
-                  .values_at(*batch_org_numbers)
-      
-      logger.info "Processing batch ##{batch_index} (records #{processed + 1} - #{[processed + batch.size, total].min})"
+      logger.info "Processing batch ##{batch_index} (records #{processed + 1} - #{processed + batch.size})"
 
       ActiveRecord::Base.transaction do
         batch.each do |brreg_record|
           begin
+            # Find or create company by registration number (organisasjonsnummer)
             company = Company.find_or_initialize_by(registration_number: brreg_record.organisasjonsnummer)
             
             # Skip if the company already exists and hasn't changed
@@ -176,11 +172,13 @@ namespace :brreg do
               next
             end
             
+            # Update company with Brreg data
             update_company_attributes(company, brreg_record)
             
             if company.save!
               success_count += 1
-              logger.debug "Successfully #{company.previously_new_record? ? 'created' : 'updated'} company: #{brreg_record.organisasjonsnummer}"
+              action = company.previously_new_record? ? 'created' : 'updated'
+              logger.debug "Successfully #{action} company: #{brreg_record.organisasjonsnummer}"
             end
             
           rescue ActiveRecord::RecordNotUnique => e
@@ -196,15 +194,20 @@ namespace :brreg do
         end
       end
       
-      logger.info "Processed #{processed}/#{total} records (#{((processed.to_f / total) * 100).round(1)}%)"
+      progress_percent = ((processed.to_f / total) * 100).round(1)
+      logger.info "Processed #{processed}/#{total} records (#{progress_percent}%)"
       logger.info "Success: #{success_count}, Skipped: #{skipped_count}, Errors: #{error_count}"
+      logger.info ""
     end
 
+    final_company_count = Company.count
     logger.info "\nMigration completed!"
-    logger.info "Total processed: #{processed}"
+    logger.info "Total Brreg records processed: #{processed}"
     logger.info "Successfully migrated: #{success_count}"
     logger.info "Skipped (no changes/duplicates): #{skipped_count}"
     logger.info "Errors: #{error_count}"
+    logger.info "Company count before: #{final_company_count - success_count}"
+    logger.info "Company count after: #{final_company_count}"
     logger.info "=" * 60
   end
 
@@ -217,6 +220,9 @@ namespace :brreg do
   end
 
   def update_company_attributes(company, brreg_record)
+    # Set brreg_id to link back to the Brreg record
+    company.brreg_id = brreg_record.id if brreg_record.respond_to?(:id)
+    
     company.assign_attributes(
       source_country: 'NO',
       source_registry: 'brreg',
@@ -227,20 +233,24 @@ namespace :brreg do
       primary_industry_code: brreg_record.naeringskode1_kode,
       primary_industry_description: brreg_record.naeringskode1_beskrivelse,
       website: brreg_record.hjemmeside,
-      email: brreg_record.epostadresse,
+      email: safe_attribute(brreg_record, :epost) || safe_attribute(brreg_record, :epostadresse),
       phone: brreg_record.telefon,
-      mobile: brreg_record.mobil,
-      postal_address: brreg_record.forretningsadresse_adresse,
+      mobile: safe_attribute(brreg_record, :mobiltelefon) || safe_attribute(brreg_record, :mobil),
+      postal_address: safe_attribute(brreg_record, :forretningsadresse) || safe_attribute(brreg_record, :forretningsadresse_adresse),
       postal_city: brreg_record.forretningsadresse_poststed,
       postal_code: brreg_record.forretningsadresse_postnummer,
       postal_municipality: brreg_record.forretningsadresse_kommune,
       postal_country: brreg_record.forretningsadresse_land,
-      postal_country_code: brreg_record.forretningsadresse_landkode,
-      has_registered_employees: brreg_record.harregistrertantallansatte == 'true',
+      postal_country_code: safe_attribute(brreg_record, :forretningsadresse_landkode),
+      has_registered_employees: safe_attribute(brreg_record, :harregistrertantallansatte) == 'true',
       employee_count: brreg_record.antallansatte&.to_i,
-      employee_registration_date_registry: parse_date(brreg_record.registreringsdatoantallansatteenhetsregisteret),
-      employee_registration_date_nav: parse_date(brreg_record.registreringsdatoantallansattenavaaregisteret)
+      employee_registration_date_registry: parse_date(safe_attribute(brreg_record, :registreringsdatoantallansatteenhetsregisteret)),
+      employee_registration_date_nav: parse_date(safe_attribute(brreg_record, :registreringsdatoantallansattenavaaregisteret))
     )
+  end
+
+  def safe_attribute(record, attribute)
+    record.respond_to?(attribute) ? record.send(attribute) : nil
   end
 
   def parse_date(date_str)
