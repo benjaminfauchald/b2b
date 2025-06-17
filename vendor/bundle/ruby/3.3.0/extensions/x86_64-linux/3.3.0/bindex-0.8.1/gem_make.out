@@ -1,0 +1,18 @@
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/bindex-0.8.1/ext/skiptrace
+/home/benjamin/.rvm/rubies/ruby-3.3.0/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/bindex-0.8.1/ext/skiptrace
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-j3o4ui sitelibdir\=./.gem.20250617-268302-j3o4ui clean
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/bindex-0.8.1/ext/skiptrace
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-j3o4ui sitelibdir\=./.gem.20250617-268302-j3o4ui
+compiling cruby.c
+linking shared-object skiptrace/internal/cruby.so
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/bindex-0.8.1/ext/skiptrace
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-j3o4ui sitelibdir\=./.gem.20250617-268302-j3o4ui install
+/usr/bin/install -c -m 0755 cruby.so ./.gem.20250617-268302-j3o4ui/skiptrace/internal
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/bindex-0.8.1/ext/skiptrace
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-j3o4ui sitelibdir\=./.gem.20250617-268302-j3o4ui clean

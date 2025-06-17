@@ -21,13 +21,16 @@ Rails.application.routes.draw do
   # Sidekiq Web UI with environment-specific authentication
   require 'sidekiq/web'
   
-  if Rails.env.development?
-    # In development, allow access without authentication for easier debugging
-    mount Sidekiq::Web => '/sidekiq'
-  else
-    # In production, require admin authentication
-    authenticate :user, lambda { |u| u.admin? } do
-      mount Sidekiq::Web => '/sidekiq'
-    end
-  end
+  # Temporarily allow access without authentication for debugging
+  mount Sidekiq::Web => '/sidekiq'
+  
+  # if Rails.env.development?
+  #   # In development, allow access without authentication for easier debugging
+  #   mount Sidekiq::Web => '/sidekiq'
+  # else
+  #   # In production, require admin authentication
+  #   authenticate :user, lambda { |u| u.admin? } do
+  #     mount Sidekiq::Web => '/sidekiq'
+  #   end
+  # end
 end

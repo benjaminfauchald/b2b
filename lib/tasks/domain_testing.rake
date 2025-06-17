@@ -5,7 +5,7 @@ namespace :domain_testing do
   task sample: :environment do
     sample_size = ENV.fetch('SAMPLE_SIZE', 5).to_i
     
-    domains = Domain.needs_service('domain_testing').limit(sample_size)
+    domains = Domain.needing_service('domain_testing').limit(sample_size)
     
     if domains.empty?
       puts "No domains need testing."
@@ -34,10 +34,10 @@ namespace :domain_testing do
     
     if count.nil?
       puts "Queueing all domains for DNS testing..."
-      domains = Domain.needs_service('domain_testing')
+      domains = Domain.needing_service('domain_testing')
     else
       puts "Queueing #{count} domains for DNS testing..."
-      domains = Domain.needs_service('domain_testing').limit(count)
+      domains = Domain.needing_service('domain_testing').limit(count)
     end
     
     if domains.empty?
@@ -63,7 +63,7 @@ namespace :domain_testing do
   
   desc 'Show domains that need DNS testing'
   task show_pending: :environment do
-    domains = Domain.needs_service('domain_testing')
+    domains = Domain.needing_service('domain_testing')
     
     if domains.empty?
       puts "No domains need testing."

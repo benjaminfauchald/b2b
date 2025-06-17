@@ -1,0 +1,19 @@
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/debug-1.10.0/ext/debug
+/home/benjamin/.rvm/rubies/ruby-3.3.0/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/debug-1.10.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-amhf9q sitelibdir\=./.gem.20250617-268302-amhf9q clean
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/debug-1.10.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-amhf9q sitelibdir\=./.gem.20250617-268302-amhf9q
+compiling debug.c
+compiling iseq_collector.c
+linking shared-object debug/debug.so
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/debug-1.10.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-amhf9q sitelibdir\=./.gem.20250617-268302-amhf9q install
+/usr/bin/install -c -m 0755 debug.so ./.gem.20250617-268302-amhf9q/debug
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/debug-1.10.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20250617-268302-amhf9q sitelibdir\=./.gem.20250617-268302-amhf9q clean

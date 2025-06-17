@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# B2B Production Console Launcher
+# This script provides an enhanced console for the production environment
+
+echo "🚀 Starting B2B Production Console..."
+
+# Parse command line options
+case "$1" in
+    "--minimal"|"-m")
+        echo "📊 Using minimal database console (direct PostgreSQL connection)"
+        ruby scripts/minimal_console.rb
+        ;;
+    "--enhanced"|"-e")
+        echo "🎯 Using enhanced console (ActiveRecord + IRB autocomplete)"
+        ruby scripts/enhanced_console.rb
+        ;;
+    "--rails"|"-r")
+        echo "🔧 Attempting Rails production console..."
+        RAILS_ENV=production rails c
+        ;;
+    *)
+        echo "🎯 Using enhanced console by default..."
+        echo ""
+        ruby scripts/enhanced_console.rb
+        ;;
+esac

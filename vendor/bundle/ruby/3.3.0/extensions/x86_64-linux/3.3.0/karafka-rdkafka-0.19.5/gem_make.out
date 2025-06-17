@@ -1,0 +1,7 @@
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/karafka-rdkafka-0.19.5/ext
+/home/benjamin/.rvm/rubies/ruby-3.3.0/bin/ruby -rrubygems /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/rake-13.3.0/exe/rake RUBYARCHDIR\=/home/benjamin/b2b/vendor/bundle/ruby/3.3.0/extensions/x86_64-linux/3.3.0/karafka-rdkafka-0.19.5 RUBYLIBDIR\=/home/benjamin/b2b/vendor/bundle/ruby/3.3.0/extensions/x86_64-linux/3.3.0/karafka-rdkafka-0.19.5
+Extracting librdkafka-2.8.0.tar.gz into tmp/x86_64-linux-gnu/ports/librdkafka/2.8.0... OK
+Running git apply with /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/karafka-rdkafka-0.19.5/dist/patches/rdkafka_global_init.patch... OK
+Running 'configure' for librdkafka 2.8.0... OK
+Running 'compile' for librdkafka 2.8.0... OK
+Running 'install' for librdkafka 2.8.0... OK
