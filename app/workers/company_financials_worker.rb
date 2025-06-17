@@ -28,11 +28,7 @@ class CompanyFinancialsWorker
     end
   end
 
-  RATE_LIMIT_KEY = 'company_financials_worker:last_api_call'
-  RATE_LIMIT_INTERVAL = 1 # second
-
   def perform(company_id, enqueued_at = nil)
-    enforce_rate_limit!
     @start_time = Time.current
     @company = Company.find_by(id: company_id)
     
@@ -77,38 +73,6 @@ class CompanyFinancialsWorker
       Rails.logger.debug("[SCT] Metadata: #{metadata.to_json}")
     rescue => e
       Rails.logger.error("Failed to log to SCT in worker: #{e.message}")
-    end
-  end
-
-  def enforce_rate_limit!
-    Sidekiq.redis do |redis|
-      # Global rate limiting using Redis - ensures only 1 API call per second across ALL threads
-      rate_limit_key = "#{RATE_LIMIT_KEY}:global_lock"
-      
-      # Try to acquire the rate limit slot
-      acquired = false
-      start_time = Time.now
-      
-      # Keep trying for up to 30 seconds to get a slot
-      while Time.now - start_time < 30
-        # Use Redis SET with NX (only set if not exists) and EX (expire)
-        # This creates a 1-second lock that only one thread can acquire
-        if redis.set(rate_limit_key, Time.now.to_f, nx: true, ex: 1)
-          acquired = true
-          break
-        end
-        
-        # Wait a bit before trying again (with some jitter to avoid thundering herd)
-        sleep(0.1 + rand(0.05))
-      end
-      
-      unless acquired
-        raise "Could not acquire rate limit slot after 30 seconds - too many concurrent requests"
-      end
-      
-      # We now have the exclusive right to make an API call
-      # The lock will automatically expire in 1 second
-      Rails.logger.info "[company_financials] Acquired rate limit slot for API call"
     end
   end
 end

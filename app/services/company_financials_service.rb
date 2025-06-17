@@ -152,11 +152,15 @@ class CompanyFinancialsService
   end
 
   def make_api_request
+    # Enforce global rate limiting before making the API call
+    enforce_rate_limit!
+    
     # Construct the full URL with the organization number
     url = "#{BASE_URL}/#{@org_number}"
-    @logger.info "[#{SERVICE_NAME}] Fetching financial data for #{@org_number} - Attempt #{@attempts + 1}/#{MAX_ATTEMPTS}"
-    @logger.debug "[#{SERVICE_NAME}] API URL: #{url}"
-
+    
+    @logger.info "[#{SERVICE_NAME}] Fetching financial data for #{@org_number} - Attempt #{@attempts}/#{MAX_ATTEMPTS}"
+    @logger.debug "[#{SERVICE_NAME}] Request URL: #{url}"
+    
     begin
       # Add headers for the BRREG API
       headers = {
@@ -321,6 +325,49 @@ class CompanyFinancialsService
   end
 
   private
+
+  # Global rate limiting using Redis - ensures only 1 API call per second across ALL threads
+  def enforce_rate_limit!
+    require 'sidekiq'
+    
+    Sidekiq.redis do |redis|
+      rate_limit_key = "company_financials_service:global_api_lock"
+      last_call_key = "company_financials_service:last_api_call"
+      
+      # Try to acquire the rate limit slot
+      acquired = false
+      start_time = Time.now
+      
+      # Keep trying for up to 30 seconds to get a slot
+      while Time.now - start_time < 30
+        # Check when the last API call was made
+        last_call_str = redis.get(last_call_key)
+        last_call = last_call_str ? last_call_str.to_f : 0
+        current_time = Time.now.to_f
+        
+        # If enough time has passed since the last call, try to acquire the lock
+        if current_time - last_call >= 1.0
+          # Try to acquire a 2-second lock to prevent race conditions
+          if redis.set(rate_limit_key, current_time, nx: true, ex: 2)
+            # Successfully acquired the lock, now record this API call time
+            redis.set(last_call_key, current_time, ex: 10)
+            acquired = true
+            break
+          end
+        end
+        
+        # Wait a bit before trying again (with some jitter to avoid thundering herd)
+        sleep(0.1 + rand(0.05))
+      end
+      
+      unless acquired
+        raise RateLimitError.new("Could not acquire rate limit slot after 30 seconds - too many concurrent requests", 30)
+      end
+      
+      # We now have the exclusive right to make an API call
+      @logger.info "[#{SERVICE_NAME}] Acquired rate limit slot for API call"
+    end
+  end
 
   # Safely dig through nested hashes and arrays without raising errors
   def safe_dig(hash, *keys)
