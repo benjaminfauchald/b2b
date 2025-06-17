@@ -1,4 +1,4 @@
-class RenameServiceAuditLogFieldsForSct < ActiveRecord::Migration[7.1]
+class RenameServiceAuditLogFieldsForSct < ActiveRecord::Migration[8.0]
   def change
     rename_column :service_audit_logs, :action, :operation_type
     rename_column :service_audit_logs, :changed_fields, :columns_affected

@@ -44,7 +44,7 @@ gem "redis", "~> 5.0"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
-  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "debug", platforms: %i[ mri windows ]
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
@@ -65,3 +65,5 @@ group :test do
 end
 
 gem "sidekiq", "~> 8.0"
+gem "devise", "~> 4.9"
+gem "karafka", "~> 2.4"
