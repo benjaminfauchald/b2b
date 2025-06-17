@@ -211,6 +211,201 @@ namespace :brreg do
     logger.info "=" * 60
   end
 
+  desc 'Migrate domain data from remote database'
+  task migrate_domains_from_remote: :environment do
+    logger = Logger.new(STDOUT)
+    batch_size = ENV['BATCH_SIZE']&.to_i || 1000
+    start_from_id = ENV['START_FROM_ID']&.to_i || 0
+    
+    # Hard-coded remote database configuration (b2b.connectica.no)
+    remote_config = {
+      adapter: 'postgresql',
+      encoding: 'unicode',
+      pool: 5,
+      database: 'b2b_development',
+      host: 'b2b.connectica.no',
+      port: 5432,
+      username: 'postgres',
+      password: 'Charcoal2020!'
+    }
+    
+    # Hard-coded local/production database configuration (app.connectica.no)
+    local_config = {
+      adapter: 'postgresql',
+      encoding: 'unicode',
+      pool: 5,
+      database: 'b2b_production',
+      host: 'app.connectica.no',
+      port: 5432,
+      username: 'benjamin',
+      password: 'Charcoal2020!'
+    }
+    
+    logger.info "\nStarting remote Domain data migration"
+    logger.info "Remote source: #{remote_config[:host]} (#{remote_config[:database]})"
+    logger.info "Local destination: #{local_config[:host]} (#{local_config[:database]})"
+    logger.info "Batch size: #{batch_size}"
+    logger.info "Starting from ID: #{start_from_id}"
+    logger.info "=" * 80
+    
+    begin
+      # Establish connection to remote database
+      ActiveRecord::Base.establish_connection(remote_config)
+      remote_connection = ActiveRecord::Base.connection
+      logger.info "✓ Connected to remote database successfully"
+      
+      # Get total count from remote database
+      total_remote = remote_connection.select_value("SELECT COUNT(*) FROM domains WHERE id > #{start_from_id}")
+      local_count_before = Domain.count
+      
+      logger.info "Remote records to process: #{total_remote}"
+      logger.info "Local records before migration: #{local_count_before}"
+      
+      # Check if migration might already be complete
+      if total_remote == 0
+        logger.info "No records to migrate from remote database."
+        logger.info "Migration completed successfully!"
+        return
+      end
+      
+      logger.info ""
+      
+      processed = 0
+      success_count = 0
+      skipped_count = 0
+      error_count = 0
+      last_processed_id = start_from_id
+      
+      # Process in batches
+      loop do
+        # Fetch batch from remote database (using id for ordering)
+        batch_sql = <<-SQL
+          SELECT * FROM domains 
+          WHERE id > #{last_processed_id} 
+          ORDER BY id ASC 
+          LIMIT #{batch_size}
+        SQL
+        
+        batch_results = remote_connection.select_all(batch_sql)
+        break if batch_results.empty?
+        
+        logger.info "Processing batch starting from ID #{last_processed_id + 1}..."
+        batch_start_time = Time.current
+        
+        # Temporarily reconnect to local database for processing
+        ActiveRecord::Base.establish_connection(local_config)
+        
+        # Process each record in the batch
+        ActiveRecord::Base.transaction do
+          batch_results.each do |remote_record|
+            begin
+              # Always update the last processed ID, even for skipped records
+              current_id = remote_record['id'].to_i
+              
+              # Check if record already exists (skip duplicates by domain name)
+              existing = Domain.find_by(domain: remote_record['domain'])
+              
+              if existing
+                logger.debug "Skipping existing domain: #{remote_record['domain']}"
+                skipped_count += 1
+                processed += 1
+                last_processed_id = [last_processed_id, current_id].max
+                next
+              end
+              
+              # Create new local record
+              new_record = Domain.new
+              
+              # Map all fields from remote record
+              remote_record.each do |key, value|
+                if new_record.respond_to?("#{key}=")
+                  # Handle datetime fields
+                  if %w[created_at updated_at].include?(key) && value.is_a?(String)
+                    begin
+                      value = DateTime.parse(value) if value.present?
+                    rescue DateTime::Error
+                      logger.warn "Invalid datetime in #{key} for domain #{remote_record['domain']}"
+                      value = nil
+                    end
+                  end
+                  
+                  new_record.send("#{key}=", value)
+                else
+                  logger.debug "Skipping field #{key} - not found in local model"
+                end
+              end
+              
+              # Save the record
+              if new_record.save!
+                success_count += 1
+                logger.debug "✓ Created domain: #{remote_record['domain']}"
+              end
+              
+            rescue ActiveRecord::RecordNotUnique => e
+              logger.warn "Skipping duplicate domain: #{remote_record['domain']}"
+              skipped_count += 1
+            rescue => e
+              error_count += 1
+              logger.error "✗ Error processing domain #{remote_record['domain']}: #{e.message}"
+              logger.error e.backtrace.first(3).join("\n") if ENV['DEBUG']
+            end
+            
+            processed += 1
+            current_id = remote_record['id'].to_i
+            last_processed_id = [last_processed_id, current_id].max
+          end
+        end
+        
+        # Reconnect to remote database for next batch
+        ActiveRecord::Base.establish_connection(remote_config)
+        remote_connection = ActiveRecord::Base.connection
+        
+        batch_duration = Time.current - batch_start_time
+        progress_percent = ((processed.to_f / total_remote) * 100).round(2)
+        
+        logger.info "Batch completed in #{batch_duration.round(2)}s"
+        logger.info "Progress: #{processed}/#{total_remote} (#{progress_percent}%)"
+        logger.info "Success: #{success_count}, Skipped: #{skipped_count}, Errors: #{error_count}"
+        logger.info "Last processed ID: #{last_processed_id}"
+        
+        # Save progress to file for resumability
+        File.write('tmp/domain_migration_progress.txt', last_processed_id.to_s)
+        logger.info ""
+        
+        # Small delay to prevent overwhelming the databases
+        sleep(0.1)
+      end
+      
+    rescue => e
+     logger.error "Fatal error during migration: #{e.message}"
+     logger.error e.backtrace.join("\n") if ENV['DEBUG']
+     raise
+    ensure
+      # Always restore the local connection
+      begin
+        ActiveRecord::Base.establish_connection(local_config)
+      rescue => e
+        logger.warn "Warning: Could not restore local database connection: #{e.message}"
+      end
+    end
+    
+    local_count_after = Domain.count
+    
+    logger.info "\n" + "=" * 80
+    logger.info "Domain migration completed!"
+    logger.info "Total processed: #{processed}"
+    logger.info "Successfully migrated: #{success_count}"
+    logger.info "Skipped (duplicates): #{skipped_count}"
+    logger.info "Errors: #{error_count}"
+    logger.info "Local count before: #{local_count_before}"
+    logger.info "Local count after: #{local_count_after}"
+    logger.info "Net increase: #{local_count_after - local_count_before}"
+    logger.info "=" * 80
+    
+    # Clean up progress file on successful completion
+    File.delete('tmp/domain_migration_progress.txt') if File.exist?('tmp/domain_migration_progress.txt') && error_count == 0
+  end
+
   private
 
   def company_changed?(company, brreg_record)
