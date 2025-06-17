@@ -85,3 +85,6 @@ node_modules/
 
 # Cursor IDE
 .cursor/mcp.json
+
+# Vendor bundle - should be generated locally
+vendor/bundle/
