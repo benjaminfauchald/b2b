@@ -36,16 +36,22 @@ jobs:
     
     - name: Setup test database
       env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
         RAILS_ENV: test
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGPASSWORD: postgres
       run: |
         bin/rails db:create
         bin/rails db:migrate
     
     - name: Run tests
       env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
         RAILS_ENV: test
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGPASSWORD: postgres
       run: bundle exec rspec
     
     - name: Run linting
