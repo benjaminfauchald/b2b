@@ -10,18 +10,16 @@ jobs:
     
     services:
       postgres:
-        image: postgres:13
+        image: postgres:14
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: b2b_test
-        ports:
-          - 5432:5432
+          POSTGRES_PASSWORD: password
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
     - uses: actions/checkout@v4
@@ -37,26 +35,10 @@ jobs:
         mkdir -p config/credentials
         echo "2b6511362ac3e7195e7097e15c402eaa" > config/credentials/test.key
     
-    - name: Install PostgreSQL client
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-    
-    - name: Wait for PostgreSQL
-      run: |
-        until pg_isready -h localhost -p 5432 -U postgres; do
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done
-        echo "PostgreSQL is ready!"
-    
     - name: Setup test database
       env:
         RAILS_ENV: test
-        PGHOST: localhost
-        PGPORT: 5432
-        PGUSER: postgres
-        PGPASSWORD: postgres
+        DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
       run: |
         bin/rails db:create
         bin/rails db:migrate
@@ -64,10 +46,7 @@ jobs:
     - name: Run tests
       env:
         RAILS_ENV: test
-        PGHOST: localhost
-        PGPORT: 5432
-        PGUSER: postgres
-        PGPASSWORD: postgres
+        DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
       run: bundle exec rspec
     
     - name: Run linting
