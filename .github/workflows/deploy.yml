@@ -139,8 +139,8 @@ jobs:
           pkill -f "rails server" || echo "No existing Rails processes"
           pkill -f "puma" || echo "No existing Puma processes"
           
-          # Start Rails server bound to all interfaces on port 4000
-          RAILS_ENV=production PORT=4000 nohup bundle exec rails server -b 0.0.0.0 -p 4000 > /tmp/rails.log 2>&1 &
+          # Start Rails server bound to all interfaces on port 3000 (for nginx proxy)
+          RAILS_ENV=production PORT=3000 nohup bundle exec rails server -b 0.0.0.0 -p 3000 > /tmp/rails.log 2>&1 &
           
           echo "⏳ Waiting for server to start..."
           sleep 10

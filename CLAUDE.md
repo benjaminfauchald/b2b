@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Rails Server
-- `PORT=4000 rails server` - Start Rails server on port 4000 (binds to 0.0.0.0 for external access)
+- `PORT=3000 rails server` - Start Rails server on port 3000 (nginx proxies from HTTPS port 443)
 - `rails console` - Open Rails console
-- **Important**: Always use port 4000 and the server automatically binds to 0.0.0.0 for external interface access
+- **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
 
 ### Background Jobs
 - `bundle exec sidekiq` - Start Sidekiq worker for all queues
