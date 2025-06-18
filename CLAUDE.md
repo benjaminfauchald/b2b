@@ -44,6 +44,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `docker-compose up kafka` - Start Kafka broker
 - Consumers: `bundle exec karafka consumer` - Start Kafka consumers
 
+## Production Configuration
+
+### Database
+- **Production Database**: app.connectica.no
+
 ## Architecture Overview
 
 ### Service-Oriented Architecture
