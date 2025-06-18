@@ -74,7 +74,7 @@ namespace :setup do
       RAILS_MASTER_KEY=#{master_key}
       SECRET_KEY_BASE=#{SecureRandom.hex(64)}
 
-      # Database Configuration (PostgreSQL)
+      # Database Configuration (PostgreSQL) - app.connectica.no
       DATABASE_URL=postgresql://benjamin:Charcoal2020!@app.connectica.no:5432/b2b_production
       PGHOST=app.connectica.no
       PGPORT=5432
@@ -92,8 +92,10 @@ namespace :setup do
       # Redis Configuration
       REDIS_URL=redis://localhost:6379/0
 
-      # Kafka Configuration (optional)
+      # Kafka Configuration
       KAFKA_ENABLED=false
+      # KAFKA_BROKERS=localhost:9092
+      # KAFKA_CLIENT_ID=b2b_production
 
       # Email/SMTP Configuration (update with your values)
       # MAIL_USERNAME=your-email@domain.com
@@ -101,12 +103,38 @@ namespace :setup do
       # SMTP_HOST=smtp.gmail.com
       # SMTP_PORT=587
       # SMTP_DOMAIN=yourdomain.com
+      # MAILER_FROM=noreply@yourdomain.com
 
-      # AWS Configuration (for S3, etc.)
+      # AWS Configuration (for S3, SES, etc.)
       # AWS_ACCESS_KEY_ID=your-aws-access-key
       # AWS_SECRET_ACCESS_KEY=your-aws-secret-key
       # AWS_REGION=us-east-1
       # S3_BUCKET=your-s3-bucket
+      # AWS_SES_REGION=us-east-1
+
+      # Google APIs (for OAuth, Maps, etc.)
+      # GOOGLE_CLIENT_ID=your-google-client-id
+      # GOOGLE_CLIENT_SECRET=your-google-client-secret
+      # GOOGLE_MAPS_API_KEY=your-google-maps-key
+
+      # Social Media APIs
+      # FACEBOOK_APP_ID=your-facebook-app-id
+      # FACEBOOK_APP_SECRET=your-facebook-app-secret
+      # TWITTER_CONSUMER_KEY=your-twitter-consumer-key
+      # TWITTER_CONSUMER_SECRET=your-twitter-consumer-secret
+
+      # Payment Gateways
+      # STRIPE_PUBLISHABLE_KEY=pk_live_your-stripe-publishable-key
+      # STRIPE_SECRET_KEY=sk_live_your-stripe-secret-key
+      # PAYPAL_CLIENT_ID=your-paypal-client-id
+      # PAYPAL_CLIENT_SECRET=your-paypal-client-secret
+
+      # External APIs
+      # RECAPTCHA_SITE_KEY=your-recaptcha-site-key
+      # RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key
+      # SENDGRID_API_KEY=your-sendgrid-api-key
+      # TWILIO_ACCOUNT_SID=your-twilio-account-sid
+      # TWILIO_AUTH_TOKEN=your-twilio-auth-token
 
       # Sidekiq Web UI Authentication (uncomment and set strong passwords)
       # SIDEKIQ_USERNAME=admin
@@ -116,15 +144,33 @@ namespace :setup do
       # BASIC_AUTH_USERNAME=admin
       # BASIC_AUTH_PASSWORD=#{SecureRandom.hex(16)}
 
-      # Error Tracking (uncomment if using Sentry)
+      # Error Tracking and Monitoring
       # SENTRY_DSN=your-sentry-dsn
+      # BUGSNAG_API_KEY=your-bugsnag-api-key
+      # HONEYBADGER_API_KEY=your-honeybadger-api-key
 
-      # Performance Monitoring (uncomment if using New Relic)
+      # Performance Monitoring
       # NEW_RELIC_LICENSE_KEY=your-newrelic-license-key
+      # DATADOG_API_KEY=your-datadog-api-key
+      # SCOUT_KEY=your-scout-key
 
-      # SSL Configuration (uncomment if needed)
+      # Security and SSL
       # SSL_CERT_PATH=/path/to/ssl/cert.pem
       # SSL_KEY_PATH=/path/to/ssl/key.pem
+      # FORCE_SSL=true
+
+      # File Storage and CDN
+      # CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
+      # CLOUDFRONT_DISTRIBUTION_ID=your-cloudfront-distribution-id
+
+      # Background Jobs and Queues
+      # GOOD_JOB_EXECUTION_MODE=async
+      # DELAYED_JOB_WORKERS=2
+
+      # Application-specific settings
+      # MAX_UPLOAD_SIZE=10485760
+      # DEFAULT_TIMEZONE=UTC
+      # PAGINATION_PER_PAGE=25
     ENV
 
     File.write(Rails.root.join(".env.production"), env_content)

@@ -53,6 +53,12 @@ namespace :debug do
       NEW_RELIC_LICENSE_KEY
       SSL_CERT_PATH
       SSL_KEY_PATH
+      KAFKA_BROKERS
+      GOOGLE_CLIENT_ID
+      STRIPE_SECRET_KEY
+      SENDGRID_API_KEY
+      CLOUDINARY_URL
+      FORCE_SSL
     ]
 
     env_vars.each do |var|
