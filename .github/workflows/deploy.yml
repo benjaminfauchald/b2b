@@ -89,22 +89,36 @@ jobs:
           ls -la $HOME/.rbenv/ || echo "rbenv directory not found"
           ls -la $HOME/.rbenv/versions/ || echo "rbenv versions not found"
           
-          # Try different Ruby setups
+          # Setup rbenv environment
           if [ -f "$HOME/.rbenv/bin/rbenv" ]; then
             echo "Found rbenv, setting up environment..."
             export PATH="$HOME/.rbenv/bin:$PATH"
             eval "$(rbenv init -)"
             export PATH="$HOME/.rbenv/shims:$PATH"
+            
+            # Check if Ruby 3.3.0 is installed
+            if [ ! -d "$HOME/.rbenv/versions/3.3.0" ]; then
+              echo "Installing Ruby 3.3.0..."
+              rbenv install 3.3.0
+              rbenv global 3.3.0
+              rbenv rehash
+            else
+              echo "Ruby 3.3.0 already installed, setting as global..."
+              rbenv global 3.3.0
+              rbenv rehash
+            fi
+            
             echo "Ruby version: $(ruby -v)"
           elif command -v ruby >/dev/null 2>&1; then
             echo "Using system Ruby: $(ruby -v)"
           else
-            echo "Installing Ruby via rbenv..."
+            echo "Installing rbenv and Ruby..."
             curl -fsSL https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer | bash
             export PATH="$HOME/.rbenv/bin:$PATH"
             eval "$(rbenv init -)"
             rbenv install 3.3.0
             rbenv global 3.3.0
+            rbenv rehash
             export PATH="$HOME/.rbenv/shims:$PATH"
           fi
           
