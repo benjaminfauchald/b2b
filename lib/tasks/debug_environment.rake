@@ -19,7 +19,7 @@ namespace :debug do
     # Environment variables
     puts "\n🔧 ENVIRONMENT VARIABLES:"
     env_vars = %w[
-      RAILS_ENV 
+      RAILS_ENV
       RACK_ENV
       RAILS_MASTER_KEY
       SECRET_KEY_BASE
@@ -27,12 +27,12 @@ namespace :debug do
       REDIS_URL
       KAFKA_ENABLED
     ]
-    
+
     env_vars.each do |var|
       value = ENV[var]
       if value
         # Mask sensitive values
-        if var.include?('KEY') || var.include?('SECRET') || var.include?('PASSWORD')
+        if var.include?("KEY") || var.include?("SECRET") || var.include?("PASSWORD")
           puts "#{var}: #{value[0..10]}... (masked)"
         else
           puts "#{var}: #{value}"
@@ -61,15 +61,15 @@ namespace :debug do
     begin
       puts "Rails.application.credentials methods: #{Rails.application.credentials.methods.grep(/secret/).sort}"
       puts "Rails.application.config.secret_key_base present: #{Rails.application.config.secret_key_base.present?}"
-      
+
       # Try to access credentials
       secret_key = Rails.application.credentials.secret_key_base
       puts "Credentials secret_key_base present: #{secret_key.present?}"
-      
+
       if Rails.application.credentials.respond_to?(:database)
         puts "Database credentials accessible: true"
       end
-      
+
     rescue => e
       puts "❌ Error accessing credentials: #{e.class}: #{e.message}"
       puts "Backtrace: #{e.backtrace.first(3).join('\n')}"
@@ -78,14 +78,14 @@ namespace :debug do
     # File system checks
     puts "\n📁 FILE SYSTEM CHECKS:"
     files_to_check = [
-      'config/credentials.yml.enc',
-      'config/master.key',
-      'config/credentials/production.yml.enc',
-      'config/credentials/production.key',
-      '.env',
-      'tmp/restart.txt'
+      "config/credentials.yml.enc",
+      "config/master.key",
+      "config/credentials/production.yml.enc",
+      "config/credentials/production.key",
+      ".env",
+      "tmp/restart.txt"
     ]
-    
+
     files_to_check.each do |file|
       full_path = Rails.root.join(file)
       if File.exist?(full_path)
@@ -111,7 +111,7 @@ namespace :debug do
     puts "\n🔴 REDIS CONNECTION:"
     begin
       if defined?(Redis)
-        redis = Redis.new(url: ENV['REDIS_URL'] || 'redis://localhost:6379/0')
+        redis = Redis.new(url: ENV["REDIS_URL"] || "redis://localhost:6379/0")
         redis.ping
         puts "✅ Redis connection: OK"
         puts "Redis info: #{redis.info('server')['redis_version']}"
@@ -131,7 +131,7 @@ namespace :debug do
     # Rails application configuration
     puts "\n⚙️  RAILS APPLICATION CONFIG:"
     config = Rails.application.config
-    
+
     config_items = %w[
       eager_load
       cache_classes
@@ -141,10 +141,10 @@ namespace :debug do
       force_ssl
       log_level
     ]
-    
+
     config_items.each do |item|
       begin
-        value = item.split('.').reduce(config) { |obj, method| obj.send(method) }
+        value = item.split(".").reduce(config) { |obj, method| obj.send(method) }
         puts "#{item}: #{value}"
       rescue => e
         puts "#{item}: ERROR - #{e.message}"
@@ -157,7 +157,7 @@ namespace :debug do
       if Rails.application.config.respond_to?(:service_auditing_enabled)
         puts "service_auditing_enabled: #{Rails.application.config.service_auditing_enabled}"
       end
-      
+
       if Rails.application.config.respond_to?(:automatic_auditing_enabled)
         puts "automatic_auditing_enabled: #{Rails.application.config.automatic_auditing_enabled}"
       end
@@ -173,11 +173,11 @@ namespace :debug do
   desc "Test credentials loading specifically"
   task credentials: :environment do
     puts "\n🔐 DETAILED CREDENTIALS DEBUG:"
-    
+
     # Check master key
-    master_key_path = Rails.root.join('config/master.key')
+    master_key_path = Rails.root.join("config/master.key")
     puts "Master key file exists: #{File.exist?(master_key_path)}"
-    
+
     if File.exist?(master_key_path)
       key_content = File.read(master_key_path).strip
       puts "Master key length: #{key_content.length}"
@@ -185,9 +185,9 @@ namespace :debug do
     end
 
     # Check credentials file
-    creds_path = Rails.root.join('config/credentials.yml.enc')
+    creds_path = Rails.root.join("config/credentials.yml.enc")
     puts "Credentials file exists: #{File.exist?(creds_path)}"
-    
+
     if File.exist?(creds_path)
       puts "Credentials file size: #{File.size(creds_path)} bytes"
     end
@@ -198,16 +198,16 @@ namespace :debug do
       creds = Rails.application.credentials
       puts "Credentials class: #{creds.class}"
       puts "Credentials responds to secret_key_base: #{creds.respond_to?(:secret_key_base)}"
-      
+
       # Try to get the secret key
       secret_key = creds.secret_key_base
       puts "Secret key base present: #{secret_key.present?}"
       puts "Secret key base length: #{secret_key&.length || 0}"
-      
+
     rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
       puts "❌ InvalidMessage error: #{e.message}"
       puts "This means the master key doesn't match the credentials file"
-      
+
     rescue => e
       puts "❌ Other error: #{e.class}: #{e.message}"
     end
@@ -216,7 +216,7 @@ namespace :debug do
     puts "\nChecking environment-specific credentials..."
     env_creds_path = Rails.root.join("config/credentials/#{Rails.env}.yml.enc")
     env_key_path = Rails.root.join("config/credentials/#{Rails.env}.key")
-    
+
     puts "Environment credentials file exists: #{File.exist?(env_creds_path)}"
     puts "Environment key file exists: #{File.exist?(env_key_path)}"
   end
