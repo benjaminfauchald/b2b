@@ -20,6 +20,16 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
     - uses: actions/checkout@v4
@@ -47,6 +57,7 @@ jobs:
       env:
         RAILS_ENV: test
         DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
+        REDIS_URL: redis://localhost:6379/0
       run: bundle exec rspec
     
     - name: Run linting
