@@ -13,12 +13,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bundle exec sidekiq` - Start Sidekiq worker for all queues
 - `bundle exec sidekiq -q [queue_name]` - Start worker for specific queue (e.g., brreg_migration, company_financials)
 
-### Testing
+### Development Quality Checks
+- `./bin/check` - **Run this before every commit** (RuboCop + tests + security check)
+- `bundle exec rubocop` - Run linting only
+- `bundle exec rubocop -a` - Auto-fix safe linting issues
 - `bundle exec rspec` - Run all tests
 - `bundle exec rspec spec/path/to/file_spec.rb` - Run specific test file
 - `bundle exec guard` - Auto-run tests on file changes
-- `bundle exec rubocop` - Run linting
 - `bundle exec brakeman` - Security analysis
+
+### Pre-Commit Hooks
+- **Automatic**: Pre-commit hooks run RuboCop and related tests on staged files
+- **Manual bypass**: `git commit --no-verify` (not recommended)
+- **Best practice**: Always run `./bin/check` before committing
 
 ### Database
 - `rails db:migrate` - Run migrations
