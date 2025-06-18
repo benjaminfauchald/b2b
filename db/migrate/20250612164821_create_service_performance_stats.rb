@@ -3,7 +3,7 @@ class CreateServicePerformanceStats < ActiveRecord::Migration[8.0]
     execute <<-SQL
       CREATE MATERIALIZED VIEW service_performance_stats AS
       WITH stats AS (
-        SELECT 
+        SELECT#{' '}
           service_name,
           COUNT(*) as total_runs,
           COUNT(*) FILTER (WHERE status = 1) as successful_runs,
@@ -16,12 +16,12 @@ class CreateServicePerformanceStats < ActiveRecord::Migration[8.0]
         FROM service_audit_logs
         GROUP BY service_name
       )
-      SELECT 
+      SELECT#{' '}
         service_name,
         total_runs,
         successful_runs,
         failed_runs,
-        CASE 
+        CASE#{' '}
           WHEN total_runs > 0 THEN (successful_runs::float / total_runs * 100)
           ELSE 0
         END as success_rate_percent,
@@ -30,15 +30,15 @@ class CreateServicePerformanceStats < ActiveRecord::Migration[8.0]
         max_duration_ms,
         successful_runs_last_hour,
         failed_runs_last_hour,
-        CASE 
-          WHEN (successful_runs_last_hour + failed_runs_last_hour) > 0 
+        CASE#{' '}
+          WHEN (successful_runs_last_hour + failed_runs_last_hour) > 0#{' '}
           THEN (failed_runs_last_hour::float / (successful_runs_last_hour + failed_runs_last_hour) * 100)
           ELSE 0
         END as failure_rate_last_hour,
         NOW() as last_updated_at
       FROM stats;
 
-      CREATE UNIQUE INDEX idx_service_performance_stats_service_name 
+      CREATE UNIQUE INDEX idx_service_performance_stats_service_name#{' '}
       ON service_performance_stats(service_name);
     SQL
   end
@@ -46,4 +46,4 @@ class CreateServicePerformanceStats < ActiveRecord::Migration[8.0]
   def down
     execute "DROP MATERIALIZED VIEW IF EXISTS service_performance_stats;"
   end
-end 
+end

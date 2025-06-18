@@ -8,7 +8,7 @@ class DomainMxTestingConsumer < ApplicationConsumer
   private
 
   def process_message(message)
-    domain_id = message.payload['domain_id']
+    domain_id = message.payload["domain_id"]
     return unless domain_id
 
     DomainMXTestingWorker.perform_async(domain_id)
@@ -16,4 +16,4 @@ class DomainMxTestingConsumer < ApplicationConsumer
     Rails.logger.error("Error processing MX testing message: #{e.message}")
     raise
   end
-end 
+end

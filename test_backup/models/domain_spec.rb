@@ -91,9 +91,9 @@ RSpec.describe Domain, type: :model do
 
     context 'when DNS was tested recently' do
       before do
-        create(:service_audit_log, :success, 
-               auditable: domain, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain,
+               service_name: service_name,
                completed_at: 1.hour.ago)
       end
 
@@ -104,9 +104,9 @@ RSpec.describe Domain, type: :model do
 
     context 'when DNS was tested long ago' do
       before do
-        create(:service_audit_log, :success, 
-               auditable: domain, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain,
+               service_name: service_name,
                completed_at: 25.hours.ago)
       end
 
@@ -228,13 +228,13 @@ RSpec.describe Domain, type: :model do
     let!(:domain3) { create(:domain) }
 
     before do
-      create(:service_audit_log, :success, 
-             auditable: domain2, 
-             service_name: service_name, 
+      create(:service_audit_log, :success,
+             auditable: domain2,
+             service_name: service_name,
              completed_at: 1.hour.ago)
-      create(:service_audit_log, :success, 
-             auditable: domain3, 
-             service_name: service_name, 
+      create(:service_audit_log, :success,
+             auditable: domain3,
+             service_name: service_name,
              completed_at: 25.hours.ago)
     end
 

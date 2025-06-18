@@ -1,7 +1,7 @@
 class LatestServiceRun < ApplicationRecord
   # This is a read-only view model
-  self.table_name = 'latest_service_runs'
-  self.primary_key = ['service_name', 'auditable_type', 'auditable_id']
+  self.table_name = "latest_service_runs"
+  self.primary_key = [ "service_name", "auditable_type", "auditable_id" ]
 
   # Make it read-only
   def readonly?
@@ -10,7 +10,7 @@ class LatestServiceRun < ApplicationRecord
 
   # Associations
   belongs_to :auditable, polymorphic: true
-  belongs_to :audit_log, class_name: 'ServiceAuditLog', foreign_key: 'audit_log_id'
+  belongs_to :audit_log, class_name: "ServiceAuditLog", foreign_key: "audit_log_id"
 
   # Scopes
   scope :for_service, ->(name) { where(service_name: name) }
@@ -31,7 +31,7 @@ class LatestServiceRun < ApplicationRecord
   end
 
   def self.refresh
-    connection.execute('REFRESH MATERIALIZED VIEW latest_service_runs')
+    connection.execute("REFRESH MATERIALIZED VIEW latest_service_runs")
   end
 
   def self.find_by_auditable(service_name, auditable)
@@ -49,13 +49,13 @@ class LatestServiceRun < ApplicationRecord
 
   def age_in_hours
     return nil unless completed_at
-    
+
     ((Time.current - completed_at) / 1.hour).round(2)
   end
 
   def duration_in_seconds
     return nil unless duration_ms
-    
+
     (duration_ms / 1000.0).round(2)
   end
 
@@ -64,14 +64,14 @@ class LatestServiceRun < ApplicationRecord
   end
 
   def success?
-    status == 'success'
+    status == "success"
   end
 
   def failed?
-    status == 'failed'
+    status == "failed"
   end
 
   def pending?
-    status == 'pending'
+    status == "pending"
   end
-end 
+end

@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe ServiceConfiguration, type: :model do
   let(:service_name) { 'test_service' }
   let(:refresh_interval) { 24 }
-  let(:depends_on) { ['other_service'] }
+  let(:depends_on) { [ 'other_service' ] }
 
   before(:each) do
     ServiceConfiguration.delete_all
@@ -63,21 +63,21 @@ RSpec.describe ServiceConfiguration, type: :model do
 
   describe 'dependencies' do
     it 'stores and retrieves dependencies' do
-      config = create(:service_configuration, 
+      config = create(:service_configuration,
         service_name: service_name,
         depends_on_services: depends_on
       )
-      
+
       expect(config.depends_on_services).to eq(depends_on)
     end
 
     it 'handles empty dependencies' do
-      config = create(:service_configuration, 
+      config = create(:service_configuration,
         service_name: service_name,
         depends_on_services: []
       )
-      
+
       expect(config.depends_on_services).to eq([])
     end
   end
-end 
+end

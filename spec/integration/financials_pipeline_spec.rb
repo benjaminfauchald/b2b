@@ -37,7 +37,7 @@ RSpec.describe 'Financials Pipeline Integration', :integration do
       company = create(:company, registration_number: "TEST#{1000 + i}")
       @test_companies << company
     end
-    
+
     # Mock Kafka producer (no real Kafka needed)
     allow(KafkaService).to receive(:produce)
     # Mock Sidekiq job enqueueing
@@ -58,7 +58,7 @@ RSpec.describe 'Financials Pipeline Integration', :integration do
     messages.each do |msg|
       expect(worker_class).to receive(:perform_async).with(JSON.parse(msg.value, symbolize_names: false).fetch('company_id')).once
       # Simulate consumer processing
-      allow(consumer).to receive(:messages).and_return([msg])
+      allow(consumer).to receive(:messages).and_return([ msg ])
       expect { consumer.send(:process_message, msg) }.not_to raise_error
     end
 
@@ -80,4 +80,4 @@ RSpec.describe 'Financials Pipeline Integration', :integration do
     expect(intervals.all? { |interval| interval >= 1.0 }).to be true
     expect(processed_times.size).to eq(5)
   end
-end 
+end

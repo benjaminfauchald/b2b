@@ -1,6 +1,6 @@
 namespace :financials do
-  desc 'Update financial data for companies'
-  task :update, [:batch_size, :offset] => :environment do |_t, args|
+  desc "Update financial data for companies"
+  task :update, [ :batch_size, :offset ] => :environment do |_t, args|
     batch_size = (args[:batch_size] || 1000).to_i
     offset = (args[:offset] || 0).to_i
     total = Company.count
@@ -25,11 +25,11 @@ namespace :financials do
     logger.info "Enqueued updates for #{processed} companies"
   end
 
-  desc 'Update financial data for a specific company'
-  task :update_company, [:registration_number] => :environment do |_t, args|
+  desc "Update financial data for a specific company"
+  task :update_company, [ :registration_number ] => :environment do |_t, args|
     registration_number = args[:registration_number]
     unless registration_number
-      puts 'Please provide a registration number: rake financials:update_company[123456789]'
+      puts "Please provide a registration number: rake financials:update_company[123456789]"
       next
     end
 
@@ -50,7 +50,7 @@ namespace :financials do
     puts "Annual Result: #{company.annual_result}"
     puts "Operating Revenue: #{company.operating_revenue}"
     puts "Operating Costs: #{company.operating_costs}"
-    if company.financial_data_status == 'failed'
+    if company.financial_data_status == "failed"
       puts "Error: #{company.http_error_message}"
     end
   end

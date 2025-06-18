@@ -5,7 +5,7 @@ RSpec.describe DomainARecordTestJob, type: :job do
   before(:each) do
     Domain.delete_all
   end
-  
+
   let!(:domain) { create(:domain, dns: true, www: nil) }
 
   describe 'job configuration' do
@@ -21,14 +21,14 @@ RSpec.describe DomainARecordTestJob, type: :job do
   describe '#perform' do
     it 'calls DomainARecordTestingService.test_a_record with correct domain' do
       expect(DomainARecordTestingService).to receive(:test_a_record).with(domain)
-      
+
       DomainARecordTestJob.perform_now(domain.id)
     end
 
     it 'finds domain by id and passes to service' do
       expect(Domain).to receive(:find).with(domain.id).and_return(domain)
       expect(DomainARecordTestingService).to receive(:test_a_record).with(domain)
-      
+
       DomainARecordTestJob.perform_now(domain.id)
     end
 
@@ -47,7 +47,7 @@ RSpec.describe DomainARecordTestJob, type: :job do
 
       it 'successfully processes domain A record test' do
         DomainARecordTestJob.perform_now(domain.id)
-        
+
         expect(domain.reload.www).to be true
       end
     end
@@ -64,4 +64,4 @@ RSpec.describe DomainARecordTestJob, type: :job do
       end
     end
   end
-end 
+end

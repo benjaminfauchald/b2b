@@ -5,7 +5,7 @@ require 'securerandom'
 RSpec.describe DomainTestingService, type: :service do
   let(:service_name) { 'domain_testing' }
   let!(:service_config) do
-    create(:service_configuration, 
+    create(:service_configuration,
            service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
@@ -40,9 +40,9 @@ RSpec.describe DomainTestingService, type: :service do
 
       it 'processes all domains needing testing' do
         service = DomainTestingService.new
-        
+
         result = service.call
-        
+
         expect(result[:processed]).to eq(3)
         expect(result[:successful]).to eq(3)
         expect(result[:failed]).to eq(0)
@@ -51,11 +51,11 @@ RSpec.describe DomainTestingService, type: :service do
 
       it 'creates audit logs for each domain' do
         service = DomainTestingService.new
-        
+
         expect {
           service.call
         }.to change(ServiceAuditLog, :count).by(3)
-        
+
         audit_logs = ServiceAuditLog.where(service_name: service_name)
         expect(audit_logs.count).to eq(3)
         expect(audit_logs.all?(&:status_success?)).to be true
@@ -63,9 +63,9 @@ RSpec.describe DomainTestingService, type: :service do
 
       it 'updates domain dns status' do
         service = DomainTestingService.new
-        
+
         service.call
-        
+
         domains.each(&:reload)
         expect(domains.all? { |d| d.dns == true }).to be true
       end
@@ -93,10 +93,10 @@ RSpec.describe DomainTestingService, type: :service do
                service_name: service_name,
                status: :success,
                completed_at: 1.hour.ago)
-        
+
         service = DomainTestingService.new
         result = service.call
-        
+
         expect(result[:processed]).to eq(0)
       end
     end
@@ -206,7 +206,7 @@ RSpec.describe DomainTestingService, type: :service do
 
       it 'queues all domains needing testing' do
         count = DomainTestingService.queue_all_domains
-        
+
         expect(count).to eq(5)
         expect(DomainTestJob).to have_received(:perform_later).exactly(5).times
       end
@@ -220,7 +220,7 @@ RSpec.describe DomainTestingService, type: :service do
 
       it 'queues only 100 domains' do
         count = DomainTestingService.queue_100_domains
-        
+
         expect(count).to eq(100)
         expect(DomainTestJob).to have_received(:perform_later).exactly(100).times
       end
@@ -232,21 +232,21 @@ RSpec.describe DomainTestingService, type: :service do
 
     it 'returns true for valid domains' do
       allow(Resolv).to receive(:getaddress).with('example.com').and_return('93.184.216.34')
-      
+
       result = service.send(:has_dns?, 'example.com')
       expect(result).to be true
     end
 
     it 'returns false for invalid domains' do
       allow(Resolv).to receive(:getaddress).and_raise(Resolv::ResolvError)
-      
+
       result = service.send(:has_dns?, 'nonexistent.invalid')
       expect(result).to be false
     end
 
     it 'returns false on timeout' do
       allow(Resolv).to receive(:getaddress).and_raise(Timeout::Error)
-      
+
       result = service.send(:has_dns?, 'slow-domain.com')
       expect(result).to be false
     end
@@ -272,4 +272,4 @@ RSpec.describe DomainTestingService, type: :service do
       expect(audit_log.context['error_type']).to eq('resolve_error')
     end
   end
-end 
+end

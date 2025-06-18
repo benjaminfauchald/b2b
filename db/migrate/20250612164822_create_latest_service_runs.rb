@@ -21,7 +21,7 @@ class CreateLatestServiceRuns < ActiveRecord::Migration[8.0]
       )
       SELECT * FROM latest_runs;
 
-      CREATE UNIQUE INDEX idx_latest_service_runs_unique 
+      CREATE UNIQUE INDEX idx_latest_service_runs_unique#{' '}
       ON latest_service_runs(service_name, auditable_type, auditable_id);
     SQL
   end
@@ -29,4 +29,4 @@ class CreateLatestServiceRuns < ActiveRecord::Migration[8.0]
   def down
     execute "DROP MATERIALIZED VIEW IF EXISTS latest_service_runs;"
   end
-end 
+end

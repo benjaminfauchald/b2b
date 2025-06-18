@@ -13,7 +13,7 @@ class DomainTestingConsumer < Karafka::BaseConsumer
 
     # Parse payload
     payload = JSON.parse(message.payload)
-    domain = payload['domain']
+    domain = payload["domain"]
 
     # Create audit log
     create_audit_log(domain)
@@ -31,7 +31,7 @@ class DomainTestingConsumer < Karafka::BaseConsumer
   def create_audit_log(domain)
     DomainAuditLog.create!(
       domain: domain,
-      status: 'processed',
+      status: "processed",
       processed_at: Time.current
     )
   end
@@ -42,10 +42,10 @@ class DomainTestingConsumer < Karafka::BaseConsumer
 
   def handle_error(error, message)
     Rails.logger.error("Error processing domain: #{error.message}")
-    
+
     # Send to dead letter queue
     produce_message(
-      topic: 'domain_testing_dlq',
+      topic: "domain_testing_dlq",
       payload: {
         original_message: message.payload,
         error: error.message,
@@ -54,4 +54,4 @@ class DomainTestingConsumer < Karafka::BaseConsumer
       key: message.key
     )
   end
-end 
+end

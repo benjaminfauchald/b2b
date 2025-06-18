@@ -50,7 +50,7 @@ def domains(limit = 5)
   result.each do |row|
     flags = []
     flags << "MX" if row['mx'] == 't'
-    flags << "WWW" if row['www'] == 't' 
+    flags << "WWW" if row['www'] == 't'
     flags << "DNS" if row['dns'] == 't'
     puts "#{row['domain']} [#{flags.join(', ')}] (#{row['created_at']})"
   end
@@ -68,11 +68,11 @@ end
 def stats
   puts "📊 Database Statistics:"
   puts "=" * 50
-  
+
   # Get all table counts
   tables_query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
   tables = @conn.exec(tables_query)
-  
+
   tables.each do |table|
     table_name = table['table_name']
     count = @conn.exec("SELECT COUNT(*) FROM #{table_name}")[0]['count']
@@ -85,7 +85,7 @@ end
 def search_companies(name)
   result = @conn.exec_params(
     "SELECT id, company_name, registration_number, website FROM companies WHERE company_name ILIKE $1 LIMIT 10",
-    ["%#{name}%"]
+    [ "%#{name}%" ]
   )
   puts "🔍 Companies matching '#{name}':"
   puts "-" * 60
@@ -100,7 +100,7 @@ end
 def search_domains(domain)
   result = @conn.exec_params(
     "SELECT id, domain, mx, www, dns FROM domains WHERE domain ILIKE $1 LIMIT 10",
-    ["%#{domain}%"]
+    [ "%#{domain}%" ]
   )
   puts "🔍 Domains matching '#{domain}':"
   puts "-" * 40

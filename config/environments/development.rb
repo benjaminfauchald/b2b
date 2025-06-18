@@ -75,7 +75,7 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   # Configure default URL options for Devise
-  config.action_mailer.default_url_options = { host: 'localhost', port: 4000 }
+  config.action_mailer.default_url_options = { host: "localhost", port: 4000 }
 
   # Allow external host access for development (needed for Azure/remote access)
   # Disable host authorization in development for easier external access

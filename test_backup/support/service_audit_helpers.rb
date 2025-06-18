@@ -18,4 +18,4 @@ end
 
 RSpec.configure do |config|
   config.include ServiceAuditHelpers
-end 
+end

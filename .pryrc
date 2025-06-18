@@ -33,7 +33,7 @@ end
 # Enable Rails helpers if in Rails console
 if defined?(Rails)
   puts "Rails #{Rails.version} console loaded in #{Rails.env} environment 🚀"
-  
+
   begin
     require 'rails/console/app'
     require 'rails/console/helpers'
@@ -41,19 +41,19 @@ if defined?(Rails)
   rescue LoadError
     # Rails console helpers not available
   end
-  
+
   # Add useful aliases and shortcuts
   def reload!
     puts "🔄 Reloading Rails application..."
     Rails.application.reloader.reload!
     puts "✅ Reload complete!"
   end
-  
+
   if defined?(User)
     def u
       User.first
     end
-    
+
     def users(limit = 5)
       User.limit(limit)
     end
@@ -63,11 +63,11 @@ if defined?(Rails)
     def c
       Company.first
     end
-    
+
     def companies(limit = 5)
       Company.limit(limit)
     end
-    
+
     def company_stats
       puts "📊 Company Statistics:"
       puts "Total companies: #{Company.count}"
@@ -80,11 +80,11 @@ if defined?(Rails)
     def d
       Domain.first
     end
-    
+
     def domains(limit = 5)
       Domain.limit(limit)
     end
-    
+
     def domain_stats
       puts "🌐 Domain Statistics:"
       puts "Total domains: #{Domain.count}"
@@ -92,7 +92,7 @@ if defined?(Rails)
       puts "With WWW: #{Domain.where(www: true).count}"
     end
   end
-  
+
   # Database shortcuts
   def db_stats
     puts "🗄️  Database Statistics:"
@@ -101,7 +101,7 @@ if defined?(Rails)
       puts "#{table}: #{count} records"
     end
   end
-  
+
   # Quick model shortcuts
   def models
     puts "📋 Available Models:"
@@ -127,7 +127,7 @@ if defined?(Rails)
     # Standard Pry completion
     completer = Pry::InputCompleter.new(context)
     completions = completer.call(input)
-    
+
     # Add model completions
     if input =~ /^[A-Z]/
       Rails.application.eager_load! rescue nil
@@ -135,7 +135,7 @@ if defined?(Rails)
       model_completions = model_names.select { |name| name.start_with?(input) }
       completions.concat(model_completions)
     end
-    
+
     completions.uniq.sort
   end
 end

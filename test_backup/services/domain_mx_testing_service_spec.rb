@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe DomainMxTestingService, type: :service do
   let(:service_name) { 'domain_mx_testing' }
   let!(:service_config) do
-    create(:service_configuration, 
+    create(:service_configuration,
            service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
@@ -17,14 +17,14 @@ RSpec.describe DomainMxTestingService, type: :service do
       before do
         # Mock successful MX resolution for all domains
         allow_any_instance_of(DomainMxTestingService).to receive(:check_mx_record).and_return(true)
-        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: ['mail.example.com'], duration: 0.01 })
+        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: [ 'mail.example.com' ], duration: 0.01 })
       end
 
       it 'processes all domains needing testing' do
         service = DomainMxTestingService.new
-        
+
         result = service.call
-        
+
         expect(result[:processed]).to eq(3)
         expect(result[:successful]).to eq(3)
         expect(result[:failed]).to eq(0)
@@ -33,11 +33,11 @@ RSpec.describe DomainMxTestingService, type: :service do
 
       it 'creates audit logs for each domain' do
         service = DomainMxTestingService.new
-        
+
         expect {
           service.call
         }.to change(ServiceAuditLog, :count).by(3)
-        
+
         audit_logs = ServiceAuditLog.where(service_name: service_name)
         expect(audit_logs.count).to eq(3)
         expect(audit_logs.all?(&:status_success?)).to be true
@@ -45,9 +45,9 @@ RSpec.describe DomainMxTestingService, type: :service do
 
       it 'updates domain mx status' do
         service = DomainMxTestingService.new
-        
+
         service.call
-        
+
         domains.each(&:reload)
         expect(domains.all? { |d| d.mx == true }).to be true
       end
@@ -55,9 +55,9 @@ RSpec.describe DomainMxTestingService, type: :service do
       it 'stores MX test details in audit log context' do
         domain = create(:domain, domain: 'example.com', dns: true, www: true, mx: nil)
         service = DomainMxTestingService.new
-        
+
         service.call
-        
+
         audit_log = ServiceAuditLog.where(auditable: domain).last
         expect(audit_log.context).to include(
           'domain_name' => 'example.com',
@@ -78,10 +78,10 @@ RSpec.describe DomainMxTestingService, type: :service do
                service_name: service_name,
                status: :success,
                completed_at: 1.hour.ago)
-        
+
         service = DomainMxTestingService.new
         result = service.call
-        
+
         expect(result[:processed]).to eq(0)
       end
     end
@@ -92,7 +92,7 @@ RSpec.describe DomainMxTestingService, type: :service do
       it 'does not process any domains' do
         create_list(:domain, 2, dns: true, www: true, mx: nil)
         service = DomainMxTestingService.new
-        
+
         result = service.call
         expect(result[:processed]).to eq(0)
       end
@@ -106,7 +106,7 @@ RSpec.describe DomainMxTestingService, type: :service do
     context 'when MX resolution succeeds' do
       before do
         allow(Resolv::DNS).to receive(:new).and_return(
-          double(getresources: [double(exchange: 'mail.example.com')])
+          double(getresources: [ double(exchange: 'mail.example.com') ])
         )
       end
 
@@ -156,13 +156,13 @@ RSpec.describe DomainMxTestingService, type: :service do
     describe '.test_mx' do
       before do
         allow_any_instance_of(DomainMxTestingService).to receive(:check_mx_record).and_return(true)
-        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: ['mail.example.com'], duration: 0.01 })
+        allow_any_instance_of(DomainMxTestingService).to receive(:perform_mx_test).and_return({ status: :success, mx_records: [ 'mail.example.com' ], duration: 0.01 })
       end
 
       it 'maintains backward compatibility' do
         result = DomainMxTestingService.test_mx(domain)
         expect(result).to be true
-        
+
         domain.reload
         expect(domain.mx).to be true
       end
@@ -176,7 +176,7 @@ RSpec.describe DomainMxTestingService, type: :service do
 
       it 'queues all domains needing testing' do
         count = DomainMxTestingService.queue_all_domains
-        
+
         expect(count).to eq(5)
         expect(DomainMxTestingWorker).to have_received(:perform_async).exactly(5).times
       end
@@ -190,10 +190,10 @@ RSpec.describe DomainMxTestingService, type: :service do
 
       it 'queues only 100 domains' do
         count = DomainMxTestingService.queue_100_domains
-        
+
         expect(count).to eq(100)
         expect(DomainMxTestingWorker).to have_received(:perform_async).exactly(100).times
       end
     end
   end
-end 
+end

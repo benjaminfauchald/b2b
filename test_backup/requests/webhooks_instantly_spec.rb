@@ -49,4 +49,4 @@ describe 'Instantly Webhook', type: :request do
     }.not_to change { Communication.count }
     expect(response).to have_http_status(:bad_request).or have_http_status(:unprocessable_entity)
   end
-end 
+end

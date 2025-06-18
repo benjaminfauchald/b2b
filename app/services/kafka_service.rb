@@ -1,4 +1,4 @@
-require 'json-schema'
+require "json-schema"
 
 class KafkaService < ApplicationService
   class << self
@@ -7,7 +7,7 @@ class KafkaService < ApplicationService
     end
 
     def schema_path
-      Rails.root.join('docs', 'event_schemas', "#{topic_name}.json")
+      Rails.root.join("docs", "event_schemas", "#{topic_name}.json")
     end
 
     def schema
@@ -22,7 +22,7 @@ class KafkaService < ApplicationService
           raise error_msg
         end
       end
-      
+
       # Use Karafka producer for message publishing
       if defined?(Karafka) && Karafka.respond_to?(:producer)
         Karafka.producer.produce_sync(
@@ -43,7 +43,7 @@ class KafkaService < ApplicationService
   def call
     validate!
     log_service_start
-    
+
     begin
       result = perform
       log_service_completion(result)
@@ -83,4 +83,4 @@ class KafkaService < ApplicationService
   def perform
     raise NotImplementedError, "#{self.class.name} must implement #perform"
   end
-end 
+end

@@ -11,19 +11,19 @@ class KarafkaApp < Karafka::App
   else
     nil
   end
-  
+
   setup do |config|
     config.kafka = {
       'bootstrap.servers': bootstrap_servers
     }
-    
+
     config.client_id = if kafka_config && kafka_config['consumer'] && kafka_config['consumer']['group_id']
       kafka_config['consumer']['group_id']
     else
       'test-client'
     end
   end
-  
+
   routes.draw do
     group_id = if kafka_config && kafka_config['consumer'] && kafka_config['consumer']['group_id']
       kafka_config['consumer']['group_id']
@@ -36,4 +36,4 @@ class KarafkaApp < Karafka::App
       end
     end
   end
-end 
+end

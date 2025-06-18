@@ -4,4 +4,4 @@ FactoryBot.define do
     navn { 'Test AS' }
     # Add other fields as needed for mapping
   end
-end 
+end

@@ -47,7 +47,7 @@ FactoryBot.define do
     end
 
     trait :with_changes do
-      changed_fields { ['name', 'email'] }
+      changed_fields { [ 'name', 'email' ] }
     end
 
     trait :with_job_info do
@@ -80,4 +80,4 @@ FactoryBot.define do
       created_at { 1.week.ago }
     end
   end
-end 
+end

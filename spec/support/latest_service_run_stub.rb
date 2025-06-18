@@ -3,4 +3,4 @@ class LatestServiceRun
   def self.find_by(*args)
     nil
   end
-end 
+end

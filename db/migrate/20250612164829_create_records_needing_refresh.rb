@@ -3,14 +3,14 @@ class CreateRecordsNeedingRefresh < ActiveRecord::Migration[8.0]
     execute <<-SQL
       CREATE OR REPLACE VIEW records_needing_refresh AS
       WITH configs AS (
-        SELECT 
+        SELECT#{' '}
           service_name,
           refresh_interval_hours,
           active
         FROM service_configurations
       ),
       latest_runs AS (
-        SELECT 
+        SELECT#{' '}
           service_name,
           auditable_type,
           auditable_id,
@@ -18,11 +18,11 @@ class CreateRecordsNeedingRefresh < ActiveRecord::Migration[8.0]
         FROM latest_service_runs
         WHERE status = 1
       )
-      SELECT 
+      SELECT#{' '}
         c.service_name,
         l.auditable_type,
         l.auditable_id,
-        CASE 
+        CASE#{' '}
           WHEN l.completed_at IS NULL THEN true
           WHEN l.completed_at < (NOW() - (COALESCE(c.refresh_interval_hours, 24)) * INTERVAL '1 hour') THEN true
           ELSE false
@@ -32,7 +32,7 @@ class CreateRecordsNeedingRefresh < ActiveRecord::Migration[8.0]
         SELECT DISTINCT auditable_type, auditable_id
         FROM service_audit_logs
       ) a
-      LEFT JOIN latest_runs l ON 
+      LEFT JOIN latest_runs l ON#{' '}
         l.service_name = c.service_name AND
         l.auditable_type = a.auditable_type AND
         l.auditable_id = a.auditable_id
@@ -43,4 +43,4 @@ class CreateRecordsNeedingRefresh < ActiveRecord::Migration[8.0]
   def down
     execute "DROP VIEW IF EXISTS records_needing_refresh;"
   end
-end 
+end

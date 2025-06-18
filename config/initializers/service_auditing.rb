@@ -24,4 +24,4 @@ Rails.application.configure do
     warning_failure_rate: 0.05,  # 5% failure rate needs attention
     slow_duration_ms: 5000       # 5 seconds is considered slow
   }
-end 
+end

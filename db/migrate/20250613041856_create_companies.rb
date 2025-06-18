@@ -92,7 +92,7 @@ class CreateCompanies < ActiveRecord::Migration[8.0]
     # Add indexes for performance
     add_index :companies, :operating_revenue
     add_index :companies, :linkedin_ai_url
-    add_index :companies, [:source_country, :source_registry]
+    add_index :companies, [ :source_country, :source_registry ]
     add_index :companies, :organization_form_description
   end
 end

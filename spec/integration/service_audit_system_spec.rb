@@ -6,7 +6,7 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
 
   before do
     # Ensure service is configured
-    create(:service_configuration, 
+    create(:service_configuration,
       service_name: service_name,
       refresh_interval_hours: 24,
       active: true
@@ -23,7 +23,7 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
         metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
-        columns_affected: ['unspecified']
+        columns_affected: [ 'unspecified' ]
       )
       audit_log.mark_success!({ 'result' => 'ok' })
       expect(audit_log.reload).to have_attributes(
@@ -42,7 +42,7 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
         metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
-        columns_affected: ['unspecified']
+        columns_affected: [ 'unspecified' ]
       )
       error_message = 'Test error'
       audit_log.mark_failed!(error_message, { 'error' => error_message })
@@ -68,4 +68,4 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
       expect(ServiceConfiguration.active?(service_name)).to be true
     end
   end
-end 
+end

@@ -8,7 +8,7 @@ RSpec.describe CompanyFinancialsService, type: :service do
 
   it 'creates an SCT audit log entry when called' do
     # Call the service (simulate a successful run)
-    allow(service).to receive(:fetch_and_update_financials).and_return({ changed_fields: ['revenue'], success: true })
+    allow(service).to receive(:fetch_and_update_financials).and_return({ changed_fields: [ 'revenue' ], success: true })
     result = service.call
 
     # Check that an audit log was created with correct SCT fields
@@ -19,7 +19,7 @@ RSpec.describe CompanyFinancialsService, type: :service do
       record_id: company.id.to_s,
       operation_type: 'update',
       status: 'success',
-      columns_affected: ['revenue'], # changed_fields are passed in mark_success!
+      columns_affected: [ 'revenue' ], # changed_fields are passed in mark_success!
       metadata: include('company_id' => company.id, 'registration_number' => company.registration_number)
     )
     expect(result[:success]).to be true
@@ -37,4 +37,4 @@ RSpec.describe CompanyFinancialsService, type: :service do
     expect(log.table_name).to eq('companies')
     expect(log.record_id).to eq(company.id.to_s)
   end
-end 
+end

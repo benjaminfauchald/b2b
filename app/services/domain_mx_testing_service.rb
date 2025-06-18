@@ -1,5 +1,5 @@
-require 'resolv'
-require 'timeout'
+require "resolv"
+require "timeout"
 
 class DomainMxTestingService < KafkaService
   attr_reader :domain, :batch_size, :max_retries
@@ -10,36 +10,36 @@ class DomainMxTestingService < KafkaService
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
-    super(service_name: 'domain_mx_testing', action: 'test_mx')
+    super(service_name: "domain_mx_testing", action: "test_mx")
   end
 
   def call
     return test_single_domain if domain
     return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
-    test_domains_in_batches(Domain.needing_service('domain_mx_testing'))
+    test_domains_in_batches(Domain.needing_service("domain_mx_testing"))
   end
 
   def self.queue_all_domains
-    domains = Domain.needing_service('domain_mx_testing')
+    domains = Domain.needing_service("domain_mx_testing")
     count = 0
-    
+
     domains.find_each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       count += 1
     end
-    
+
     count
   end
 
   def self.queue_100_domains
-    domains = Domain.needing_service('domain_mx_testing').limit(100)
+    domains = Domain.needing_service("domain_mx_testing").limit(100)
     count = 0
-    
+
     domains.each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       count += 1
     end
-    
+
     count
   end
 
@@ -73,27 +73,27 @@ class DomainMxTestingService < KafkaService
           service_name: service_name,
           operation_type: action,
           status: :pending,
-          columns_affected: ['mx'],
+          columns_affected: [ "mx" ],
           metadata: { domain_name: domain.domain }
         )
         result = perform_mx_test(domain.domain)
         if result[:status] == :success
           update_domain_status(domain, result)
           audit_log.mark_success!({
-            'domain_name' => domain.domain,
-            'mx_status' => domain.mx,
-            'test_duration_ms' => result[:duration]
-          }, ['mx'])
+            "domain_name" => domain.domain,
+            "mx_status" => domain.mx,
+            "test_duration_ms" => result[:duration]
+          }, [ "mx" ])
           results[:successful] += 1
         else
           update_domain_status(domain, result)
-          audit_log.mark_failed!(result[:error] || 'MX test failed', { 'error' => result[:error] || 'MX test failed', 'domain_name' => domain.domain }, [])
+          audit_log.mark_failed!(result[:error] || "MX test failed", { "error" => result[:error] || "MX test failed", "domain_name" => domain.domain }, [])
           results[:failed] += 1
         end
         results[:processed] += 1
       rescue StandardError => e
         results[:errors] += 1
-        audit_log.mark_failed!(e.message, { 'error' => e.message, 'domain_name' => domain.domain }, []) if audit_log
+        audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, []) if audit_log
       end
     end
     results
@@ -114,7 +114,7 @@ class DomainMxTestingService < KafkaService
     rescue Resolv::ResolvError => e
       {
         status: :error,
-        error: 'DNS resolution failed',
+        error: "DNS resolution failed",
         duration: Time.current - start_time
       }
     rescue Timeout::Error => e
@@ -143,7 +143,7 @@ class DomainMxTestingService < KafkaService
   def self.test_mx(domain)
     service = new(domain: domain)
     result = service.send(:perform_mx_test, domain.domain)
-    if result[:status] == 'success'
+    if result[:status] == "success"
       domain.update_columns(mx: true)
       true
     else
@@ -151,4 +151,4 @@ class DomainMxTestingService < KafkaService
       false
     end
   end
-end 
+end

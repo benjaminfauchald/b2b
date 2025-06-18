@@ -16,7 +16,7 @@ require 'awesome_print'
 require 'irb'
 require 'irb/completion'
 
-# Configure IRB for enhanced experience  
+# Configure IRB for enhanced experience
 IRB.conf[:SAVE_HISTORY] = 1000
 IRB.conf[:HISTORY_FILE] = File.expand_path('~/.irb_history')
 IRB.conf[:USE_AUTOCOMPLETE] = true if IRB.conf.has_key?(:USE_AUTOCOMPLETE)
@@ -116,27 +116,27 @@ end
 # Add model name completion to IRB
 module IRB::InputCompletor
   ORIGINAL_RETRIEVE_COMPLETION_DATA = instance_method(:retrieve_completion_data) if method_defined?(:retrieve_completion_data)
-  
+
   def retrieve_completion_data(input, bind: IRB.conf[:MAIN_CONTEXT].workspace.binding, doc_namespace: false)
     if ORIGINAL_RETRIEVE_COMPLETION_DATA
       completions = ORIGINAL_RETRIEVE_COMPLETION_DATA.bind(self).call(input, bind: bind, doc_namespace: doc_namespace)
     else
       completions = []
     end
-    
+
     # Add model names for patterns starting with capital letters
     if input =~ /^[A-Z]/
       model_names = []
       begin
         # Add common models
-        model_names = ['Company', 'Domain', 'User', 'ServiceAuditLog', 'Brreg']
+        model_names = [ 'Company', 'Domain', 'User', 'ServiceAuditLog', 'Brreg' ]
         model_completions = model_names.select { |name| name.start_with?(input) }
         completions.concat(model_completions)
       rescue
         # Ignore errors
       end
     end
-    
+
     completions.uniq.sort
   end
 end
@@ -145,7 +145,7 @@ end
 if IRB.conf[:PROMPT]
   IRB.conf[:PROMPT][:B2B] = {
     PROMPT_I: "b2b(prod)> ",
-    PROMPT_S: "b2b(prod)* ",  
+    PROMPT_S: "b2b(prod)* ",
     PROMPT_C: "b2b(prod)* ",
     RETURN: "=> %s\n"
   }
@@ -166,7 +166,7 @@ puts <<-BANNER
 ║                                                              ║
 ║  Shortcuts:                                                  ║
 ║    c, companies(10)    -> Company queries                   ║
-║    d, domains(10)      -> Domain queries                    ║  
+║    d, domains(10)      -> Domain queries                    ║#{'  '}
 ║    company_stats       -> Company statistics                ║
 ║    domain_stats        -> Domain statistics                 ║
 ║    reload!             -> Reload models                     ║

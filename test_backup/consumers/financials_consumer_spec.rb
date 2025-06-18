@@ -25,13 +25,13 @@ RSpec.describe FinancialsConsumer do
       topic: 'company_financials'
     )
   end
-  
+
   let(:consumer) { described_class.new(group_id: 'test_group', topic: 'company_financials') }
-  
+
   before do
-    allow(consumer).to receive(:messages).and_return([message])
+    allow(consumer).to receive(:messages).and_return([ message ])
   end
-  
+
   describe '#consume' do
     it 'processes the message and updates the company' do
       expect {
@@ -45,15 +45,15 @@ RSpec.describe FinancialsConsumer do
       expect(audit_log).not_to be_nil
       expect(audit_log.changed_fields).to include('ordinary_result', 'annual_result', 'operating_revenue', 'operating_costs')
     end
-    
+
     context 'when the company does not exist' do
       before { company.destroy }
-      
+
       it 'raises an error' do
         expect { consumer.consume }.to raise_error(RuntimeError, /Company not found/)
       end
     end
-    
+
     context 'when the message is invalid' do
       let(:message) do
         instance_double(
@@ -65,13 +65,13 @@ RSpec.describe FinancialsConsumer do
           topic: 'company_financials'
         )
       end
-      
+
       it 'raises a JSON parse error' do
         expect { consumer.consume }.to raise_error(JSON::ParserError)
       end
     end
   end
-  
+
   describe '#process_message' do
     it 'handles unknown event types' do
       message = instance_double(
@@ -82,9 +82,9 @@ RSpec.describe FinancialsConsumer do
         partition: 0,
         topic: 'company_financials'
       )
-      
+
       expect(Rails.logger).to receive(:warn).with(/Unknown event type/)
-      
+
       consumer.send(:process_message, message)
     end
   end
