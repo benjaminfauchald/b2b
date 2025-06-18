@@ -83,19 +83,45 @@ jobs:
           git fetch origin
           git reset --hard origin/master
           
-          # Source rbenv environment and Ruby setup
-          export PATH="$HOME/.rbenv/bin:$PATH"
-          eval "$(rbenv init -)"
-          export PATH="$HOME/.rbenv/shims:$PATH"
+          # Debug rbenv setup
+          echo "🔍 Debugging Ruby environment..."
+          echo "HOME: $HOME"
+          ls -la $HOME/.rbenv/ || echo "rbenv directory not found"
+          ls -la $HOME/.rbenv/versions/ || echo "rbenv versions not found"
+          
+          # Try different Ruby setups
+          if [ -f "$HOME/.rbenv/bin/rbenv" ]; then
+            echo "Found rbenv, setting up environment..."
+            export PATH="$HOME/.rbenv/bin:$PATH"
+            eval "$(rbenv init -)"
+            export PATH="$HOME/.rbenv/shims:$PATH"
+            echo "Ruby version: $(ruby -v)"
+          elif command -v ruby >/dev/null 2>&1; then
+            echo "Using system Ruby: $(ruby -v)"
+          else
+            echo "Installing Ruby via rbenv..."
+            curl -fsSL https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer | bash
+            export PATH="$HOME/.rbenv/bin:$PATH"
+            eval "$(rbenv init -)"
+            rbenv install 3.3.0
+            rbenv global 3.3.0
+            export PATH="$HOME/.rbenv/shims:$PATH"
+          fi
           
           # Verify Ruby environment
-          echo "Ruby version: $(ruby -v)"
-          echo "Gem version: $(gem -v)"
-          echo "Bundle location: $(which bundle)"
+          echo "Final Ruby check:"
+          which ruby && ruby -v || echo "Ruby still not found"
+          which gem && gem -v || echo "Gem not found"
           
-          # Install/update gems with proper bundler setup
-          gem install bundler --no-document
-          bundle install --deployment --without development test
+          # Install/update gems
+          if command -v gem >/dev/null 2>&1; then
+            gem install bundler --no-document
+            which bundle && bundle -v
+            bundle install --deployment --without development test
+          else
+            echo "Cannot install gems - Ruby/Gem not available"
+            exit 1
+          fi
           
           # Precompile assets
           RAILS_ENV=production bundle exec rails assets:precompile
