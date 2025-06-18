@@ -2,7 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -47,7 +47,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     
     steps:
     - uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
         script: |
           cd /home/benjamin/b2b
           git fetch origin
-          git reset --hard origin/main
+          git reset --hard origin/master
           
           # Install/update gems
           bundle install --deployment --without development test

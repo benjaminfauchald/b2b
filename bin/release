@@ -57,19 +57,19 @@ if [ -f "VERSION" ]; then
     git commit -m "Bump version to $VERSION"
 fi
 
-# 5. Merge release to main
-echo -e "${YELLOW}🔀 Merging to main branch...${NC}"
-git checkout main
-git pull origin main
+# 5. Merge release to master
+echo -e "${YELLOW}🔀 Merging to master branch...${NC}"
+git checkout master
+git pull origin master
 git merge --no-ff "$RELEASE_BRANCH" -m "Release $VERSION: $DESCRIPTION"
 
 # 6. Create tag
 echo -e "${YELLOW}🏷️  Creating tag v$VERSION...${NC}"
 git tag -a "v$VERSION" -m "Release $VERSION: $DESCRIPTION"
 
-# 7. Push main and tags (this triggers deployment)
+# 7. Push master and tags (this triggers deployment)
 echo -e "${YELLOW}📤 Pushing to GitHub (this will trigger deployment)...${NC}"
-git push origin main
+git push origin master
 git push origin "v$VERSION"
 
 # 8. Merge back to develop
