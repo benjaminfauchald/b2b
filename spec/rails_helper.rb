@@ -1,7 +1,15 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
-require_relative '../config/environment'
+
+# Ensure test environment before loading Rails
+begin
+  require_relative '../config/environment'
+rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
+  puts "Credentials error: #{e.message}"
+  puts "Run: RAILS_ENV=test rails credentials:edit --environment=test"
+  exit 1
+end
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
