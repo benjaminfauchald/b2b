@@ -83,11 +83,18 @@ jobs:
           git fetch origin
           git reset --hard origin/master
           
-          # Source rbenv environment
+          # Source rbenv environment and Ruby setup
           export PATH="$HOME/.rbenv/bin:$PATH"
           eval "$(rbenv init -)"
+          export PATH="$HOME/.rbenv/shims:$PATH"
           
-          # Install/update gems
+          # Verify Ruby environment
+          echo "Ruby version: $(ruby -v)"
+          echo "Gem version: $(gem -v)"
+          echo "Bundle location: $(which bundle)"
+          
+          # Install/update gems with proper bundler setup
+          gem install bundler --no-document
           bundle install --deployment --without development test
           
           # Precompile assets
@@ -110,8 +117,10 @@ jobs:
           ls -la /home/benjamin/b2b/
           
           echo "🔧 Ruby environment:"
-          which ruby && ruby -v
-          which bundle && bundle -v
+          echo "PATH: $PATH"
+          which ruby && ruby -v || echo "Ruby not found"
+          which bundle && bundle -v || echo "Bundle not found"
+          which gem && gem -v || echo "Gem not found"
           
           echo "📦 Gem environment:"
           bundle check || echo "Gems not properly installed"
