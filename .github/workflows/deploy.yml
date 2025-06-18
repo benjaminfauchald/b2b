@@ -5,7 +5,22 @@ on:
     branches: [ master ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3.0
+        bundler-cache: true
+    
+    - name: Run linting
+      run: bundle exec rubocop
+
   test:
+    needs: lint
     runs-on: ubuntu-latest
     
     services:
@@ -59,12 +74,9 @@ jobs:
         DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
         REDIS_URL: redis://localhost:6379/0
       run: bundle exec rspec
-    
-    - name: Run linting
-      run: bundle exec rubocop
 
   deploy:
-    needs: test
+    needs: [lint, test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     
