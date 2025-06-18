@@ -26,6 +26,39 @@ namespace :debug do
       DATABASE_URL
       REDIS_URL
       KAFKA_ENABLED
+      PGHOST
+      PGPORT
+      PGDATABASE
+      PGUSER
+      PGPASSWORD
+      POSTGRES_HOST
+      POSTGRES_PORT
+      POSTGRES_DB
+      POSTGRES_USER
+      POSTGRES_PASSWORD
+      MAIL_USERNAME
+      MAIL_PASSWORD
+      SMTP_HOST
+      SMTP_PORT
+      SMTP_DOMAIN
+      AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY
+      AWS_REGION
+      S3_BUCKET
+      SIDEKIQ_USERNAME
+      SIDEKIQ_PASSWORD
+      BASIC_AUTH_USERNAME
+      BASIC_AUTH_PASSWORD
+      SENTRY_DSN
+      NEW_RELIC_LICENSE_KEY
+      SSL_CERT_PATH
+      SSL_KEY_PATH
+      KAFKA_BROKERS
+      GOOGLE_CLIENT_ID
+      STRIPE_SECRET_KEY
+      SENDGRID_API_KEY
+      CLOUDINARY_URL
+      FORCE_SSL
     ]
 
     env_vars.each do |var|
@@ -54,7 +87,7 @@ namespace :debug do
     puts "\n📂 RAILS PATHS:"
     puts "Rails.root: #{Rails.root}"
     puts "Rails.application.config.root: #{Rails.application.config.root}"
-    puts "Config path: #{Rails.application.config.config_for}"
+    # puts "Config path: #{Rails.application.config.config_for}" # Not available in Rails 8
 
     # Credentials investigation
     puts "\n🔐 CREDENTIALS DEBUG:"

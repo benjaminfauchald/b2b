@@ -37,14 +37,29 @@ echo -e "${YELLOW}🔄 Switching to develop branch...${NC}"
 git checkout develop
 git pull origin develop
 
-# 2. Run tests locally first
-echo -e "${YELLOW}🧪 Running tests locally...${NC}"
-if ! bundle exec rspec; then
-    echo -e "${RED}❌ Tests failed! Fix tests before releasing.${NC}"
-    exit 1
+# 2. Run comprehensive quality checks
+echo -e "${YELLOW}🔍 Running comprehensive quality checks...${NC}"
+if [ -f "./bin/check" ]; then
+    if ! ./bin/check --release; then
+        echo -e "${RED}❌ Quality checks failed! Please fix issues before releasing.${NC}"
+        exit 1
+    fi
+else
+    # Fallback to individual checks if bin/check doesn't exist
+    echo -e "${YELLOW}🧪 Running tests...${NC}"
+    if ! bundle exec rspec; then
+        echo -e "${RED}❌ Tests failed! Fix tests before releasing.${NC}"
+        exit 1
+    fi
+    
+    echo -e "${YELLOW}🎨 Running RuboCop...${NC}"
+    if ! bundle exec rubocop; then
+        echo -e "${RED}❌ RuboCop failed! Fix style issues before releasing.${NC}"
+        exit 1
+    fi
 fi
 
-echo -e "${GREEN}✅ Tests passed!${NC}"
+echo -e "${GREEN}✅ All quality checks passed!${NC}"
 
 # 3. Create release branch
 echo -e "${YELLOW}🌿 Creating release branch: $RELEASE_BRANCH${NC}"

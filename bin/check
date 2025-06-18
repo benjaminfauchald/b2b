@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+# Development Quality Check Script
+# Run this before committing to catch issues early
+
+set -e
+
+# Check if we're being called from release script (quieter output)
+if [ "$1" = "--release" ]; then
+  QUIET_MODE=true
+  echo "🔍 Running quality checks..."
+else
+  QUIET_MODE=false
+  echo "🔍 B2B Development Quality Checks"
+  echo "=================================="
+fi
+
+# Check if we're in the right directory
+if [ ! -f "Gemfile" ]; then
+  echo "❌ Please run this from the Rails root directory"
+  exit 1
+fi
+
+# Check if bundle is installed
+if ! command -v bundle &> /dev/null; then
+  echo "❌ Bundler not found. Please install bundler first."
+  exit 1
+fi
+
+if [ "$QUIET_MODE" = false ]; then
+  echo ""
+fi
+echo "📦 Checking dependencies..."
+bundle check || {
+  echo "Installing missing gems..."
+  bundle install
+}
+
+echo ""
+echo "🎨 Running RuboCop..."
+if bundle exec rubocop; then
+  echo "✅ RuboCop passed!"
+else
+  echo ""
+  echo "❌ RuboCop failed!"
+  echo ""
+  echo "💡 Auto-fix suggestions:"
+  echo "   bundle exec rubocop -a      # Auto-fix safe issues"
+  echo "   bundle exec rubocop -A      # Auto-fix all issues (more aggressive)"
+  echo ""
+  read -p "Would you like to auto-fix safe issues now? (y/N): " -n 1 -r
+  echo ""
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "🔧 Running auto-fix..."
+    bundle exec rubocop -a
+    echo "✅ Auto-fix completed! Please review the changes."
+  else
+    echo "❌ Please fix RuboCop issues manually"
+    exit 1
+  fi
+fi
+
+echo ""
+echo "🧪 Running tests..."
+if bundle exec rspec; then
+  echo "✅ All tests passed!"
+else
+  echo "❌ Tests failed! Please fix before committing."
+  exit 1
+fi
+
+echo ""
+echo "🔒 Checking for secrets..."
+if git status --porcelain | grep -E '\.(key|pem|p12|p8|ppk|env)$|credentials\.yml\.enc$'; then
+  echo "⚠️  Warning: You may be committing sensitive files!"
+  echo "Please review the files above carefully."
+  echo ""
+  read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Commit cancelled for security"
+    exit 1
+  fi
+fi
+
+if [ "$QUIET_MODE" = false ]; then
+  echo ""
+  echo "🎉 All checks passed! Ready to commit."
+  echo ""
+  echo "💡 Next steps:"
+  echo "   git add .                    # Stage your changes"
+  echo "   git commit -m \"message\"     # Commit with a good message"
+  echo "   ./bin/release \"1.x.x\" \"description\"  # Deploy to production"
+else
+  echo "✅ All quality checks passed!"
+fi
