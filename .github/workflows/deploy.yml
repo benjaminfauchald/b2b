@@ -103,15 +103,50 @@ jobs:
           service puma restart || systemctl --user restart puma || echo "Puma restart attempted"
           service sidekiq restart || systemctl --user restart sidekiq || echo "Sidekiq restart attempted"
           
-          # Health check
-          sleep 5
-          echo "Checking application health..."
+          # Diagnostic checks
+          echo "🔍 Running diagnostic checks..."
           
-          # Check if the application responds
-          if curl -f -s http://localhost:4000/version > /dev/null; then
-            echo "✅ Application is responding!"
+          echo "📂 Application directory:"
+          ls -la /home/benjamin/b2b/
+          
+          echo "🔧 Ruby environment:"
+          which ruby && ruby -v
+          which bundle && bundle -v
+          
+          echo "📦 Gem environment:"
+          bundle check || echo "Gems not properly installed"
+          
+          echo "⚙️  Process status:"
+          ps aux | grep -E "(puma|sidekiq)" | grep -v grep || echo "No puma/sidekiq processes found"
+          
+          echo "🌐 Port status:"
+          netstat -tlnp | grep :4000 || echo "Port 4000 not listening"
+          
+          echo "📋 Rails application check:"
+          cd /home/benjamin/b2b
+          if RAILS_ENV=production bundle exec rails runner "puts 'Rails loaded successfully'" 2>/dev/null; then
+            echo "✅ Rails application loads correctly"
           else
-            echo "⚠️  Application may not be fully ready yet"
+            echo "❌ Rails application failed to load"
+            echo "Error details:"
+            RAILS_ENV=production bundle exec rails runner "puts 'Rails loaded successfully'" 2>&1 || true
           fi
           
-          echo "🎉 Deployment completed!"
+          echo "🚀 Starting Rails server manually:"
+          cd /home/benjamin/b2b
+          RAILS_ENV=production PORT=4000 nohup bundle exec rails server -b 0.0.0.0 > /tmp/rails.log 2>&1 &
+          sleep 5
+          
+          echo "📊 Server logs:"
+          tail -20 /tmp/rails.log || echo "No log file found"
+          
+          echo "🔍 Health check:"
+          if curl -f -s http://localhost:4000/version; then
+            echo "✅ Application is responding!"
+          else
+            echo "❌ Application not responding"
+            echo "🔧 Checking what's running on port 4000:"
+            lsof -i :4000 || echo "Nothing listening on port 4000"
+          fi
+          
+          echo "🎉 Deployment process completed!"
