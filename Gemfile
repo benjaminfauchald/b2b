@@ -110,7 +110,7 @@ gem "dry-monitor"           # For monitoring Kafka operations
 
 gem "httparty"              # For making HTTP requests
 gem "nokogiri"              # For XML parsing
-gem "json-schema", "~> 4.0"
+gem "json-schema", "~> 5.1"
 
 # Console enhancements for all environments
 gem "pry-rails"
