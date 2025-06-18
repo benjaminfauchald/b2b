@@ -22,11 +22,17 @@ class KafkaService < ApplicationService
           raise error_msg
         end
       end
-      WaterDrop::SyncProducer.call(
-        message.to_json,
-        topic: topic_name,
-        key: key
-      )
+      
+      # Use Karafka producer for message publishing
+      if defined?(Karafka) && Karafka.respond_to?(:producer)
+        Karafka.producer.produce_sync(
+          topic: topic_name,
+          payload: message.to_json,
+          key: key
+        )
+      else
+        Rails.logger.warn "Karafka producer not available, message not sent to #{topic_name}"
+      end
     end
 
     def call(*args)

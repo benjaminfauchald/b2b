@@ -9,13 +9,13 @@ RSpec.describe ServiceAuditLog, type: :model do
 
   describe 'validations' do
     it 'requires a service name' do
-      log = build(:service_audit_log, service_name: nil, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      log = build(:service_audit_log, service_name: nil, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: ['unspecified'])
       expect(log).not_to be_valid
       expect(log.errors[:service_name]).to include("can't be blank")
     end
 
     it 'requires an auditable object' do
-      log = build(:service_audit_log, auditable: nil, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      log = build(:service_audit_log, auditable: nil, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: ['unspecified'])
       expect(log).not_to be_valid
       expect(log.errors[:auditable]).to include("can't be blank")
     end
@@ -23,26 +23,26 @@ RSpec.describe ServiceAuditLog, type: :model do
 
   describe 'status management' do
     it 'starts with pending status' do
-      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: {}, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: [])
-      expect(log.status).to eq(:pending)
+      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: ['unspecified'])
+      expect(log.status).to eq('pending')
     end
 
     it 'can be marked as successful' do
-      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: {}, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: [])
+      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: ['unspecified'])
       log.mark_success!({ 'result' => 'ok' })
       
-      expect(log.status).to eq(:success)
+      expect(log.status).to eq('success')
       expect(log.completed_at).not_to be_nil
       expect(log.execution_time_ms).not_to be_nil
       expect(log.metadata).to include('result' => 'ok')
     end
 
     it 'can be marked as failed with error message' do
-      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: {}, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: [])
+      log = create(:service_audit_log, service_name: service_name, auditable: auditable, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: auditable.id, operation_type: 'process', columns_affected: ['unspecified'])
       error_message = 'Test error'
       log.mark_failed!(error_message)
       
-      expect(log.status).to eq(:failed)
+      expect(log.status).to eq('failed')
       expect(log.error_message).to eq('Test error')
       expect(log.completed_at).not_to be_nil
       expect(log.execution_time_ms).not_to be_nil
@@ -55,11 +55,11 @@ RSpec.describe ServiceAuditLog, type: :model do
         service_name: service_name, 
         auditable: auditable,
         started_at: 1.minute.ago,
-        metadata: {},
+        metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
         operation_type: 'process',
-        columns_affected: []
+        columns_affected: ['unspecified']
       )
       log.update!(completed_at: Time.current)
       log.update_column(:execution_time_ms, log.calculate_duration)
@@ -70,11 +70,11 @@ RSpec.describe ServiceAuditLog, type: :model do
       log = create(:service_audit_log, 
         service_name: service_name, 
         auditable: auditable,
-        metadata: {},
+        metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
         operation_type: 'process',
-        columns_affected: []
+        columns_affected: ['unspecified']
       )
       
       expect(log.execution_time_ms).to be_nil
@@ -84,9 +84,9 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'scopes' do
     before do
       # Create logs with different statuses
-      create(:service_audit_log, service_name: service_name, status: :success, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
-      create(:service_audit_log, service_name: service_name, status: :failed, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
-      create(:service_audit_log, service_name: service_name, status: :pending, metadata: {}, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: [])
+      create(:service_audit_log, service_name: service_name, status: :success, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: ['unspecified'])
+      create(:service_audit_log, service_name: service_name, status: :failed, metadata: { 'status' => 'initialized', 'error' => 'test error' }, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: ['unspecified'])
+      create(:service_audit_log, service_name: service_name, status: :pending, metadata: { 'status' => 'initialized' }, table_name: 'companies', record_id: '1', operation_type: 'process', columns_affected: ['unspecified'])
     end
 
     it 'finds successful logs' do

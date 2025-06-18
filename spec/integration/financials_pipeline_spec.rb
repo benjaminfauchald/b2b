@@ -6,10 +6,10 @@ require 'ostruct'
 RSpec.describe 'Financials Pipeline Integration', :integration do
   let(:topic) { 'company_financials' }
   let(:messages) do
-    5.times.map do |i|
+    @test_companies.map.with_index do |company, i|
       OpenStruct.new(
         value: {
-          company_id: 1000 + i,
+          company_id: company.id,
           requested_at: Time.now.utc.iso8601,
           event_type: 'company_financials_updated',
           data: {
@@ -31,12 +31,21 @@ RSpec.describe 'Financials Pipeline Integration', :integration do
   let(:api_service) { CompanyFinancialsService }
 
   before do
+    # Create test companies that the messages reference
+    @test_companies = []
+    5.times do |i|
+      company = create(:company, registration_number: "TEST#{1000 + i}")
+      @test_companies << company
+    end
+    
     # Mock Kafka producer (no real Kafka needed)
     allow(KafkaService).to receive(:produce)
     # Mock Sidekiq job enqueueing
     allow(worker_class).to receive(:perform_async)
     # Mock API call
     allow_any_instance_of(api_service).to receive(:call).and_return(true)
+    # Mock SCT logging in consumer
+    allow_any_instance_of(FinancialsConsumer).to receive(:log_to_sct)
   end
 
   it 'processes Kafka messages through Sidekiq with 1/sec rate limiting' do
@@ -61,8 +70,8 @@ RSpec.describe 'Financials Pipeline Integration', :integration do
     end
 
     # Simulate Sidekiq draining jobs (in real test, use Sidekiq::Testing.inline!)
-    5.times do |i|
-      worker_class.new.perform(1000 + i)
+    @test_companies.each do |company|
+      worker_class.new.perform(company.id)
       sleep 1 # Simulate rate limit (replace with real rate limiter in implementation)
     end
 

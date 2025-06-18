@@ -42,5 +42,8 @@ pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 # Bind to all interfaces for external access (needed for Azure/remote connections)
 bind "tcp://#{ENV.fetch('BINDING', '0.0.0.0')}:#{ENV.fetch('PORT', 3000)}"
 
+# Bind to all interfaces for external access (needed for Azure/remote connections)
+bind "tcp://#{ENV.fetch('BINDING', '0.0.0.0')}:#{ENV.fetch('PORT', 3000)}"
+
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart

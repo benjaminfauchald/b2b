@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# One-Command Release Script for Git-Flow
+# Usage: ./bin/release "1.2.3" "Release description"
+
+set -e  # Exit on any error
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Check if version and description are provided
+if [ $# -ne 2 ]; then
+    echo -e "${RED}Usage: ./bin/release <version> <description>${NC}"
+    echo -e "${YELLOW}Example: ./bin/release '1.2.3' 'Added user authentication'${NC}"
+    exit 1
+fi
+
+VERSION="$1"
+DESCRIPTION="$2"
+RELEASE_BRANCH="release/$VERSION"
+
+echo -e "${BLUE}🚀 Starting release process for version $VERSION${NC}"
+
+# 1. Make sure we're on develop and it's clean
+echo -e "${YELLOW}📋 Checking git status...${NC}"
+if [[ $(git status --porcelain) ]]; then
+    echo -e "${RED}❌ Working directory is not clean. Please commit or stash changes.${NC}"
+    exit 1
+fi
+
+# Switch to develop and pull latest
+echo -e "${YELLOW}🔄 Switching to develop branch...${NC}"
+git checkout develop
+git pull origin develop
+
+# 2. Run tests locally first
+echo -e "${YELLOW}🧪 Running tests locally...${NC}"
+if ! bundle exec rspec; then
+    echo -e "${RED}❌ Tests failed! Fix tests before releasing.${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Tests passed!${NC}"
+
+# 3. Create release branch
+echo -e "${YELLOW}🌿 Creating release branch: $RELEASE_BRANCH${NC}"
+git checkout -b "$RELEASE_BRANCH"
+
+# 4. Update version if VERSION file exists
+if [ -f "VERSION" ]; then
+    echo "$VERSION" > VERSION
+    git add VERSION
+    git commit -m "Bump version to $VERSION"
+fi
+
+# 5. Merge release to master
+echo -e "${YELLOW}🔀 Merging to master branch...${NC}"
+git checkout master
+git pull origin master
+git merge --no-ff "$RELEASE_BRANCH" -m "Release $VERSION: $DESCRIPTION"
+
+# 6. Create tag
+echo -e "${YELLOW}🏷️  Creating tag v$VERSION...${NC}"
+git tag -a "v$VERSION" -m "Release $VERSION: $DESCRIPTION"
+
+# 7. Push master and tags (this triggers deployment)
+echo -e "${YELLOW}📤 Pushing to GitHub (this will trigger deployment)...${NC}"
+git push origin master
+git push origin "v$VERSION"
+
+# 8. Merge back to develop
+echo -e "${YELLOW}🔄 Merging back to develop...${NC}"
+git checkout develop
+git merge --no-ff "$RELEASE_BRANCH" -m "Merge release $VERSION back to develop"
+git push origin develop
+
+# 9. Clean up release branch
+echo -e "${YELLOW}🧹 Cleaning up release branch...${NC}"
+git branch -d "$RELEASE_BRANCH"
+
+# 10. Show summary
+echo -e "${GREEN}🎉 Release $VERSION completed successfully!${NC}"
+echo -e "${BLUE}📊 Summary:${NC}"
+echo -e "  • Version: $VERSION"
+echo -e "  • Description: $DESCRIPTION"
+echo -e "  • Branch: main (pushed)"
+echo -e "  • Tag: v$VERSION (created)"
+echo -e "  • Deployment: Triggered automatically via GitHub Actions"
+echo -e "${YELLOW}📱 Check GitHub Actions for deployment progress:${NC}"
+echo -e "  https://github.com/benjaminfauchald/b2b/actions"
+echo -e "${GREEN}✅ You can continue working on develop branch!${NC}"

@@ -1,4 +1,22 @@
 :concurrency: 5
+<<<<<<< HEAD
+:timeout: 30
+:max_retries: 3
+:pidfile: tmp/pids/sidekiq.pid
+:logfile: log/sidekiq.log
+
+:queues:
+  - [financials, 3]  # Higher priority for financial updates
+  - [brreg, 2]
+  - [DomainTestingService, 2]
+  - [DomainARecordTestingService, 2]
+  - [default, 1]
+
+:limits:
+  financials: 1  # Only 1 concurrent financial job to respect rate limits
+  DomainTestingService: 1
+  DomainARecordTestingService: 1
+=======
 :queues:
   - default
   - mailers
@@ -7,3 +25,4 @@
 :max_retries: 3
 :retry_interval: 5
 :timeout: 25
+>>>>>>> 1abfb56397c1b02ca799ba1791316677e412c682

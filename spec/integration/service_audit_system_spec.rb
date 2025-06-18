@@ -20,14 +20,14 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
         auditable: auditable,
         operation_type: 'process',
         started_at: Time.current,
-        metadata: {},
+        metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
-        columns_affected: []
+        columns_affected: ['unspecified']
       )
       audit_log.mark_success!({ 'result' => 'ok' })
       expect(audit_log.reload).to have_attributes(
-        status: :success,
+        status: 'success',
         completed_at: be_present,
         execution_time_ms: be_positive
       )
@@ -39,15 +39,15 @@ RSpec.describe 'Service Audit System Integration', type: :integration do
         auditable: auditable,
         operation_type: 'process',
         started_at: Time.current,
-        metadata: {},
+        metadata: { 'status' => 'initialized' },
         table_name: 'companies',
         record_id: auditable.id,
-        columns_affected: []
+        columns_affected: ['unspecified']
       )
       error_message = 'Test error'
       audit_log.mark_failed!(error_message, { 'error' => error_message })
       expect(audit_log.reload).to have_attributes(
-        status: :failed,
+        status: 'failed',
         error_message: error_message,
         completed_at: be_present,
         execution_time_ms: be_positive

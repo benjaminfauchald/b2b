@@ -1,0 +1,93 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: b2b_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3.0
+        bundler-cache: true
+    
+    - name: Setup test database
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
+      run: |
+        bundle exec rails db:create RAILS_ENV=test
+        bundle exec rails db:migrate RAILS_ENV=test
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
+      run: bundle exec rspec
+    
+    - name: Run linting
+      run: bundle exec rubocop
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to production
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd /home/benjamin/b2b
+          git fetch origin
+          git reset --hard origin/master
+          
+          # Install/update gems
+          bundle install --deployment --without development test
+          
+          # Precompile assets
+          RAILS_ENV=production bundle exec rails assets:precompile
+          
+          # Run database migrations
+          RAILS_ENV=production bundle exec rails db:migrate
+          
+          # Restart services
+          sudo systemctl restart puma
+          sudo systemctl restart sidekiq
+          sudo systemctl reload nginx
+          
+          # Health check
+          sleep 5
+          if ! systemctl is-active --quiet puma; then
+            echo "Puma failed to start!"
+            exit 1
+          fi
+          
+          if ! systemctl is-active --quiet sidekiq; then
+            echo "Sidekiq failed to start!"
+            exit 1
+          fi
+          
+          echo "Deployment successful!"
