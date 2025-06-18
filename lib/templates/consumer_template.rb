@@ -19,7 +19,7 @@ class ConsumerTemplate < Karafka::BaseConsumer
           status: :success,
           table_name: '<%= table_name %>',
           record_id: data['id'] || SecureRandom.uuid,
-          columns_affected: [],
+          columns_affected: ['unspecified'],
           metadata: {
             message_data: data,
             consumer: self.class.name,

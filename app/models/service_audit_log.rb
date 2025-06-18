@@ -21,7 +21,7 @@ class ServiceAuditLog < ApplicationRecord
   validates :record_id, presence: true
   validates :columns_affected, presence: true
   validate :columns_affected_not_empty
-  validates :metadata, presence: true
+  validate :metadata_not_empty
   validate :metadata_must_have_error_if_failed
   # target_table is optional (nullable)
 
@@ -108,8 +108,8 @@ class ServiceAuditLog < ApplicationRecord
             status: STATUS_PENDING,
             auditable: record,
             started_at: Time.current,
-            metadata: {},
-            columns_affected: [],
+            metadata: { 'status' => 'initialized' },
+            columns_affected: ['unspecified'],
             execution_time_ms: nil
           )
 
@@ -135,8 +135,8 @@ class ServiceAuditLog < ApplicationRecord
       status: STATUS_PENDING,
       auditable: auditable,
       started_at: Time.current,
-      metadata: {},
-      columns_affected: [],
+      metadata: { 'status' => 'initialized' },
+      columns_affected: ['unspecified'],
       execution_time_ms: nil
     )
   end
@@ -144,14 +144,20 @@ class ServiceAuditLog < ApplicationRecord
   private
 
   def set_defaults
-    self.metadata ||= {}
-    self.columns_affected ||= []
+    self.metadata ||= { 'status' => 'initialized' }
+    self.columns_affected ||= ['unspecified']
     self.table_name ||= auditable&.class&.table_name || ''
     self.record_id ||= auditable&.id&.to_s
   end
 
   def metadata_not_nil
     errors.add(:metadata, "can't be nil") if metadata.nil?
+  end
+
+  def metadata_not_empty
+    if metadata.blank? || (metadata.is_a?(Hash) && metadata.empty?)
+      errors.add(:metadata, "can't be blank")
+    end
   end
 
   def columns_affected_not_nil

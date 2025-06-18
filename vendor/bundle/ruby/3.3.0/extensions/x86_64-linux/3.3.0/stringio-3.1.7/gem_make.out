@@ -1,0 +1,19 @@
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/stringio-3.1.7/ext/stringio
+/home/benjamin/.rvm/rubies/ruby-3.3.0/bin/ruby extconf.rb
+checking for rb_io_mode_t in ruby/io.h... no
+creating Makefile
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/stringio-3.1.7/ext/stringio
+make DESTDIR\= sitearchdir\=./.gem.20250617-98480-xmygif sitelibdir\=./.gem.20250617-98480-xmygif clean
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/stringio-3.1.7/ext/stringio
+make DESTDIR\= sitearchdir\=./.gem.20250617-98480-xmygif sitelibdir\=./.gem.20250617-98480-xmygif
+compiling stringio.c
+linking shared-object stringio.so
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/stringio-3.1.7/ext/stringio
+make DESTDIR\= sitearchdir\=./.gem.20250617-98480-xmygif sitelibdir\=./.gem.20250617-98480-xmygif install
+/usr/bin/install -c -m 0755 stringio.so ./.gem.20250617-98480-xmygif
+
+current directory: /home/benjamin/b2b/vendor/bundle/ruby/3.3.0/gems/stringio-3.1.7/ext/stringio
+make DESTDIR\= sitearchdir\=./.gem.20250617-98480-xmygif sitelibdir\=./.gem.20250617-98480-xmygif clean

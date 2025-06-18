@@ -84,4 +84,13 @@ node_modules/
 # OS specific
 
 # Cursor IDE
+<<<<<<< HEAD
 .cursor/mcp.json
+=======
+.cursor/mcp.json
+# Environment files with secrets
+*.env.production
+app/.env.production
+.env.production
+vendor/bundle/
+>>>>>>> 1abfb56397c1b02ca799ba1791316677e412c682

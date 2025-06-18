@@ -5,8 +5,8 @@ FactoryBot.define do
     status { :pending }
     started_at { Time.current }
     association :auditable, factory: :company
-    metadata { {} }
-    columns_affected { [] }
+    metadata { { 'status' => 'initialized' } }
+    columns_affected { ['unspecified'] }
     completed_at { nil }
     execution_time_ms { nil }
     error_message { nil }

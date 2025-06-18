@@ -18,7 +18,6 @@ gem "stimulus-rails"
 gem "jbuilder"
 
 # Authentication
-gem "devise"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
@@ -43,9 +42,11 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
+gem "redis", "~> 5.0"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
-  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "debug", platforms: %i[ mri windows ]
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
@@ -70,8 +71,6 @@ group :development, :test do
 end
 
 # Background job processing
-gem 'sidekiq'
-gem 'redis'
 
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
@@ -95,21 +94,20 @@ group :test do
 end
 
 gem "rubocop", "~> 1.76", group: :development
-
 gem "rubocop-rails", "~> 2.32", group: :development
-
 gem "rubocop-performance", "~> 1.25", group: :development
-
 gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
-
 gem "tailwindcss-rails", "~> 4.2"
 
-# Kafka
-gem 'ruby-kafka', '~> 1.5.0'  # Kafka client
-gem 'waterdrop', '~> 2.8.4'   # Kafka producer
-gem 'karafka', '~> 2.4.0'     # Kafka consumer framework
-gem 'dry-monitor'           # For monitoring Kafka operations
+gem "sidekiq", "~> 8.0"
+gem "devise", "~> 4.9"
 
-gem 'httparty'              # For making HTTP requests
-gem 'nokogiri'              # For XML parsing
-gem 'json-schema', '~> 3.0'
+# Kafka
+gem 'ruby-kafka', '~> 1.5.0'
+gem 'waterdrop', '~> 2.8.4'
+gem 'karafka', '~> 2.4.0'
+gem 'dry-monitor'
+
+gem 'httparty'
+gem 'nokogiri'
+gem 'json-schema', '~> 4.0'

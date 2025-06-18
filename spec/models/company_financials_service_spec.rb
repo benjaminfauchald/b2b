@@ -18,8 +18,8 @@ RSpec.describe CompanyFinancialsService, type: :service do
       table_name: 'companies',
       record_id: company.id.to_s,
       operation_type: 'update',
-      status: :success,
-      columns_affected: [], # changed_fields are passed in mark_success!
+      status: 'success',
+      columns_affected: ['revenue'], # changed_fields are passed in mark_success!
       metadata: include('company_id' => company.id, 'registration_number' => company.registration_number)
     )
     expect(result[:success]).to be true
@@ -30,9 +30,9 @@ RSpec.describe CompanyFinancialsService, type: :service do
     allow(service).to receive(:fetch_and_update_financials).and_raise(StandardError, 'API failure')
     expect {
       service.call rescue nil
-    }.to change { ServiceAuditLog.where(status: :failed).count }.by(1)
+    }.to change { ServiceAuditLog.where(status: 'failed').count }.by(1)
     log = ServiceAuditLog.order(:created_at).last
-    expect(log.status).to eq(:failed)
+    expect(log.status).to eq('failed')
     expect(log.error_message).to eq('API failure')
     expect(log.table_name).to eq('companies')
     expect(log.record_id).to eq(company.id.to_s)

@@ -20,7 +20,7 @@ class ServiceTemplate < KafkaService
         service_name: self.class.name.underscore,
         operation_type: 'process',
         status: :pending,
-        columns_affected: [],
+        columns_affected: ['unspecified'],
         metadata: { resource_id: resource.id }
       )
       
