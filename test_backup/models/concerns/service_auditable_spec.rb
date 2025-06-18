@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe ServiceAuditable, type: :model do
   let(:service_name) { 'domain_testing' }
   let!(:service_config) do
-    create(:service_configuration, 
+    create(:service_configuration,
            service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
@@ -102,17 +102,17 @@ RSpec.describe ServiceAuditable, type: :model do
       end
 
       it 'returns false when successful run exists within refresh interval' do
-        create(:service_audit_log, :success, 
-               auditable: domain, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain,
+               service_name: service_name,
                completed_at: 1.hour.ago)
         expect(domain.needs_service?(service_name)).to be false
       end
 
       it 'returns true when last successful run is older than refresh interval' do
-        create(:service_audit_log, :success, 
-               auditable: domain, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain,
+               service_name: service_name,
                completed_at: 25.hours.ago)
         expect(domain.needs_service?(service_name)).to be true
       end
@@ -122,17 +122,17 @@ RSpec.describe ServiceAuditable, type: :model do
       let(:domain) { create(:domain) }
 
       it 'returns the most recent successful run' do
-        old_log = create(:service_audit_log, :success, 
-                        auditable: domain, 
-                        service_name: service_name, 
+        old_log = create(:service_audit_log, :success,
+                        auditable: domain,
+                        service_name: service_name,
                         completed_at: 2.hours.ago)
-        new_log = create(:service_audit_log, :success, 
-                        auditable: domain, 
-                        service_name: service_name, 
+        new_log = create(:service_audit_log, :success,
+                        auditable: domain,
+                        service_name: service_name,
                         completed_at: 1.hour.ago)
-        create(:service_audit_log, :failed, 
-               auditable: domain, 
-               service_name: service_name, 
+        create(:service_audit_log, :failed,
+               auditable: domain,
+               service_name: service_name,
                completed_at: 30.minutes.ago)
 
         expect(domain.last_service_run(service_name)).to eq(new_log)
@@ -196,13 +196,13 @@ RSpec.describe ServiceAuditable, type: :model do
       let!(:domain3) { create(:domain) }
 
       before do
-        create(:service_audit_log, :success, 
-               auditable: domain2, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain2,
+               service_name: service_name,
                completed_at: 1.hour.ago)
-        create(:service_audit_log, :success, 
-               auditable: domain3, 
-               service_name: service_name, 
+        create(:service_audit_log, :success,
+               auditable: domain3,
+               service_name: service_name,
                completed_at: 25.hours.ago)
       end
 
@@ -242,4 +242,4 @@ RSpec.describe ServiceAuditable, type: :model do
       end
     end
   end
-end 
+end

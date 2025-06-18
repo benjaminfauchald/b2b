@@ -9,24 +9,24 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
 
   def process_message(message)
     return if processed?(message)
-    
+
     payload = JSON.parse(message.payload)
-    domain = Domain.find_by(domain: payload['domain'])
-    
+    domain = Domain.find_by(domain: payload["domain"])
+
     return unless domain
-    
+
     service = DomainARecordTestingService.new(domain: domain)
     result = service.call
-    
+
     # Log the result
     audit_log = ServiceAuditLog.create!(
       auditable: domain,
-      service_name: 'domain_a_record_testing',
-      operation_type: 'test_a_record',
+      service_name: "domain_a_record_testing",
+      operation_type: "test_a_record",
       status: result ? :success : :failed,
-      columns_affected: ['www'],
+      columns_affected: [ "www" ],
       metadata: {
-        domain_name: payload['domain'],
+        domain_name: payload["domain"],
         result: result,
         consumer: self.class.name,
         kafka_topic: message.topic,
@@ -34,7 +34,7 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
         kafka_offset: message.offset
       }
     )
-    
+
     mark_as_processed(message)
   rescue JSON::ParserError => e
     Rails.logger.error "Invalid JSON in message: #{e.message}"
@@ -45,7 +45,7 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
 
   def processed?(message)
     ServiceAuditLog.exists?(
-      service_name: 'domain_a_record_testing',
+      service_name: "domain_a_record_testing",
       message_id: message.offset
     )
   end
@@ -53,10 +53,10 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
   def create_audit_log(domain)
     ServiceAuditLog.create!(
       auditable: domain,
-      service_name: 'domain_a_record_testing',
-      operation_type: 'test_a_record',
+      service_name: "domain_a_record_testing",
+      operation_type: "test_a_record",
       status: :pending,
-      columns_affected: ['www'],
+      columns_affected: [ "www" ],
       metadata: { domain_name: domain.domain }
     )
   end
@@ -71,9 +71,9 @@ class DomainARecordTestingConsumer < Karafka::BaseConsumer
 
     # Send to DLQ
     produce_message(
-      topic: 'domain_a_record_testing_dlq',
+      topic: "domain_a_record_testing_dlq",
       payload: message.payload,
       key: message.key
     )
   end
-end 
+end

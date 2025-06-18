@@ -1,4 +1,4 @@
-require 'sidekiq/web'
+require "sidekiq/web"
 
 Rails.application.routes.draw do
   devise_for :users
@@ -8,7 +8,7 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
-  
+
   # Version endpoint for deployment verification
   get "version" => "application#version", as: :version_check
 
@@ -20,15 +20,15 @@ Rails.application.routes.draw do
   root "domains#index"
 
   namespace :webhooks do
-    post '/instantly', to: 'instantly_webhook#create'
+    post "/instantly", to: "instantly_webhook#create"
   end
 
   # Sidekiq Web UI with environment-specific authentication
-  require 'sidekiq/web'
-  
+  require "sidekiq/web"
+
   # Temporarily allow access without authentication for debugging
-  mount Sidekiq::Web => '/sidekiq'
-  
+  mount Sidekiq::Web => "/sidekiq"
+
   # if Rails.env.development?
   #   # In development, allow access without authentication for easier debugging
   #   mount Sidekiq::Web => '/sidekiq'

@@ -1,22 +1,22 @@
 class ServiceConfiguration < ApplicationRecord
-  self.primary_key = 'service_name'
+  self.primary_key = "service_name"
 
-  has_many :service_audit_logs, foreign_key: 'service_name', primary_key: 'service_name'
-  has_many :service_performance_stats, foreign_key: 'service_name', primary_key: 'service_name'
-  has_many :latest_service_runs, foreign_key: 'service_name', primary_key: 'service_name'
-  has_many :records_needing_refresh, foreign_key: 'service_name', primary_key: 'service_name'
+  has_many :service_audit_logs, foreign_key: "service_name", primary_key: "service_name"
+  has_many :service_performance_stats, foreign_key: "service_name", primary_key: "service_name"
+  has_many :latest_service_runs, foreign_key: "service_name", primary_key: "service_name"
+  has_many :records_needing_refresh, foreign_key: "service_name", primary_key: "service_name"
 
   # Validations
   validates :service_name, presence: true, uniqueness: true, length: { maximum: 100 }
   validates :refresh_interval_hours, presence: true, numericality: { greater_than: 0 }
   validates :batch_size, numericality: { greater_than: 0 }
   validates :retry_attempts, numericality: { greater_than_or_equal_to: 0 }
-  validates :active, inclusion: { in: [true, false] }
+  validates :active, inclusion: { in: [ true, false ] }
 
   # Scopes
   scope :active, -> { where(active: true) }
   scope :inactive, -> { where(active: false) }
-  scope :frequent_refresh, ->(hours) { where('refresh_interval_hours < ?', hours) }
+  scope :frequent_refresh, ->(hours) { where("refresh_interval_hours < ?", hours) }
 
   # Class methods
   def self.active?(service_name)
@@ -53,13 +53,13 @@ class ServiceConfiguration < ApplicationRecord
 
   def add_dependency(service_name)
     return if depends_on_services.include?(service_name)
-    
-    self.depends_on_services = (depends_on_services || []) + [service_name]
+
+    self.depends_on_services = (depends_on_services || []) + [ service_name ]
     save!
   end
 
   def remove_dependency(service_name)
-    self.depends_on_services = (depends_on_services || []) - [service_name]
+    self.depends_on_services = (depends_on_services || []) - [ service_name ]
     save!
   end
 
@@ -74,13 +74,13 @@ class ServiceConfiguration < ApplicationRecord
 
   def needs_refresh?(last_run_time)
     return true if last_run_time.nil?
-    
+
     last_run_time < refresh_interval_hours.hours.ago
   end
 
   def dependencies_met?
     return true if depends_on_services.blank?
-    
+
     dependency_configs = ServiceConfiguration.where(service_name: depends_on_services)
     dependency_configs.all?(&:active?)
   end
@@ -107,7 +107,7 @@ class ServiceConfiguration < ApplicationRecord
     service_settings_hash.each do |service_name, settings|
       config = for_service(service_name)
       next unless config
-      
+
       settings.each do |key, value|
         config.update_setting(key, value)
       end
@@ -146,15 +146,15 @@ class ServiceConfiguration < ApplicationRecord
   end
 
   def healthy?
-    health_status == 'healthy'
+    health_status == "healthy"
   end
 
   def needs_attention?
-    health_status == 'needs_attention'
+    health_status == "needs_attention"
   end
 
   def critical?
-    health_status == 'critical'
+    health_status == "critical"
   end
 
   private
@@ -170,4 +170,4 @@ class ServiceConfiguration < ApplicationRecord
   def log_update
     Rails.logger.info "Service configuration updated for #{service_name}"
   end
-end 
+end

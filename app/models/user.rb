@@ -4,7 +4,7 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
   include ServiceAuditable
-  
+
   # Override Devise's email validation in test environment
   def email_required?
     return false if Rails.env.test?
@@ -22,7 +22,7 @@ class User < ApplicationRecord
   validates :password, presence: true, length: { minimum: 8 }, on: :create
 
   def admin?
-    email == 'admin@example.com'
+    email == "admin@example.com"
   end
 
   # Test environment specific behavior

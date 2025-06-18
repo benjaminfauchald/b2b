@@ -1,7 +1,7 @@
 namespace :domain_mx_testing do
   desc "Queue a single random pending domain for MX testing via worker"
-  task :sample => :environment do
-    domain = Domain.where(mx: nil).order('RANDOM()').first
+  task sample: :environment do
+    domain = Domain.where(mx: nil).order("RANDOM()").first
     if domain
       DomainMxTestingWorker.perform_async(domain.id)
       puts "Queued domain ##{domain.id} (#{domain.domain}) for MX testing."
@@ -11,18 +11,18 @@ namespace :domain_mx_testing do
   end
 
   desc "Queue all pending domains for MX testing via worker"
-  task :queue_all => :environment do
+  task queue_all: :environment do
     count = DomainMxTestingService.queue_all_domains
     puts "Queued #{count} domains for MX testing."
   end
 
   desc "Show domains pending MX testing and their stats"
-  task :show_pending => :environment do
+  task show_pending: :environment do
     domains = Domain.where(mx: nil)
     total = Domain.count
     pending = domains.count
     tested = Domain.where.not(mx: nil).count
-    failed = Domain.where.not(mx_error: [nil, '']).count
+    failed = Domain.where.not(mx_error: [ nil, "" ]).count
 
     puts "\nMX Testing Statistics:"
     puts "Total domains: #{total}"
@@ -40,14 +40,14 @@ namespace :domain_mx_testing do
   end
 
   desc "Show MX testing stats"
-  task :stats => :environment do
+  task stats: :environment do
     total = Domain.count
     pending = Domain.where(mx: nil).count
     tested = Domain.where.not(mx: nil).count
-    failed = Domain.where.not(mx_error: [nil, '']).count
+    failed = Domain.where.not(mx_error: [ nil, "" ]).count
     puts "Total domains: #{total}"
     puts "Pending MX test: #{pending}"
     puts "Tested: #{tested}"
     puts "Failed: #{failed}"
   end
-end 
+end

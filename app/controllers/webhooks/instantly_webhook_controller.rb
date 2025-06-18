@@ -5,15 +5,15 @@ module Webhooks
 
     def create
       audit_log = ServiceAuditLog.create!(
-        service_name: 'instantly_webhook',
-        operation_type: 'process_webhook',
+        service_name: "instantly_webhook",
+        operation_type: "process_webhook",
         status: :pending,
-        table_name: 'webhooks',
+        table_name: "webhooks",
         record_id: SecureRandom.uuid,
-        columns_affected: ['payload'],
+        columns_affected: [ "payload" ],
         metadata: {
           webhook_payload: params.to_unsafe_h,
-          headers: request.headers.to_h.select { |k, v| k.start_with?('HTTP_') },
+          headers: request.headers.to_h.select { |k, v| k.start_with?("HTTP_") },
           ip_address: request.remote_ip,
           user_agent: request.user_agent
         }
@@ -23,7 +23,7 @@ module Webhooks
         validate_event_type!
         timestamp = parse_timestamp
         communication = create_communication(timestamp)
-        
+
         audit_log.update!(
           status: :success,
           auditable: communication,
@@ -36,7 +36,7 @@ module Webhooks
           )
         )
 
-        render json: { status: 'success', message: 'Webhook processed successfully' }
+        render json: { status: "success", message: "Webhook processed successfully" }
       rescue StandardError => e
         audit_log.update!(
           status: :failed,
@@ -75,7 +75,7 @@ module Webhooks
     end
 
     def validate_event_type!
-      return if webhook_params[:event_type].end_with?('_email_sent')
+      return if webhook_params[:event_type].end_with?("_email_sent")
       raise "Invalid event type: #{webhook_params[:event_type]}"
     end
 
@@ -87,9 +87,9 @@ module Webhooks
 
     def create_communication(timestamp)
       Communication.create!(
-        source: 'instantly',
-        type: 'email',
-        status: 'sent',
+        source: "instantly",
+        type: "email",
+        status: "sent",
         sent_at: timestamp,
         recipient_email: webhook_params[:lead_email],
         recipient_name: "#{webhook_params[:firstName]} #{webhook_params[:lastName]}".strip,
@@ -112,4 +112,4 @@ module Webhooks
       )
     end
   end
-end 
+end

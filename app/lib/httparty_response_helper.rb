@@ -19,7 +19,7 @@ module HttpartyResponseHelper
   # Parse JSON response safely
   def parse_json_response(response)
     return nil unless valid_response?(response)
-    
+
     begin
       JSON.parse(response.body)
     rescue JSON::ParserError => e
@@ -33,25 +33,25 @@ module HttpartyResponseHelper
     default_options = {
       timeout: 30,
       headers: {
-        'User-Agent' => 'B2B-Services/1.0',
-        'Accept' => 'application/json'
+        "User-Agent" => "B2B-Services/1.0",
+        "Accept" => "application/json"
       },
       # Add SSL verification
       verify: Rails.env.production?,
       debug_output: Rails.env.development? ? $stdout : nil
     }
-    
+
     begin
       merged_options = default_options.merge(options)
-      
+
       Rails.logger.debug "[HTTParty] Making request to: #{url}"
       Rails.logger.debug "[HTTParty] Request options: #{merged_options.except(:debug_output).inspect}"
-      
+
       response = HTTParty.get(url, merged_options)
-      
+
       Rails.logger.debug "[HTTParty] Response code: #{response&.code}"
       Rails.logger.debug "[HTTParty] Response headers: #{response&.headers&.inspect}"
-      
+
       if block_given?
         if valid_response?(response)
           yield(response)
@@ -62,7 +62,7 @@ module HttpartyResponseHelper
       else
         valid_response?(response) ? response : nil
       end
-      
+
     rescue HTTParty::Error => e
       Rails.logger.error "[HTTParty] HTTP error for #{url}: #{e.class} - #{e.message}"
       nil
@@ -88,9 +88,9 @@ module HttpartyResponseHelper
 
   # Get response status info
   def response_status_info(response)
-    return { valid: false, message: 'Response body is empty' } if response.body.nil? || response.body.empty?
+    return { valid: false, message: "Response body is empty" } if response.body.nil? || response.body.empty?
     return { valid: false, message: "HTTP #{response.code}: #{response.message}" } unless response.respond_to?(:success?) && response.success?
-    
-    { valid: true, message: 'Success' }
+
+    { valid: true, message: "Success" }
   end
 end

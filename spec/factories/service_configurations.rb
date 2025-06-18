@@ -21,7 +21,7 @@ FactoryBot.define do
     end
 
     trait :with_dependencies do
-      depends_on_services { ['user_enhancement', 'domain_testing'] }
+      depends_on_services { [ 'user_enhancement', 'domain_testing' ] }
     end
 
     trait :with_settings do
@@ -55,7 +55,7 @@ FactoryBot.define do
       refresh_interval_hours { 168 } # 1 week
       settings do
         {
-          'fields_to_enhance' => ['email', 'profile'],
+          'fields_to_enhance' => [ 'email', 'profile' ],
           'validation_enabled' => true
         }
       end
@@ -64,13 +64,13 @@ FactoryBot.define do
     trait :domain do
       service_name { generate(:service_name) }
       refresh_interval_hours { 24 } # daily
-      depends_on_services { ['dns_resolution'] }
+      depends_on_services { [ 'dns_resolution' ] }
       settings do
         {
           'timeout_seconds' => 5,
-          'test_types' => ['A', 'MX', 'NS']
+          'test_types' => [ 'A', 'MX', 'NS' ]
         }
       end
     end
   end
-end 
+end

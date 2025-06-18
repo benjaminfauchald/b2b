@@ -6,18 +6,18 @@ class ApplicationService
   attr_reader :service_name, :action, :batch_size
 
   # Core service attributes
-  attribute :action, :string, default: 'process'
+  attribute :action, :string, default: "process"
   attribute :batch_size, :integer
 
   # Validations
   validates :action, presence: true, format: {
     with: /\A[a-z0-9_]+\z/,
-    message: 'must follow naming convention (e.g., process, enhance, test)'
+    message: "must follow naming convention (e.g., process, enhance, test)"
   }
 
   validates :service_name, presence: true, format: { with: /\A[a-z0-9_]+\z/, message: "can only contain lowercase letters, numbers, and underscores" }
 
-  def initialize(service_name:, action: 'process', batch_size: 1000, **attributes)
+  def initialize(service_name:, action: "process", batch_size: 1000, **attributes)
     @service_name = service_name
     @action = action
     @batch_size = batch_size
@@ -28,7 +28,7 @@ class ApplicationService
   def call
     validate!
     log_service_start
-    
+
     begin
       result = perform
       log_service_completion(result)
@@ -53,7 +53,7 @@ class ApplicationService
   def service_name
     return @service_name if @service_name.present?
     if self.class.name.present? && self.class.name != ""
-      self.class.name.underscore.encode('UTF-8')
+      self.class.name.underscore.encode("UTF-8")
     else
       # Fallback for anonymous classes in tests
       "test_service_#{SecureRandom.hex(8)}"
@@ -95,7 +95,7 @@ class ApplicationService
 
   def log_service_error(error, context = {})
     error_message = error.respond_to?(:message) ? error.message : error.to_s
-    error_class = error.respond_to?(:class) ? error.class.name : 'UnknownError'
+    error_class = error.respond_to?(:class) ? error.class.name : "UnknownError"
     context_str = context.any? ? " - Context: #{context.inspect}" : ""
     Rails.logger.error "Service failed: #{service_name} (action: #{action}) - Error: #{error_class}: #{error_message}#{context_str}"
   end
@@ -112,8 +112,8 @@ class ApplicationService
       service_name: service_name,
       operation_type: action,
       status: :pending,
-      columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : ['none']),
-      metadata: (defined?(context) && context.present? ? context : { error: 'no metadata' })
+      columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : [ "none" ]),
+      metadata: (defined?(context) && context.present? ? context : { error: "no metadata" })
     )
 
     begin
@@ -121,8 +121,8 @@ class ApplicationService
       audit_log.mark_success!(result: result, context: result.respond_to?(:saved_changes) ? result.saved_changes.keys : [], columns_affected: (respond_to?(:saved_changes) ? saved_changes.keys : []))
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e, { 'error' => e.message }, [])
+      audit_log.mark_failed!(e, { "error" => e.message }, [])
       raise e
     end
   end
-end 
+end

@@ -1,12 +1,12 @@
 class RecordsNeedingRefresh < ApplicationRecord
-  self.table_name = 'records_needing_refresh'
-  self.primary_key = ['service_name', 'auditable_type', 'auditable_id']
+  self.table_name = "records_needing_refresh"
+  self.primary_key = [ "service_name", "auditable_type", "auditable_id" ]
 
   belongs_to :auditable, polymorphic: true
-  belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name'
+  belongs_to :service_configuration, foreign_key: "service_name", primary_key: "service_name"
 
   def self.refresh
-    connection.execute('REFRESH MATERIALIZED VIEW records_needing_refresh')
+    connection.execute("REFRESH MATERIALIZED VIEW records_needing_refresh")
   end
 
   def self.find_by_auditable(service_name, auditable)
@@ -34,4 +34,4 @@ class RecordsNeedingRefresh < ApplicationRecord
     return nil unless time_since_last_run
     (time_since_last_run / 3600).round(2)
   end
-end 
+end

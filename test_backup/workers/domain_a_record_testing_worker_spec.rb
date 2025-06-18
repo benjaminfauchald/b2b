@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe DomainARecordTestingWorker, type: :worker do
   let(:service_name) { 'domain_a_record_testing' }
   let!(:service_config) do
-    create(:service_configuration, 
+    create(:service_configuration,
            service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
@@ -74,4 +74,4 @@ RSpec.describe DomainARecordTestingWorker, type: :worker do
       expect(described_class.get_sidekiq_options['retry']).to eq(0)
     end
   end
-end 
+end

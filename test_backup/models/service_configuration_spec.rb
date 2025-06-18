@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe ServiceConfiguration, type: :model do
   describe 'validations' do
     subject { build(:service_configuration) }
-    
+
     it { should validate_presence_of(:service_name) }
     it { should validate_uniqueness_of(:service_name) }
     it { should validate_length_of(:service_name).is_at_most(100) }
@@ -98,7 +98,7 @@ RSpec.describe ServiceConfiguration, type: :model do
 
     describe '#remove_dependency' do
       it 'removes service from depends_on_services array' do
-        config.update!(depends_on_services: ['user_enhancement', 'domain_testing'])
+        config.update!(depends_on_services: [ 'user_enhancement', 'domain_testing' ])
         config.remove_dependency('user_enhancement')
         expect(config.depends_on_services).not_to include('user_enhancement')
         expect(config.depends_on_services).to include('domain_testing')
@@ -155,7 +155,7 @@ RSpec.describe ServiceConfiguration, type: :model do
       let!(:dep2_config) { create(:service_configuration, service_name: "dependency_2_service_#{SecureRandom.hex(8)}") }
 
       before do
-        config.update!(depends_on_services: ['dependency_1', 'dependency_2'])
+        config.update!(depends_on_services: [ 'dependency_1', 'dependency_2' ])
       end
 
       it 'returns true when all dependencies are active' do
@@ -234,10 +234,10 @@ RSpec.describe ServiceConfiguration, type: :model do
       it 'logs configuration updates' do
         # Clear the creation log expectation first
         allow(Rails.logger).to receive(:info)
-        
+
         expect(Rails.logger).to receive(:info).with(/Service configuration updated for/)
         config.update!(batch_size: 2000)
       end
     end
   end
-end 
+end

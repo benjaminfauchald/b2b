@@ -28,4 +28,4 @@ RSpec.describe BrregMigrationWorker, type: :worker do
       described_class.new.perform('123456789')
     }.to raise_error(StandardError)
   end
-end 
+end

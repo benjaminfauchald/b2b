@@ -8,7 +8,7 @@ class ServiceAuditLog < ApplicationRecord
   enum :status, { pending: 0, success: 1, failed: 2 }
 
   # Associations
-  belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name', optional: true
+  belongs_to :service_configuration, foreign_key: "service_name", primary_key: "service_name", optional: true
   belongs_to :auditable, polymorphic: true, optional: false
 
   # Validations
@@ -92,10 +92,10 @@ class ServiceAuditLog < ApplicationRecord
   end
 
   def self.cleanup_old_logs(days = 90)
-    where('created_at < ?', days.days.ago).delete_all
+    where("created_at < ?", days.days.ago).delete_all
   end
 
-  def self.batch_audit(records, service_name:, operation_type: 'process', batch_size: 1000)
+  def self.batch_audit(records, service_name:, operation_type: "process", batch_size: 1000)
     records.each_slice(batch_size) do |batch|
       transaction do
         batch.each do |record|
@@ -108,8 +108,8 @@ class ServiceAuditLog < ApplicationRecord
             status: STATUS_PENDING,
             auditable: record,
             started_at: Time.current,
-            metadata: { 'status' => 'initialized' },
-            columns_affected: ['unspecified'],
+            metadata: { "status" => "initialized" },
+            columns_affected: [ "unspecified" ],
             execution_time_ms: nil
           )
 
@@ -125,7 +125,7 @@ class ServiceAuditLog < ApplicationRecord
     end
   end
 
-  def self.create_for_service(service_name, operation_type: 'process', auditable: nil)
+  def self.create_for_service(service_name, operation_type: "process", auditable: nil)
     create!(
       service_name: service_name,
       table_name: auditable&.class&.table_name,
@@ -135,8 +135,8 @@ class ServiceAuditLog < ApplicationRecord
       status: STATUS_PENDING,
       auditable: auditable,
       started_at: Time.current,
-      metadata: { 'status' => 'initialized' },
-      columns_affected: ['unspecified'],
+      metadata: { "status" => "initialized" },
+      columns_affected: [ "unspecified" ],
       execution_time_ms: nil
     )
   end
@@ -144,9 +144,9 @@ class ServiceAuditLog < ApplicationRecord
   private
 
   def set_defaults
-    self.metadata ||= { 'status' => 'initialized' }
-    self.columns_affected ||= ['unspecified']
-    self.table_name ||= auditable&.class&.table_name || ''
+    self.metadata ||= { "status" => "initialized" }
+    self.columns_affected ||= [ "unspecified" ]
+    self.table_name ||= auditable&.class&.table_name || ""
     self.record_id ||= auditable&.id&.to_s
   end
 
@@ -175,4 +175,4 @@ class ServiceAuditLog < ApplicationRecord
       errors.add(:metadata, "must include an 'error' key with the error message when status is failed")
     end
   end
-end 
+end

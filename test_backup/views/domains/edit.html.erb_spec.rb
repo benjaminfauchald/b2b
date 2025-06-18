@@ -17,7 +17,6 @@ RSpec.describe "domains/edit", type: :view do
     render
 
     assert_select "form[action=?][method=?]", domain_path(domain), "post" do
-
       assert_select "input[name=?]", "domain[domain]"
 
       assert_select "input[name=?]", "domain[www]"

@@ -49,33 +49,33 @@ end
 # If in Rails environment, add helpful methods
 if defined?(Rails)
   puts "Rails #{Rails.version} loaded in #{Rails.env} environment"
-  
+
   # Add model shortcuts
   def reload!
     Rails.application.reloader.reload!
   end
-  
+
   if defined?(User)
     def u
       User.first
     end
   end
-  
+
   if defined?(Company)
     def c
       Company.first
     end
-    
+
     def companies(limit = 5)
       Company.limit(limit)
     end
   end
-  
+
   if defined?(Domain)
     def d
       Domain.first
     end
-    
+
     def domains(limit = 5)
       Domain.limit(limit)
     end

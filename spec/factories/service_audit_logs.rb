@@ -6,7 +6,7 @@ FactoryBot.define do
     started_at { Time.current }
     association :auditable, factory: :company
     metadata { { 'status' => 'initialized' } }
-    columns_affected { ['unspecified'] }
+    columns_affected { [ 'unspecified' ] }
     completed_at { nil }
     execution_time_ms { nil }
     error_message { nil }
@@ -53,7 +53,7 @@ FactoryBot.define do
     end
 
     trait :with_columns do
-      columns_affected { ['company_name', 'email'] }
+      columns_affected { [ 'company_name', 'email' ] }
     end
 
     trait :with_job_info do
@@ -88,4 +88,4 @@ FactoryBot.define do
       created_at { 1.week.ago }
     end
   end
-end 
+end

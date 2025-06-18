@@ -25,7 +25,7 @@ RSpec.describe User, type: :model do
         expect {
           User.create!(name: "Test User", email: "test_#{SecureRandom.hex(4)}@example.com", password: 'Password123!')
         }.to change(ServiceAuditLog, :count).by(1)
-        
+
         audit_log = ServiceAuditLog.last
         expect(audit_log.service_name).to eq('automatic_audit')
         expect(audit_log.action).to eq('create')
@@ -34,11 +34,11 @@ RSpec.describe User, type: :model do
 
       it 'creates audit log on update' do
         user = create(:user)
-        
+
         expect {
           user.update!(name: "New Name")
         }.to change(ServiceAuditLog, :count).by(1)
-        
+
         audit_log = ServiceAuditLog.last
         expect(audit_log.service_name).to eq('automatic_audit')
         expect(audit_log.action).to eq('update')
@@ -52,7 +52,7 @@ RSpec.describe User, type: :model do
       it 'processes users with audit logging' do
         # Clear existing automatic audit logs from user creation
         ServiceAuditLog.where(service_name: 'automatic_audit').delete_all
-        
+
         expect {
           User.with_service_audit('test_service', action: 'bulk_process') do |user, audit_log|
             user.update!(name: "Processed #{user.name}")
@@ -62,7 +62,7 @@ RSpec.describe User, type: :model do
         service_audit_logs = ServiceAuditLog.where(service_name: 'test_service')
         expect(service_audit_logs.count).to eq(3)
         expect(service_audit_logs.all?(&:status_success?)).to be true
-        
+
         automatic_audit_logs = ServiceAuditLog.where(service_name: 'automatic_audit')
         expect(automatic_audit_logs.count).to eq(3) # One for each user update
       end
@@ -95,8 +95,8 @@ RSpec.describe User, type: :model do
 
       context 'when user was processed recently' do
         before do
-          create(:service_audit_log, 
-                 auditable: user, 
+          create(:service_audit_log,
+                 auditable: user,
                  service_name: 'test_service',
                  status: :success,
                  completed_at: 1.hour.ago)
@@ -112,7 +112,7 @@ RSpec.describe User, type: :model do
         before do
           create(:service_audit_log,
                  auditable: user,
-                 service_name: 'test_service', 
+                 service_name: 'test_service',
                  status: :success,
                  completed_at: 2.days.ago)
         end
@@ -136,9 +136,9 @@ RSpec.describe User, type: :model do
         create(:service_audit_log,
                auditable: user,
                service_name: 'test_service',
-               status: :success, 
+               status: :success,
                completed_at: 1.hour.ago)
-        
+
         expect(user.needs_service?('test_service')).to be false
       end
 
@@ -148,7 +148,7 @@ RSpec.describe User, type: :model do
                service_name: 'test_service',
                status: :success,
                completed_at: 2.days.ago)
-        
+
         expect(user.needs_service?('test_service')).to be true
       end
 

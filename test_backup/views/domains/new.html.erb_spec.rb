@@ -13,7 +13,6 @@ RSpec.describe "domains/new", type: :view do
     render
 
     assert_select "form[action=?][method=?]", domains_path, "post" do
-
       assert_select "input[name=?]", "domain[domain]"
 
       assert_select "input[name=?]", "domain[www]"

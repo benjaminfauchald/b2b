@@ -5,7 +5,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
   before(:each) do
     Domain.delete_all
   end
-  
+
   let!(:domain_with_dns_true) { create(:domain, dns: true, www: nil) }
   let!(:domain_with_dns_false) { create(:domain, dns: false, www: nil) }
   let!(:domain_with_dns_nil) { create(:domain, dns: nil, www: nil) }
@@ -13,7 +13,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
   let(:service_name) { 'domain_a_record_testing' }
   let!(:service_config) do
-    create(:service_configuration, 
+    create(:service_configuration,
            service_name: service_name,
            refresh_interval_hours: 24,
            batch_size: 100,
@@ -28,7 +28,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       it 'updates domain www field to true' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
-        
+
         expect(result).to be true
         expect(domain_with_dns_true.reload.www).to be true
       end
@@ -46,7 +46,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       it 'updates domain www field to false' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
-        
+
         expect(result).to be false
         expect(domain_with_dns_true.reload.www).to be false
       end
@@ -64,7 +64,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       it 'updates domain www field to false' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
-        
+
         expect(result).to be false
         expect(domain_with_dns_true.reload.www).to be false
       end
@@ -82,7 +82,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       it 'updates domain www field to nil' do
         result = DomainARecordTestingService.test_a_record(domain_with_dns_true)
-        
+
         expect(result).to be nil
         expect(domain_with_dns_true.reload.www).to be nil
       end
@@ -100,7 +100,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
       expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_false.id)
       expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_with_dns_nil.id)
       expect(DomainARecordTestingWorker).not_to receive(:perform_async).with(domain_already_tested.id)
-      
+
       DomainARecordTestingService.queue_all_domains
     end
 
@@ -220,4 +220,4 @@ RSpec.describe DomainARecordTestingService, type: :service do
       end
     end
   end
-end 
+end

@@ -15,7 +15,7 @@ module ServiceAuditable
   end
 
   # Instance methods
-  def audit_service_operation(service_name, operation_type: 'process', **options)
+  def audit_service_operation(service_name, operation_type: "process", **options)
     audit_log = ServiceAuditLog.create!(
       auditable: self,
       service_name: service_name,
@@ -30,7 +30,7 @@ module ServiceAuditable
       audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+      audit_log.mark_failed!(e.message, { "error" => e.message }, options[:columns_affected] || [])
       raise e
     end
   end
@@ -70,9 +70,9 @@ module ServiceAuditable
     end
   end
 
-  def with_service_audit(service_name, operation_type: 'process', **options)
+  def with_service_audit(service_name, operation_type: "process", **options)
     records = options[:scope] || all
-    
+
     records.find_each do |record|
       audit_log = ServiceAuditLog.create!(
         auditable: record,
@@ -88,15 +88,15 @@ module ServiceAuditable
         audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
         result
       rescue StandardError => e
-        audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+        audit_log.mark_failed!(e.message, { "error" => e.message }, options[:columns_affected] || [])
         raise e
       end
     end
   end
 
-  def audit_update(service_name, operation_type: 'update', **options)
+  def audit_update(service_name, operation_type: "update", **options)
     records = options[:scope] || all
-    
+
     records.find_each do |record|
       audit_log = ServiceAuditLog.create!(
         auditable: record,
@@ -112,7 +112,7 @@ module ServiceAuditable
         audit_log.mark_success!(options[:success_metadata] || {}, options[:columns_affected] || [])
         result
       rescue StandardError => e
-        audit_log.mark_failed!(e.message, { 'error' => e.message }, options[:columns_affected] || [])
+        audit_log.mark_failed!(e.message, { "error" => e.message }, options[:columns_affected] || [])
         raise e
       end
     end
@@ -124,7 +124,7 @@ module ServiceAuditable
     service_audit_logs
       .for_service(service_name)
       .successful
-      .where('completed_at < ?', service_configuration.refresh_interval_hours.hours.ago)
+      .where("completed_at < ?", service_configuration.refresh_interval_hours.hours.ago)
   end
 
   # Class methods
@@ -139,9 +139,9 @@ module ServiceAuditable
       .and(logs[:auditable_id].eq(left[:id]))
       .and(logs[:service_name].eq(service_name))
       .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
-    
+
     joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
-      .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?", 
+      .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?",
              service_config.refresh_interval_hours.hours.ago)
   end
 
@@ -150,14 +150,14 @@ module ServiceAuditable
   def audit_creation
     return unless audit_enabled?
     service_audit_logs.create!(
-      service_name: 'automatic_audit',
-      operation_type: 'create',
+      service_name: "automatic_audit",
+      operation_type: "create",
       status: :success,
       auditable: self,
       context: attributes,
       changed_fields: [],
-      columns_affected: ['none'],
-      metadata: (attributes.presence || { error: 'no metadata' }),
+      columns_affected: [ "none" ],
+      metadata: (attributes.presence || { error: "no metadata" }),
       started_at: created_at,
       completed_at: created_at
     )
@@ -166,14 +166,14 @@ module ServiceAuditable
   def audit_update
     return unless audit_enabled?
     service_audit_logs.create!(
-      service_name: 'automatic_audit',
-      operation_type: 'update',
+      service_name: "automatic_audit",
+      operation_type: "update",
       status: :success,
       auditable: self,
       context: attributes,
       changed_fields: saved_changes.keys,
-      columns_affected: (saved_changes.keys.presence || ['none']),
-      metadata: (attributes.presence || { error: 'no metadata' }),
+      columns_affected: (saved_changes.keys.presence || [ "none" ]),
+      metadata: (attributes.presence || { error: "no metadata" }),
       started_at: updated_at,
       completed_at: updated_at
     )
@@ -193,4 +193,4 @@ module ServiceAuditable
   ensure
     Thread.current[:automatic_auditing_disabled] = previous
   end
-end 
+end

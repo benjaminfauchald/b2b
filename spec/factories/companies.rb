@@ -23,7 +23,7 @@ FactoryBot.define do
     employee_count { Faker::Number.between(from: 1, to: 1000) }
     employee_registration_date_registry { Faker::Date.between(from: 5.years.ago, to: Date.today) }
     employee_registration_date_nav { Faker::Date.between(from: 5.years.ago, to: Date.today) }
-    
+
     # Financial fields
     ordinary_result { Faker::Number.between(from: -1_000_000, to: 1_000_000) }
     annual_result { Faker::Number.between(from: -1_000_000, to: 1_000_000) }
@@ -31,15 +31,15 @@ FactoryBot.define do
     operating_costs { Faker::Number.between(from: 0, to: 9_000_000) }
     http_error { nil }
     http_error_message { nil }
-    
+
     trait :with_financial_data do
     end
-    
+
     trait :with_failed_financial_data do
       http_error { 500 }
       http_error_message { 'Internal Server Error' }
     end
-    
+
     trait :with_stale_financial_data do
     end
   end

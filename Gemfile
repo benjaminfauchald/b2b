@@ -55,19 +55,19 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 
   # Test Framework
-  gem 'rspec-rails'
-  gem 'factory_bot_rails'
-  gem 'faker'
+  gem "rspec-rails"
+  gem "factory_bot_rails"
+  gem "faker"
 
   # Test Coverage
-  gem 'simplecov', require: false
+  gem "simplecov", require: false
 
   # Guard for automatic testing
-  gem 'guard-rspec'
-  gem 'guard-rubocop'
-  
+  gem "guard-rspec"
+  gem "guard-rubocop"
+
   # Environment variables
-  gem 'dotenv-rails'
+  gem "dotenv-rails"
 end
 
 # Background job processing
@@ -79,18 +79,18 @@ end
 
 
 group :development do
-  gem 'guard'
-  gem 'spring'
-  gem 'spring-watcher-listen'
+  gem "guard"
+  gem "spring"
+  gem "spring-watcher-listen"
 end
 
 group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
-  
+
   # Shoulda matchers for RSpec
-  gem 'shoulda-matchers', '~> 5.0'
+  gem "shoulda-matchers", "~> 5.0"
 end
 
 gem "rubocop", "~> 1.76", group: :development
@@ -103,14 +103,14 @@ gem "sidekiq", "~> 8.0"
 gem "devise", "~> 4.9"
 
 # Kafka
-gem 'ruby-kafka', '~> 1.5.0'  # Kafka client
-gem 'waterdrop', '~> 2.8.4'   # Kafka producer
-gem 'karafka', '~> 2.4.0'     # Kafka consumer framework
-gem 'dry-monitor'           # For monitoring Kafka operations
+gem "ruby-kafka", "~> 1.5.0"  # Kafka client
+gem "waterdrop", "~> 2.8.4"   # Kafka producer
+gem "karafka", "~> 2.4.0"     # Kafka consumer framework
+gem "dry-monitor"           # For monitoring Kafka operations
 
-gem 'httparty'              # For making HTTP requests
-gem 'nokogiri'              # For XML parsing
-gem 'json-schema', '~> 4.0'
+gem "httparty"              # For making HTTP requests
+gem "nokogiri"              # For XML parsing
+gem "json-schema", "~> 4.0"
 
 # Console enhancements for all environments
 gem "pry-rails"

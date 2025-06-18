@@ -5,13 +5,13 @@ RSpec.describe ApplicationService, type: :service do
   let(:test_service_class) do
     Class.new(ApplicationService) do
       attribute :test_param, :string
-      
+
       def initialize(attributes = {})
         super(action: 'test_action', **attributes)
       end
-      
+
       private
-      
+
       def perform
         { result: 'success', test_param: test_param }
       end
@@ -23,9 +23,9 @@ RSpec.describe ApplicationService, type: :service do
       def initialize(attributes = {})
         super(**attributes)
       end
-      
+
       private
-      
+
       def perform
         raise StandardError, 'Service failed'
       end
@@ -138,7 +138,7 @@ RSpec.describe ApplicationService, type: :service do
 
     it 'processes records in batches with audit logging' do
       processed_users = []
-      
+
       service.batch_process(users) do |user, audit_log|
         processed_users << user
         expect(audit_log).to be_a(ServiceAuditLog)
@@ -152,11 +152,11 @@ RSpec.describe ApplicationService, type: :service do
 
     it 'handles batch_size configuration' do
       service = test_service_class.new(batch_size: 2)
-      
+
       # Mock the batch_audit method to verify batch_size is used
       expect(ServiceAuditLog).to receive(:batch_audit).with(
-        users, 
-        service_name: 'test_service', 
+        users,
+        service_name: 'test_service',
         action: 'test_action',
         batch_size: 2
       ).and_call_original
@@ -217,7 +217,7 @@ RSpec.describe ApplicationService, type: :service do
 
   describe 'integration with ServiceConfiguration' do
     let!(:config) do
-      create(:service_configuration, 
+      create(:service_configuration,
              service_name: "integration_test_#{SecureRandom.hex(8)}",
              batch_size: 100,
              settings: { 'timeout' => 30 })
@@ -228,9 +228,9 @@ RSpec.describe ApplicationService, type: :service do
         def initialize(attributes = {})
           super(service_name: 'integration_test', **attributes)
         end
-        
+
         private
-        
+
         def perform
           {
             batch_size: batch_size || configuration&.batch_size,
@@ -243,7 +243,7 @@ RSpec.describe ApplicationService, type: :service do
     it 'uses configuration values when not explicitly set' do
       service = integration_service_class.new
       result = service.call
-      
+
       expect(result[:batch_size]).to eq(100)
       expect(result[:timeout]).to eq(30)
     end
@@ -251,9 +251,9 @@ RSpec.describe ApplicationService, type: :service do
     it 'allows overriding configuration values' do
       service = integration_service_class.new(batch_size: 50)
       result = service.call
-      
+
       expect(result[:batch_size]).to eq(50)
       expect(result[:timeout]).to eq(30)
     end
   end
-end 
+end

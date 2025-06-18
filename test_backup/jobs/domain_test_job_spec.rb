@@ -50,4 +50,4 @@ RSpec.describe DomainTestJob, type: :job do
       expect(described_class.queue_name).to eq('DomainTestingService')
     end
   end
-end 
+end

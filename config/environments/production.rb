@@ -86,7 +86,7 @@ Rails.application.configure do
   config.hosts << "app.connectica.no"
 
   # Trust proxy headers from nginx
-  config.trusted_proxies = ['127.0.0.1', '::1']
+  config.trusted_proxies = [ "127.0.0.1", "::1" ]
 
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }

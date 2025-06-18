@@ -1,7 +1,7 @@
 class DomainMxTestingWorker
   include Sidekiq::Worker
 
-  sidekiq_options queue: 'domain_mx_testing', retry: 3
+  sidekiq_options queue: "domain_mx_testing", retry: 3
 
   def perform(domain_id)
     domain = Domain.find_by(id: domain_id)
@@ -29,4 +29,4 @@ class DomainMxTestingWorker
     Rails.logger.error "Error testing MX for domain ##{domain_id}: #{e.message}"
     raise
   end
-end 
+end

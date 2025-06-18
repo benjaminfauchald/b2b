@@ -1,3 +1,3 @@
 class Brreg < ApplicationRecord
-  self.table_name = 'brreg'
-end 
+  self.table_name = "brreg"
+end
