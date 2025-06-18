@@ -1,4 +1,4 @@
-class DomainMXTestingConsumer < ApplicationConsumer
+class DomainMxTestingConsumer < ApplicationConsumer
   def consume
     messages.each do |message|
       process_message(message)

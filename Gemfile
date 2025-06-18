@@ -103,11 +103,15 @@ gem "sidekiq", "~> 8.0"
 gem "devise", "~> 4.9"
 
 # Kafka
-gem 'ruby-kafka', '~> 1.5.0'
-gem 'waterdrop', '~> 2.8.4'
-gem 'karafka', '~> 2.4.0'
-gem 'dry-monitor'
+gem 'ruby-kafka', '~> 1.5.0'  # Kafka client
+gem 'waterdrop', '~> 2.8.4'   # Kafka producer
+gem 'karafka', '~> 2.4.0'     # Kafka consumer framework
+gem 'dry-monitor'           # For monitoring Kafka operations
 
-gem 'httparty'
-gem 'nokogiri'
+gem 'httparty'              # For making HTTP requests
+gem 'nokogiri'              # For XML parsing
 gem 'json-schema', '~> 4.0'
+
+# Console enhancements for all environments
+gem "pry-rails"
+gem "awesome_print"

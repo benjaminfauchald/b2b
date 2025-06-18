@@ -85,10 +85,13 @@ node_modules/
 
 # Cursor IDE
 .cursor/mcp.json
+
 # Environment files with secrets
 *.env.production
 app/.env.production
 .env.production
+
+# Vendor bundle - should be generated locally
 vendor/bundle/
 
 # Deployment files
