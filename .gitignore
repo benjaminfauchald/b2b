@@ -96,3 +96,5 @@ vendor/bundle/
 
 # Deployment files
 .deploy
+
+/config/credentials/test.key
