@@ -90,7 +90,7 @@ group :test do
   gem "selenium-webdriver"
 
   # Shoulda matchers for RSpec
-  gem "shoulda-matchers", "~> 5.0"
+  gem "shoulda-matchers", "~> 6.5"
 end
 
 gem "rubocop", "~> 1.76", group: :development
