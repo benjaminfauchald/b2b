@@ -5,8 +5,15 @@
 
 set -e
 
-echo "🔍 B2B Development Quality Checks"
-echo "=================================="
+# Check if we're being called from release script (quieter output)
+if [ "$1" = "--release" ]; then
+  QUIET_MODE=true
+  echo "🔍 Running quality checks..."
+else
+  QUIET_MODE=false
+  echo "🔍 B2B Development Quality Checks"
+  echo "=================================="
+fi
 
 # Check if we're in the right directory
 if [ ! -f "Gemfile" ]; then
@@ -20,7 +27,9 @@ if ! command -v bundle &> /dev/null; then
   exit 1
 fi
 
-echo ""
+if [ "$QUIET_MODE" = false ]; then
+  echo ""
+fi
 echo "📦 Checking dependencies..."
 bundle check || {
   echo "Installing missing gems..."
@@ -74,10 +83,14 @@ if git status --porcelain | grep -E '\.(key|pem|p12|p8|ppk|env)$|credentials\.ym
   fi
 fi
 
-echo ""
-echo "🎉 All checks passed! Ready to commit."
-echo ""
-echo "💡 Next steps:"
-echo "   git add .                    # Stage your changes"
-echo "   git commit -m \"message\"     # Commit with a good message"
-echo "   ./bin/release \"1.x.x\" \"description\"  # Deploy to production"
+if [ "$QUIET_MODE" = false ]; then
+  echo ""
+  echo "🎉 All checks passed! Ready to commit."
+  echo ""
+  echo "💡 Next steps:"
+  echo "   git add .                    # Stage your changes"
+  echo "   git commit -m \"message\"     # Commit with a good message"
+  echo "   ./bin/release \"1.x.x\" \"description\"  # Deploy to production"
+else
+  echo "✅ All quality checks passed!"
+fi
