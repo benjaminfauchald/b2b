@@ -4,7 +4,10 @@ redis_config = { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
-  config.concurrency = 30
+  config.concurrency = 5
+
+  # Automatically assign 5 workers to any queue not explicitly configured
+  config.queues = Hash.new(5).merge(config.queues || {})
 end
 
 Sidekiq.configure_client do |config|
