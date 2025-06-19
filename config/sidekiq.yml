@@ -1,28 +1,25 @@
+# Sidekiq configuration with 5 workers per queue
 :concurrency: 5
-<<<<<<< HEAD
 :timeout: 30
 :max_retries: 3
 :pidfile: tmp/pids/sidekiq.pid
 :logfile: log/sidekiq.log
 
+# All queues configured with 5 workers each
 :queues:
-  - [financials, 3]  # Higher priority for financial updates
-  - [brreg, 2]
-  - [DomainTestingService, 2]
-  - [DomainARecordTestingService, 2]
-  - [default, 1]
+  - [financials, 5]
+  - [brreg_migration, 5]
+  - [company_financials, 5]
+  - [DomainTestingService, 5]
+  - [DomainARecordTestingService, 5]
+  - [default, 5]
+  - [mailers, 5]
+  - [active_storage_analysis, 5]
+  - [active_storage_purge, 5]
 
+# Rate limiting for external API services
 :limits:
-  financials: 1  # Only 1 concurrent financial job to respect rate limits
+  financials: 1
+  company_financials: 1
   DomainTestingService: 1
   DomainARecordTestingService: 1
-=======
-:queues:
-  - default
-  - mailers
-  - active_storage_analysis
-  - active_storage_purge
-:max_retries: 3
-:retry_interval: 5
-:timeout: 25
->>>>>>> 1abfb56397c1b02ca799ba1791316677e412c682
