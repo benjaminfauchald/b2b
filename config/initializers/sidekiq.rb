@@ -6,8 +6,10 @@ Sidekiq.configure_server do |config|
   config.redis = redis_config
   config.concurrency = 5
 
-  # Automatically assign 5 workers to any queue not explicitly configured
-  config.queues = Hash.new(5).merge(config.queues || {})
+  # Set default queue weights - queues is an array of [queue_name, weight] pairs
+  config.queues = (config.queues || []).map { |queue_config|
+    queue_config.is_a?(Array) ? queue_config : [ queue_config, 5 ]
+  }
 end
 
 Sidekiq.configure_client do |config|
