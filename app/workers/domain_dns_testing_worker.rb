@@ -18,8 +18,8 @@ class DomainDnsTestingWorker
           values.map(&:to_s)
         end
 
-        # Update audit context with results
-        audit_log.add_context(
+        # Update audit metadata with results
+        audit_log.add_metadata(
           domain_name: domain.domain,
           dns_result: result[:status] == "success",
           test_duration_ms: duration,

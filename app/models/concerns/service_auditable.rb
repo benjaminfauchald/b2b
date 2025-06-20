@@ -21,8 +21,11 @@ module ServiceAuditable
       service_name: service_name,
       operation_type: operation_type,
       status: :pending,
-      columns_affected: options[:columns_affected] || [],
-      metadata: options[:metadata] || {}
+      table_name: self.class.table_name,
+      record_id: self.id.to_s,
+      columns_affected: options[:columns_affected] || [ "unspecified" ],
+      metadata: options[:metadata] || { "status" => "initialized" },
+      started_at: Time.current
     )
 
     begin
@@ -79,8 +82,11 @@ module ServiceAuditable
         service_name: service_name,
         operation_type: operation_type,
         status: :pending,
-        columns_affected: options[:columns_affected] || [],
-        metadata: options[:metadata] || {}
+        table_name: record.class.table_name,
+        record_id: record.id.to_s,
+        columns_affected: options[:columns_affected] || [ "unspecified" ],
+        metadata: options[:metadata] || { "status" => "initialized" },
+        started_at: Time.current
       )
 
       begin
@@ -103,8 +109,11 @@ module ServiceAuditable
         service_name: service_name,
         operation_type: operation_type,
         status: :pending,
-        columns_affected: options[:columns_affected] || [],
-        metadata: options[:metadata] || {}
+        table_name: record.class.table_name,
+        record_id: record.id.to_s,
+        columns_affected: options[:columns_affected] || [ "unspecified" ],
+        metadata: options[:metadata] || { "status" => "initialized" },
+        started_at: Time.current
       )
 
       begin
@@ -154,8 +163,8 @@ module ServiceAuditable
       operation_type: "create",
       status: :success,
       auditable: self,
-      context: attributes,
-      changed_fields: [],
+      table_name: self.class.table_name,
+      record_id: self.id.to_s,
       columns_affected: [ "none" ],
       metadata: (attributes.presence || { error: "no metadata" }),
       started_at: created_at,
@@ -170,8 +179,8 @@ module ServiceAuditable
       operation_type: "update",
       status: :success,
       auditable: self,
-      context: attributes,
-      changed_fields: saved_changes.keys,
+      table_name: self.class.table_name,
+      record_id: self.id.to_s,
       columns_affected: (saved_changes.keys.presence || [ "none" ]),
       metadata: (attributes.presence || { error: "no metadata" }),
       started_at: updated_at,
