@@ -1,0 +1,23 @@
+[Unit]
+Description=B2B Rails Application
+After=network.target postgresql.service redis.service
+Requires=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=benjamin
+Group=benjamin
+WorkingDirectory=/home/benjamin/b2b
+Environment=RAILS_ENV=production
+Environment=PORT=3000
+Environment=PATH=/home/benjamin/.rbenv/shims:/home/benjamin/.rbenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/benjamin/.rbenv/shims/bundle exec rails server -b 0.0.0.0 -p 3000
+ExecReload=/bin/kill -USR2 $MAINPID
+KillMode=mixed
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/benjamin/b2b/log/production.log
+StandardError=append:/home/benjamin/b2b/log/production.log
+
+[Install]
+WantedBy=multi-user.target
