@@ -177,7 +177,8 @@ jobs:
           echo "📦 Gem environment:"
           /home/benjamin/.rbenv/shims/bundle check || echo "Gems not properly installed"
           
-          echo "⚙️  Process status:"
+          echo "⚙️  Service status:"
+          sudo systemctl status b2b-rails --no-pager || echo "Rails service status check failed"
           ps aux | grep -E "(puma|sidekiq)" | grep -v grep || echo "No puma/sidekiq processes found"
           
           echo "🌐 Port status:"
@@ -188,27 +189,38 @@ jobs:
           cd /home/benjamin/b2b
           
           # Try to run Rails with proper environment
-          if /home/benjamin/.rbenv/shims/bundle exec rails runner "puts 'Rails loaded successfully'" 2>/dev/null; then
+          cd /home/benjamin/b2b
+          if RAILS_ENV=production /home/benjamin/.rbenv/shims/bundle exec rails runner "puts 'Rails loaded successfully'" 2>/dev/null; then
             echo "✅ Rails application loads correctly"
           else
             echo "⚠️  Rails runner failed, but server may still be working"
             echo "This is often due to credentials/environment issues"
           fi
           
-          echo "🚀 Starting Rails server manually:"
-          cd /home/benjamin/b2b
-          # Kill any existing Rails processes
+          echo "🚀 Setting up and starting Rails server via systemd:"
+          
+          # Install systemd service file if it doesn't exist
+          if [ ! -f "/etc/systemd/system/b2b-rails.service" ]; then
+            echo "Installing systemd service file..."
+            sudo cp /home/benjamin/b2b/config/systemd/b2b-rails.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable b2b-rails
+          fi
+          
+          # Kill any existing Rails processes and start via systemd
           pkill -f "rails server" || echo "No existing Rails processes"
           pkill -f "puma" || echo "No existing Puma processes"
           
-          # Start Rails server bound to all interfaces on port 3000 (for nginx proxy)
-          RAILS_ENV=production PORT=3000 nohup /home/benjamin/.rbenv/shims/bundle exec rails server -b 0.0.0.0 -p 3000 > /tmp/rails.log 2>&1 &
+          # Start Rails server via systemd (ensures correct working directory)
+          sudo systemctl restart b2b-rails
           
           echo "⏳ Waiting for server to start..."
           sleep 10
           
           echo "📊 Server logs:"
-          tail -20 /tmp/rails.log || echo "No log file found"
+          sudo journalctl -u b2b-rails --since "1 minute ago" -n 20 || echo "No systemd logs found"
+          echo "Production log:"
+          tail -10 /home/benjamin/b2b/log/production.log || echo "No production log found"
           
           echo "🔍 Health check:"
           # Test both ports
@@ -233,9 +245,10 @@ jobs:
           sleep 15
           
           # Check if Sidekiq health script exists and run it
+          cd /home/benjamin/b2b
           if [ -f "./bin/sidekiq-health" ]; then
             echo "📊 Checking Sidekiq queue health..."
-            if /home/benjamin/.rbenv/shims/bundle exec ./bin/sidekiq-health --production; then
+            if RAILS_ENV=production /home/benjamin/.rbenv/shims/bundle exec ./bin/sidekiq-health --production; then
               echo "✅ Sidekiq queues are healthy"
             else
               echo "⚠️  Sidekiq health check issues detected (deployment completed but review recommended)"
@@ -255,6 +268,7 @@ jobs:
           
           # Check critical queues specifically
           echo "🔍 Checking critical Sidekiq queues..."
+          cd /home/benjamin/b2b
           CRITICAL_QUEUES=("domain_dns_testing" "domain_mx_testing" "company_financials" "default")
           for queue in "${CRITICAL_QUEUES[@]}"; do
             if QUEUE_SIZE=$(RAILS_ENV=production /home/benjamin/.rbenv/shims/bundle exec rails runner "puts Sidekiq::Queue.new('$queue').size" 2>/dev/null); then
