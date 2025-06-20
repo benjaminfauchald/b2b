@@ -73,7 +73,7 @@ production:
   primary: &primary_production
     <<: *default
     database: b2b_production
-    host: app.connectica.no
+    host: localhost
     port: <%= ENV['PGPORT'] %>
     user: <%= ENV['PGUSER'] %>
     password: <%= ENV['PGPASSWORD'] %>
