@@ -2,6 +2,9 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
+  # Global authentication - can be overridden in specific controllers
+  before_action :authenticate_user!, unless: :public_action?
+
   def version
     version_info = {
       version: git_version,
@@ -31,5 +34,9 @@ class ApplicationController < ActionController::Base
     else
       "unknown"
     end
+  end
+
+  def public_action?
+    action_name == "version" # Allow version endpoint without auth
   end
 end

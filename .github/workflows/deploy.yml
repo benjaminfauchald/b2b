@@ -226,3 +226,42 @@ jobs:
           grep -r "proxy_pass.*:" /etc/nginx/ || echo "Cannot read nginx config"
           
           echo "🎉 Deployment process completed!"
+          
+          echo "🔧 Running post-deployment health checks..."
+          
+          # Wait for services to fully start
+          sleep 15
+          
+          # Check if Sidekiq health script exists and run it
+          if [ -f "./bin/sidekiq-health" ]; then
+            echo "📊 Checking Sidekiq queue health..."
+            if /home/benjamin/.rbenv/shims/bundle exec ./bin/sidekiq-health --production; then
+              echo "✅ Sidekiq queues are healthy"
+            else
+              echo "⚠️  Sidekiq health check issues detected (deployment completed but review recommended)"
+            fi
+          else
+            echo "⚠️  Sidekiq health check script not found"
+          fi
+          
+          # Basic Rails health check
+          echo "🏥 Testing Rails application health..."
+          cd /home/benjamin/b2b
+          if RAILS_ENV=production /home/benjamin/.rbenv/shims/bundle exec rails runner "puts 'Rails health: OK'" 2>/dev/null; then
+            echo "✅ Rails application is healthy"
+          else
+            echo "⚠️  Rails health check failed (but server may still be working)"
+          fi
+          
+          # Check critical queues specifically
+          echo "🔍 Checking critical Sidekiq queues..."
+          CRITICAL_QUEUES=("domain_dns_testing" "domain_mx_testing" "company_financials" "default")
+          for queue in "${CRITICAL_QUEUES[@]}"; do
+            if QUEUE_SIZE=$(RAILS_ENV=production /home/benjamin/.rbenv/shims/bundle exec rails runner "puts Sidekiq::Queue.new('$queue').size" 2>/dev/null); then
+              echo "   $queue: $QUEUE_SIZE jobs"
+            else
+              echo "   $queue: Failed to check"
+            fi
+          done
+          
+          echo "✨ Health checks completed!"

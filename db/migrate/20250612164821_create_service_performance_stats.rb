@@ -1,5 +1,6 @@
 class CreateServicePerformanceStats < ActiveRecord::Migration[8.0]
   def up
+    execute "DROP MATERIALIZED VIEW IF EXISTS service_performance_stats;"
     execute <<-SQL
       CREATE MATERIALIZED VIEW service_performance_stats AS
       WITH stats AS (

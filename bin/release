@@ -59,6 +59,17 @@ else
     fi
 fi
 
+# 2.5. Check Sidekiq queue health
+echo -e "${YELLOW}🔧 Checking Sidekiq queue health...${NC}"
+if [ -f "./bin/sidekiq-health" ]; then
+    if ! ./bin/sidekiq-health; then
+        echo -e "${RED}❌ Sidekiq health check failed! Please review queue issues before releasing.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}⚠️  Sidekiq health check script not found, skipping...${NC}"
+fi
+
 echo -e "${GREEN}✅ All quality checks passed!${NC}"
 
 # 3. Create release branch

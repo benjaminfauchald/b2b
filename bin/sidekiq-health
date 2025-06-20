@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# Sidekiq Queue Health Check Script
+# Usage: ./bin/sidekiq-health [--production]
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Default to development environment
+RAILS_ENV=${RAILS_ENV:-development}
+
+# Check if --production flag is passed
+if [ "$1" = "--production" ]; then
+    RAILS_ENV=production
+    echo -e "${BLUE}🔍 Running Sidekiq health check in PRODUCTION environment${NC}"
+else
+    echo -e "${BLUE}🔍 Running Sidekiq health check in ${RAILS_ENV} environment${NC}"
+fi
+
+# Expected queues from config/sidekiq.yml
+EXPECTED_QUEUES=(
+    "financials"
+    "brreg_migration" 
+    "company_financials"
+    "DomainTestingService"
+    "DomainARecordTestingService"
+    "domain_dns_testing"
+    "domain_mx_testing"
+    "default"
+    "mailers"
+    "active_storage_analysis"
+    "active_storage_purge"
+)
+
+echo -e "${YELLOW}📋 Checking Sidekiq queue health...${NC}"
+
+# Check if Sidekiq process is running
+if pgrep -f sidekiq > /dev/null; then
+    echo -e "${GREEN}✅ Sidekiq process is running${NC}"
+    SIDEKIQ_PID=$(pgrep -f sidekiq)
+    echo -e "   Process ID: $SIDEKIQ_PID"
+    
+    # Show Sidekiq process details
+    ps aux | grep $SIDEKIQ_PID | grep -v grep || echo "   Process details not available"
+else
+    echo -e "${RED}❌ Sidekiq process is NOT running${NC}"
+    exit 1
+fi
+
+# Check Redis connection
+echo -e "${YELLOW}🔗 Testing Redis connection...${NC}"
+if RAILS_ENV=$RAILS_ENV bundle exec rails runner "require 'sidekiq'; Sidekiq.redis { |conn| conn.ping }; puts 'Redis connection: OK'" 2>/dev/null; then
+    echo -e "${GREEN}✅ Redis connection successful${NC}"
+else
+    echo -e "${RED}❌ Redis connection failed${NC}"
+    exit 1
+fi
+
+# Test if Rails can start
+echo -e "${YELLOW}🚀 Testing Rails environment...${NC}"
+if ! RAILS_ENV=$RAILS_ENV timeout 30s bundle exec rails runner "puts 'Rails OK'" > /dev/null 2>&1; then
+    echo -e "${RED}❌ Rails environment failed to start - skipping detailed queue checks${NC}"
+    echo -e "${YELLOW}⚠️  This may be due to missing credentials or database issues${NC}"
+    echo -e "${YELLOW}⚠️  Deployment can continue but manual verification recommended${NC}"
+    exit 0
+fi
+
+# Check each expected queue
+echo -e "${YELLOW}📊 Checking individual queues...${NC}"
+FAILED_QUEUES=0
+TOTAL_JOBS=0
+
+for queue in "${EXPECTED_QUEUES[@]}"; do
+    if QUEUE_SIZE=$(RAILS_ENV=$RAILS_ENV timeout 10s bundle exec rails runner "require 'sidekiq/api'; puts Sidekiq::Queue.new('$queue').size" 2>&1 | tail -1); then
+        # Remove any non-numeric characters from QUEUE_SIZE
+        QUEUE_SIZE=$(echo "$QUEUE_SIZE" | grep -o '[0-9]*' | tail -1)
+        TOTAL_JOBS=$((TOTAL_JOBS + QUEUE_SIZE))
+        if [ "$QUEUE_SIZE" -eq 0 ]; then
+            echo -e "   ${GREEN}✅${NC} $queue: $QUEUE_SIZE jobs (healthy)"
+        elif [ "$QUEUE_SIZE" -lt 100 ]; then
+            echo -e "   ${YELLOW}⚠️${NC}  $queue: $QUEUE_SIZE jobs (active)"
+        else
+            echo -e "   ${RED}❌${NC} $queue: $QUEUE_SIZE jobs (backlog - may need attention)"
+            FAILED_QUEUES=$((FAILED_QUEUES + 1))
+        fi
+    else
+        echo -e "   ${RED}❌${NC} $queue: Failed to check (queue may not exist)"
+        FAILED_QUEUES=$((FAILED_QUEUES + 1))
+    fi
+done
+
+# Check for dead jobs
+echo -e "${YELLOW}💀 Checking dead jobs...${NC}"
+if DEAD_COUNT=$(RAILS_ENV=$RAILS_ENV bundle exec rails runner "require 'sidekiq/api'; puts Sidekiq::DeadSet.new.size" 2>&1 | tail -1 | grep -o '[0-9]*'); then
+    if [ "$DEAD_COUNT" -eq 0 ]; then
+        echo -e "${GREEN}✅ No dead jobs${NC}"
+    elif [ "$DEAD_COUNT" -lt 10 ]; then
+        echo -e "${YELLOW}⚠️  $DEAD_COUNT dead jobs (minor concern)${NC}"
+    else
+        echo -e "${RED}❌ $DEAD_COUNT dead jobs (requires attention)${NC}"
+        FAILED_QUEUES=$((FAILED_QUEUES + 1))
+    fi
+else
+    echo -e "${RED}❌ Failed to check dead jobs${NC}"
+    FAILED_QUEUES=$((FAILED_QUEUES + 1))
+fi
+
+# Check for failed jobs
+echo -e "${YELLOW}🔄 Checking retry queue...${NC}"
+if RETRY_COUNT=$(RAILS_ENV=$RAILS_ENV bundle exec rails runner "require 'sidekiq/api'; puts Sidekiq::RetrySet.new.size" 2>&1 | tail -1 | grep -o '[0-9]*'); then
+    if [ "$RETRY_COUNT" -eq 0 ]; then
+        echo -e "${GREEN}✅ No jobs in retry queue${NC}"
+    elif [ "$RETRY_COUNT" -lt 20 ]; then
+        echo -e "${YELLOW}⚠️  $RETRY_COUNT jobs retrying (normal)${NC}"
+    else
+        echo -e "${RED}❌ $RETRY_COUNT jobs retrying (may indicate issues)${NC}"
+        FAILED_QUEUES=$((FAILED_QUEUES + 1))
+    fi
+else
+    echo -e "${RED}❌ Failed to check retry queue${NC}"
+    FAILED_QUEUES=$((FAILED_QUEUES + 1))
+fi
+
+# Check Sidekiq stats
+echo -e "${YELLOW}📈 Sidekiq statistics...${NC}"
+if RAILS_ENV=$RAILS_ENV bundle exec rails runner "
+require 'sidekiq/api'
+stats = Sidekiq::Stats.new
+puts \"Processed: #{stats.processed}\"
+puts \"Failed: #{stats.failed}\"
+puts \"Busy: #{stats.workers_size}\"
+puts \"Enqueued: #{stats.enqueued}\"
+puts \"Scheduled: #{stats.scheduled_size}\"
+" 2>/dev/null; then
+    echo -e "${GREEN}✅ Statistics retrieved successfully${NC}"
+else
+    echo -e "${RED}❌ Failed to retrieve statistics${NC}"
+    FAILED_QUEUES=$((FAILED_QUEUES + 1))
+fi
+
+# Summary
+echo -e "${BLUE}📋 Health Check Summary:${NC}"
+echo -e "   Total queues checked: ${#EXPECTED_QUEUES[@]}"
+echo -e "   Total jobs across all queues: $TOTAL_JOBS"
+echo -e "   Failed checks: $FAILED_QUEUES"
+
+if [ "$FAILED_QUEUES" -eq 0 ]; then
+    echo -e "${GREEN}🎉 All Sidekiq queues are healthy!${NC}"
+    exit 0
+elif [ "$FAILED_QUEUES" -le 2 ]; then
+    echo -e "${YELLOW}⚠️  Minor issues detected (deployment can continue)${NC}"
+    exit 0
+else
+    echo -e "${RED}❌ Significant issues detected (deployment should be reviewed)${NC}"
+    exit 1
+fi

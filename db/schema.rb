@@ -20,7 +20,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "message_checksum", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["message_id", "message_checksum"], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
+    t.index [ "message_id", "message_checksum" ], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
   end
 
   create_table "action_text_rich_texts", force: :cascade do |t|
@@ -30,7 +30,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "record_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
+    t.index [ "record_type", "record_id", "name" ], name: "index_action_text_rich_texts_uniqueness", unique: true
   end
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -39,8 +39,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "record_id", null: false
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
-    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
-    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+    t.index [ "blob_id" ], name: "index_active_storage_attachments_on_blob_id"
+    t.index [ "record_type", "record_id", "name", "blob_id" ], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", force: :cascade do |t|
@@ -52,66 +52,193 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "byte_size", null: false
     t.string "checksum"
     t.datetime "created_at", null: false
-    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+    t.index [ "key" ], name: "index_active_storage_blobs_on_key", unique: true
   end
 
   create_table "active_storage_variant_records", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
-    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+    t.index [ "blob_id", "variation_digest" ], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
-  create_table "brreg", force: :cascade do |t|
-    t.string "organisasjonsnummer", null: false
-    t.text "navn", null: false
+  create_table "brreg", id: false, force: :cascade do |t|
+    t.integer "organisasjonsnummer"
+    t.text "navn"
     t.text "organisasjonsform_kode"
     t.text "organisasjonsform_beskrivelse"
-    t.text "naeringskode1_kode"
+    t.decimal "naeringskode1_kode"
     t.text "naeringskode1_beskrivelse"
     t.text "naeringskode2_kode"
     t.text "naeringskode2_beskrivelse"
     t.text "naeringskode3_kode"
     t.text "naeringskode3_beskrivelse"
-    t.text "aktivitet"
-    t.integer "antallansatte"
+    t.decimal "hjelpeenhetskode_kode"
+    t.text "hjelpeenhetskode_beskrivelse"
+    t.text "harregistrertantallansatte"
+    t.text "antallansatte"
+    t.text "registreringsdatoantallansatteenhetsregisteret"
+    t.text "registreringsdatoantallansattenavaaregisteret"
     t.text "hjemmeside"
-    t.text "epost"
+    t.text "epostadresse"
     t.text "telefon"
-    t.text "mobiltelefon"
-    t.text "forretningsadresse"
+    t.text "mobil"
+    t.text "postadresse_adresse"
+    t.text "postadresse_poststed"
+    t.integer "postadresse_postnummer"
+    t.text "postadresse_kommune"
+    t.integer "postadresse_kommunenummer"
+    t.text "postadresse_land"
+    t.text "postadresse_landkode"
+    t.text "forretningsadresse_adresse"
     t.text "forretningsadresse_poststed"
-    t.text "forretningsadresse_postnummer"
+    t.integer "forretningsadresse_postnummer"
     t.text "forretningsadresse_kommune"
+    t.integer "forretningsadresse_kommunenummer"
     t.text "forretningsadresse_land"
-    t.bigint "driftsinntekter"
-    t.bigint "driftskostnad"
-    t.bigint "ordinaertResultat"
-    t.bigint "aarsresultat"
-    t.boolean "mvaregistrert"
-    t.date "mvaregistrertdato"
-    t.boolean "frivilligmvaregistrert"
-    t.date "frivilligmvaregistrertdato"
-    t.date "stiftelsesdato"
-    t.boolean "konkurs"
-    t.date "konkursdato"
-    t.boolean "underavvikling"
-    t.date "avviklingsdato"
-    t.text "linked_in"
-    t.text "linked_in_ai"
-    t.jsonb "linked_in_alternatives"
-    t.boolean "linked_in_processed", default: false
-    t.datetime "linked_in_last_processed_at"
-    t.integer "http_error"
+    t.text "forretningsadresse_landkode"
+    t.integer "institusjonellsektorkode_kode"
+    t.text "institusjonellsektorkode_beskrivelse"
+    t.integer "sisteinnsendteaarsregnskap"
+    t.text "registreringsdatoenhetsregisteret"
+    t.text "stiftelsesdato"
+    t.text "registrertimvaregisteret"
+    t.text "registreringsdatomerverdiavgiftsregisteret"
+    t.text "registreringsdatomerverdiavgiftsregisteretenhetsregisteret"
+    t.text "frivilligmvaregistrertbeskrivelser"
+    t.text "registreringsdatofrivilligmerverdiavgiftsregisteret"
+    t.text "registrertifrivillighetsregisteret"
+    t.text "registreringsdatofrivillighetsregisteret"
+    t.text "registrertiforetaksregisteret"
+    t.text "registreringsdatoforetaksregisteret"
+    t.text "registrertistiftelsesregisteret"
+    t.text "registrertipartiregisteret"
+    t.text "registreringsdatopartiregisteret"
+    t.text "konkurs"
+    t.text "konkursdato"
+    t.text "underavvikling"
+    t.text "underavviklingdato"
+    t.text "undertvangsavviklingellertvangsopplosning"
+    t.text "tvangsopplostpgamanglendedagliglederdato"
+    t.text "tvangsopplostpgamanglenderevisordato"
+    t.text "tvangsopplostpgamanglenderegnskapdato"
+    t.text "tvangsopplostpgamangelfulltstyredato"
+    t.text "tvangsavvikletpgamanglendeslettingdato"
+    t.text "overordnetenhet"
+    t.text "maalform"
+    t.text "vedtektsdato"
+    t.text "vedtektsfestetformaal"
+    t.text "aktivitet"
+    t.text "registreringsnummerihjemlandet"
+    t.text "paategninger"
+    t.integer "ordinaertresultat"
+    t.integer "aarsresultat"
+    t.integer "driftsinntekter"
+    t.integer "driftskostnad"
+    t.text "http_error"
     t.text "http_error_message"
-    t.jsonb "brreg_result_raw"
     t.text "description"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["driftsinntekter"], name: "index_brreg_on_driftsinntekter"
-    t.index ["linked_in_ai"], name: "index_brreg_on_linked_in_ai"
-    t.index ["organisasjonsform_beskrivelse"], name: "index_brreg_on_organisasjonsform_beskrivelse"
-    t.index ["organisasjonsnummer"], name: "index_brreg_on_organisasjonsnummer", unique: true
+    t.text "industry"
+    t.text "country"
+    t.text "webpage"
+    t.text "linked_in_ai"
+    t.text "sps_match"
+    t.text "sps_match_percentage"
+    t.text "linked_in"
+    t.text "linked_in_alt"
+    t.text "linked_in_alternatives"
+    t.text "brreg_result_raw"
+    t.text "segment"
   end
+
+  create_table "brreg2_old", id: false, force: :cascade do |t|
+    t.integer "organisasjonsnummer"
+    t.text "navn"
+    t.text "organisasjonsform_kode"
+    t.text "organisasjonsform_beskrivelse"
+    t.decimal "naeringskode1_kode"
+    t.text "naeringskode1_beskrivelse"
+    t.text "naeringskode2_kode"
+    t.text "naeringskode2_beskrivelse"
+    t.text "naeringskode3_kode"
+    t.text "naeringskode3_beskrivelse"
+    t.decimal "hjelpeenhetskode_kode"
+    t.text "hjelpeenhetskode_beskrivelse"
+    t.text "harregistrertantallansatte"
+    t.text "antallansatte"
+    t.text "registreringsdatoantallansatteenhetsregisteret"
+    t.text "registreringsdatoantallansattenavaaregisteret"
+    t.text "hjemmeside"
+    t.text "epostadresse"
+    t.text "telefon"
+    t.text "mobil"
+    t.text "postadresse_adresse"
+    t.text "postadresse_poststed"
+    t.integer "postadresse_postnummer"
+    t.text "postadresse_kommune"
+    t.integer "postadresse_kommunenummer"
+    t.text "postadresse_land"
+    t.text "postadresse_landkode"
+    t.text "forretningsadresse_adresse"
+    t.text "forretningsadresse_poststed"
+    t.integer "forretningsadresse_postnummer"
+    t.text "forretningsadresse_kommune"
+    t.integer "forretningsadresse_kommunenummer"
+    t.text "forretningsadresse_land"
+    t.text "forretningsadresse_landkode"
+    t.integer "institusjonellsektorkode_kode"
+    t.text "institusjonellsektorkode_beskrivelse"
+    t.integer "sisteinnsendteaarsregnskap"
+    t.text "registreringsdatoenhetsregisteret"
+    t.text "stiftelsesdato"
+    t.text "registrertimvaregisteret"
+    t.text "registreringsdatomerverdiavgiftsregisteret"
+    t.text "registreringsdatomerverdiavgiftsregisteretenhetsregisteret"
+    t.text "frivilligmvaregistrertbeskrivelser"
+    t.text "registreringsdatofrivilligmerverdiavgiftsregisteret"
+    t.text "registrertifrivillighetsregisteret"
+    t.text "registreringsdatofrivillighetsregisteret"
+    t.text "registrertiforetaksregisteret"
+    t.text "registreringsdatoforetaksregisteret"
+    t.text "registrertistiftelsesregisteret"
+    t.text "registrertipartiregisteret"
+    t.text "registreringsdatopartiregisteret"
+    t.text "konkurs"
+    t.text "konkursdato"
+    t.text "underavvikling"
+    t.text "underavviklingdato"
+    t.text "undertvangsavviklingellertvangsopplosning"
+    t.text "tvangsopplostpgamanglendedagliglederdato"
+    t.text "tvangsopplostpgamanglenderevisordato"
+    t.text "tvangsopplostpgamanglenderegnskapdato"
+    t.text "tvangsopplostpgamangelfulltstyredato"
+    t.text "tvangsavvikletpgamanglendeslettingdato"
+    t.text "overordnetenhet"
+    t.text "maalform"
+    t.text "vedtektsdato"
+    t.text "vedtektsfestetformaal"
+    t.text "aktivitet"
+    t.text "registreringsnummerihjemlandet"
+    t.text "paategninger"
+    t.integer "ordinaertresultat"
+    t.integer "aarsresultat"
+    t.integer "driftsinntekter"
+    t.integer "driftskostnad"
+    t.text "http_error"
+    t.text "http_error_message"
+    t.text "description"
+    t.text "industry"
+    t.text "country"
+    t.text "webpage"
+    t.text "linked_in_ai"
+    t.text "sps_match"
+    t.text "sps_match_percentage"
+    t.text "linked_in"
+    t.text "linked_in_alt"
+    t.text "linked_in_alternatives"
+    t.text "brreg_result_raw"
+    t.text "segment"
+  end
+
 
   create_table "communications", force: :cascade do |t|
     t.datetime "timestamp"
@@ -217,11 +344,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.decimal "long_term_liabilities"
     t.integer "year"
     t.text "financial_data"
-    t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
-    t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
-    t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
-    t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
-    t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
+    t.index [ "linkedin_ai_url" ], name: "index_companies_on_linkedin_ai_url"
+    t.index [ "operating_revenue" ], name: "index_companies_on_operating_revenue"
+    t.index [ "organization_form_description" ], name: "index_companies_on_organization_form_description"
+    t.index [ "registration_number" ], name: "index_companies_on_registration_number_unique", unique: true
+    t.index [ "source_country", "source_registry" ], name: "index_companies_on_source_country_and_source_registry"
   end
 
   create_table "domains", force: :cascade do |t|
@@ -232,6 +359,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.datetime "updated_at", null: false
     t.boolean "dns"
     t.string "mx_error"
+  end
+
+  create_table "domains_se_raw", id: false, force: :cascade do |t|
+    t.text "c1"
   end
 
   create_table "service_audit_logs", force: :cascade do |t|
@@ -254,16 +385,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "table_name", default: "", null: false
     t.string "target_table"
     t.string "record_id"
-    t.index ["auditable_type", "auditable_id", "service_name"], name: "index_service_audit_logs_on_auditable_and_service"
-    t.index ["auditable_type", "auditable_id"], name: "index_service_audit_logs_on_auditable"
-    t.index ["created_at"], name: "index_service_audit_logs_on_created_at"
-    t.index ["metadata"], name: "index_service_audit_logs_on_metadata", using: :gin
-    t.index ["record_id"], name: "index_service_audit_logs_on_record_id"
-    t.index ["service_name", "status", "created_at"], name: "index_service_audit_logs_on_service_status_created"
-    t.index ["service_name"], name: "index_service_audit_logs_on_service_name"
-    t.index ["status"], name: "index_service_audit_logs_on_status"
-    t.index ["table_name"], name: "index_service_audit_logs_on_table_name"
-    t.index ["target_table"], name: "index_service_audit_logs_on_target_table"
+    t.index [ "auditable_type", "auditable_id", "service_name" ], name: "index_service_audit_logs_on_auditable_and_service"
+    t.index [ "auditable_type", "auditable_id" ], name: "index_service_audit_logs_on_auditable"
+    t.index [ "created_at" ], name: "index_service_audit_logs_on_created_at"
+    t.index [ "metadata" ], name: "index_service_audit_logs_on_metadata", using: :gin
+    t.index [ "record_id" ], name: "index_service_audit_logs_on_record_id"
+    t.index [ "service_name", "status", "created_at" ], name: "index_service_audit_logs_on_service_status_created"
+    t.index [ "service_name" ], name: "index_service_audit_logs_on_service_name"
+    t.index [ "status" ], name: "index_service_audit_logs_on_status"
+    t.index [ "table_name" ], name: "index_service_audit_logs_on_table_name"
+    t.index [ "target_table" ], name: "index_service_audit_logs_on_target_table"
   end
 
   create_table "service_configurations", force: :cascade do |t|
@@ -276,9 +407,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.jsonb "settings", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["active"], name: "index_service_configurations_on_active"
-    t.index ["service_name"], name: "index_service_configurations_on_service_name", unique: true
-    t.index ["settings"], name: "index_service_configurations_on_settings", using: :gin
+    t.index [ "active" ], name: "index_service_configurations_on_active"
+    t.index [ "service_name" ], name: "index_service_configurations_on_service_name", unique: true
+    t.index [ "settings" ], name: "index_service_configurations_on_settings", using: :gin
   end
 
   create_table "users", force: :cascade do |t|
@@ -298,9 +429,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "last_sign_in_ip"
     t.string "email_provider"
     t.datetime "last_enhanced_at"
-    t.boolean "enhanced", default: false, null: false
-    t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index [ "email" ], name: "index_users_on_email", unique: true
+    t.index [ "reset_password_token" ], name: "index_users_on_reset_password_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
