@@ -17,10 +17,10 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/rack/rack".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.4.0".freeze)
-  s.rubygems_version = "3.6.2".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "A modular Ruby webserver interface.".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

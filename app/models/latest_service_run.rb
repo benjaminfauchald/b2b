@@ -1,7 +1,9 @@
 class LatestServiceRun < ApplicationRecord
   # This is a read-only view model
   self.table_name = "latest_service_runs"
-  self.primary_key = [ "service_name", "auditable_type", "auditable_id" ]
+  # Rails 8 uses symbol arrays for composite primary keys
+  # (string arrays can raise argument-arity errors during initialisation)
+  self.primary_key = %i[service_name auditable_type auditable_id]
 
   # Make it read-only
   def readonly?

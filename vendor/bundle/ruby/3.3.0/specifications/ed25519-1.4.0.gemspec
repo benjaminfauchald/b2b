@@ -19,10 +19,10 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/RubyCrypto/ed25519".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.0".freeze)
-  s.rubygems_version = "3.5.16".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "An efficient digital signature library providing the Ed25519 algorithm".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

@@ -14,10 +14,10 @@ Gem::Specification.new do |s|
   s.files = ["bin/kamal".freeze]
   s.homepage = "https://github.com/basecamp/kamal".freeze
   s.licenses = ["MIT".freeze]
-  s.rubygems_version = "3.6.7".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "Deploy web apps in containers to servers running Docker with zero downtime.".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

@@ -13,10 +13,10 @@ Gem::Specification.new do |s|
   s.email = ["jmettraux+flor@gmail.com".freeze]
   s.homepage = "https://github.com/floraison/raabro".freeze
   s.licenses = ["MIT".freeze]
-  s.rubygems_version = "3.0.3".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "a very dumb PEG parser library".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

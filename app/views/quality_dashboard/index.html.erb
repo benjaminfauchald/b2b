@@ -1,0 +1,404 @@
+<%# Quality Dashboard - Main View %>
+<div class="bg-gray-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <%# Header section %>
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl">Service Quality Dashboard</h1>
+        <p class="mt-1 text-sm text-gray-500">
+          Real-time metrics and health status for all services
+        </p>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <span class="text-sm text-gray-500" id="last-updated">
+          Last updated: <%= Time.current.strftime("%H:%M:%S") %>
+        </span>
+        
+        <% if current_user&.role == 'admin' %>
+          <%= button_to refresh_quality_dashboard_index_path, 
+                method: :post,
+                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+                data: { turbo_frame: "_top" } do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh Stats
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+    
+    <%# Summary metrics cards %>
+    <div id="summary-metrics" class="mb-8">
+      <%= turbo_frame_tag "dashboard-summary", data: { turbo_refresh_interval: 60000 } do %>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <%# Total Services Card %>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">
+                      Active Services
+                    </dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">
+                        <%= @daily_summary[:total_services] || 0 %>
+                      </div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <%# Total Runs Card %>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">
+                      Total Runs Today
+                    </dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">
+                        <%= number_with_delimiter(@daily_summary[:total_runs] || 0) %>
+                      </div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <%# Failed Runs Card %>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">
+                      Failed Runs Today
+                    </dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">
+                        <%= number_with_delimiter(@daily_summary[:failed_runs] || 0) %>
+                      </div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <%# Error Rate Card %>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <% error_rate = @daily_summary[:error_rate] || 0 %>
+                <% bg_color = error_rate > 5 ? (error_rate > 20 ? "bg-red-500" : "bg-yellow-500") : "bg-green-500" %>
+                <div class="flex-shrink-0 <%= bg_color %> rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">
+                      Error Rate
+                    </dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">
+                        <%= number_to_percentage(error_rate, precision: 2) %>
+                      </div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <%# Avg Execution Time Card %>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                  <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">
+                      Avg Execution Time
+                    </dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">
+                        <% avg_time = @daily_summary[:avg_execution_time] || 0 %>
+                        <%= avg_time < 1000 ? "#{avg_time.round}ms" : "#{(avg_time / 1000.0).round(2)}s" %>
+                      </div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <%# Top services section %>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+      <%# Top Error Services %>
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Top Error Services
+          </h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Services with the highest error rates in the last 24 hours
+          </p>
+        </div>
+        
+        <%= turbo_frame_tag "top-error-services", data: { turbo_refresh_interval: 60000 } do %>
+          <div class="overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Error Rate
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Failed / Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <% if @top_error_services.present? %>
+                  <% @top_error_services.each do |service| %>
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <%= link_to service[:service_name], quality_dashboard_path(service[:service_name]), class: "text-sm font-medium text-indigo-600 hover:text-indigo-900" %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <% error_class = service[:error_rate] > 20 ? "bg-red-100 text-red-800" : (service[:error_rate] > 5 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800") %>
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= error_class %>">
+                          <%= number_to_percentage(service[:error_rate], precision: 2) %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <%= service[:failed_runs] %> / <%= service[:total_runs] %>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                      No error data available
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+      
+      <%# Top Slowest Services %>
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Top Slowest Services
+          </h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Services with the longest execution times in the last 24 hours
+          </p>
+        </div>
+        
+        <%= turbo_frame_tag "top-slowest-services", data: { turbo_refresh_interval: 60000 } do %>
+          <div class="overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    P95 Time
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Avg Time
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <% if @top_slowest_services.present? %>
+                  <% @top_slowest_services.each do |service| %>
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <%= link_to service[:service_name], quality_dashboard_path(service[:service_name]), class: "text-sm font-medium text-indigo-600 hover:text-indigo-900" %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <% p95_time = service[:p95_execution_time_ms] || 0 %>
+                        <% p95_class = p95_time > 1000 ? "bg-red-100 text-red-800" : (p95_time > 500 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800") %>
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= p95_class %>">
+                          <%= p95_time < 1000 ? "#{p95_time.round}ms" : "#{(p95_time / 1000.0).round(2)}s" %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <% avg_time = service[:avg_execution_time_ms] || 0 %>
+                        <%= avg_time < 1000 ? "#{avg_time.round}ms" : "#{(avg_time / 1000.0).round(2)}s" %>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                      No performance data available
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
+    <%# Service Health Status Table %>
+    <div class="bg-white shadow overflow-hidden rounded-lg mb-8">
+      <div class="px-4 py-5 border-b border-gray-200 sm:px-6 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Service Health Status
+          </h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Current health status of all active services
+          </p>
+        </div>
+        <div class="flex space-x-4">
+          <div class="flex items-center">
+            <span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>
+            <span class="text-xs text-gray-500">Healthy</span>
+          </div>
+          <div class="flex items-center">
+            <span class="h-3 w-3 bg-yellow-500 rounded-full mr-2"></span>
+            <span class="text-xs text-gray-500">Warning</span>
+          </div>
+          <div class="flex items-center">
+            <span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>
+            <span class="text-xs text-gray-500">Critical</span>
+          </div>
+          <div class="flex items-center">
+            <span class="h-3 w-3 bg-gray-300 rounded-full mr-2"></span>
+            <span class="text-xs text-gray-500">Unknown</span>
+          </div>
+        </div>
+      </div>
+      
+      <%= turbo_frame_tag "service-health-status", data: { turbo_refresh_interval: 60000 } do %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Service
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Error Rate
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  P95 Time
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Runs Today
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Run
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% if @active_services.present? %>
+                <% @active_services.each do |service_name| %>
+                  <% service_health = @service_health[service_name] || {} %>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <%= link_to service_name, quality_dashboard_path(service_name), class: "text-sm font-medium text-indigo-600 hover:text-indigo-900" %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <% status_class = case service_health[:status_class]
+                                       when 'critical' then 'bg-red-100 text-red-800'
+                                       when 'warning' then 'bg-yellow-100 text-yellow-800'
+                                       when 'success' then 'bg-green-100 text-green-800'
+                                       else 'bg-gray-100 text-gray-800'
+                                       end %>
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_class %>">
+                        <%= service_health[:status] || 'Unknown' %>
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <%= number_to_percentage(service_health[:error_rate] || 0, precision: 2) %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <% p95_time = service_health[:p95_execution_time_ms] || 0 %>
+                      <%= p95_time < 1000 ? "#{p95_time.round}ms" : "#{(p95_time / 1000.0).round(2)}s" %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <%= service_health[:total_runs_today] || 0 %> 
+                      <% if service_health[:failed_runs_today].to_i > 0 %>
+                        <span class="text-red-500">
+                          (<%= service_health[:failed_runs_today] %> failed)
+                        </span>
+                      <% end %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <% if service_health[:last_run_at].present? %>
+                        <%= time_ago_in_words(Time.parse(service_health[:last_run_at])) %> ago
+                      <% else %>
+                        Never
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No active services found
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<%# Stimulus controller for dashboard %>
+<%= content_tag :div, nil, data: { controller: "dashboard-refresh" } %>

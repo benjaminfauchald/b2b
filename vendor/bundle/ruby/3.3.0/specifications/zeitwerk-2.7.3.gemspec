@@ -15,8 +15,8 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/fxn/zeitwerk".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.2".freeze)
-  s.rubygems_version = "3.6.9".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "Efficient and thread-safe constant autoloader".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 end

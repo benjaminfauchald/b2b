@@ -28,6 +28,26 @@ Rails.application.routes.draw do
     post "/instantly", to: "instantly_webhook#create"
   end
 
+  # ------------------------------------------------------------------
+  # Quality Dashboard
+  # ------------------------------------------------------------------
+  # HTML + JSON endpoints for service quality insights.
+  # - index  : /quality            => QualityDashboard#index
+  # - show   : /quality/:id        => QualityDashboard#show
+  # - member : /quality/:id/hourly_stats (AJAX JSON)
+  # - member : /quality/:id/daily_stats  (AJAX JSON)
+  # - POST   : /quality/refresh    => QualityDashboard#refresh_stats (admin only)
+  resources :quality_dashboard, only: %i[index show], path: "quality" do
+    member do
+      get :hourly_stats, to: "quality_dashboard#service_hourly_stats"
+      get :daily_stats,  to: "quality_dashboard#service_daily_stats"
+    end
+
+    collection do
+      post :refresh, to: "quality_dashboard#refresh_stats"
+    end
+  end
+
   # Sidekiq Web UI with environment-specific authentication
   require "sidekiq/web"
 

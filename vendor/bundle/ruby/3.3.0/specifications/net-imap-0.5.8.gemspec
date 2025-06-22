@@ -16,10 +16,10 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/ruby/net-imap".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.1.0".freeze)
-  s.rubygems_version = "3.6.7".freeze
+  s.rubygems_version = "3.5.3".freeze
   s.summary = "Ruby client api for Internet Message Access Protocol".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

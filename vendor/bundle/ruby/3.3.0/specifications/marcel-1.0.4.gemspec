@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.rubygems_version = "3.5.3".freeze
   s.summary = "Simple mime type detection using magic numbers, filenames, and extensions".freeze
 
-  s.installed_by_version = "3.6.9".freeze
+  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
 
   s.specification_version = 4
 

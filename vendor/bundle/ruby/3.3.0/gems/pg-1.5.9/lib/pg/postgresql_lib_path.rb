@@ -1,3 +1,3 @@
 module PG
-	POSTGRESQL_LIB_PATH = "/usr/lib/x86_64-linux-gnu"
+	POSTGRESQL_LIB_PATH = "/opt/homebrew/lib/postgresql@14"
 end
