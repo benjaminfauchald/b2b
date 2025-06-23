@@ -89,11 +89,11 @@
         headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "Actions"]
         rows = @domains.map do |domain|
           [
-            domain.name,
-            domain.status || "Unknown",
+            domain.domain,
+            domain.test_status.capitalize,
             domain.updated_at&.strftime("%Y-%m-%d %H:%M") || "Never",
-            domain.dns_status || "Not tested",
-            domain.mx_status || "Not tested",
+            domain.dns.nil? ? "Not tested" : (domain.dns ? "Active" : "Inactive"),
+            domain.mx.nil? ? "Not tested" : (domain.mx ? "Active" : "Inactive"),
             link_to("View", domain_path(domain), class: "text-blue-600 hover:text-blue-800 font-medium")
           ]
         end
