@@ -1,18 +1,19 @@
 # frozen_string_literal: true
 
 class StatsCardComponent < ViewComponent::Base
-  def initialize(label:, value:, icon: nil, trend: nil, trend_direction: nil, color: :blue)
+  def initialize(label:, value:, icon: nil, trend: nil, trend_direction: nil, color: :blue, data_stat: nil)
     @label = label
     @value = value
     @icon = icon
     @trend = trend
     @trend_direction = trend_direction
     @color = color
+    @data_stat = data_stat
   end
 
   private
 
-  attr_reader :label, :value, :icon, :trend, :trend_direction, :color
+  attr_reader :label, :value, :icon, :trend, :trend_direction, :color, :data_stat
 
   def color_classes
     colors = {

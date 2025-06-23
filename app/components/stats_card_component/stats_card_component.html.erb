@@ -1,17 +1,18 @@
-<div class="flex items-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
+<div class="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition-shadow">
   <% if icon %>
-    <div class="inline-flex flex-shrink-0 items-center justify-center h-12 w-12 rounded-lg <%= color_classes %>">
+    <div class="flex items-center justify-center w-12 h-12 rounded-lg <%= color_classes %> mb-4">
       <span class="text-2xl"><%= icon %></span>
     </div>
   <% end %>
   
-  <div class="<%= icon ? 'ml-4' : '' %> flex-grow">
-    <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1"><%= label %></p>
-    <div class="flex items-baseline">
-      <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= value %></p>
+  <div class="space-y-1">
+    <p class="text-sm font-medium text-gray-600 dark:text-gray-400"><%= label %></p>
+    <div class="flex items-baseline space-x-2">
+      <p class="text-3xl font-bold text-gray-900 dark:text-white" <% if data_stat %>data-stat="<%= data_stat %>"<% end %>><%= value %></p>
       <% if trend %>
-        <span class="ml-2 flex items-center text-sm font-medium <%= trend_color %>">
-          <%= trend_icon %> <%= trend %>
+        <span class="flex items-center text-sm font-medium <%= trend_color %>">
+          <span class="mr-1"><%= trend_icon %></span>
+          <%= trend %>
         </span>
       <% end %>
     </div>

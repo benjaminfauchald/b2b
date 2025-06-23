@@ -54,13 +54,15 @@
     <%= render StatsCardComponent.new(
       label: "DNS Testing Queue",
       value: @queue_stats['domain_dns_testing'] || 0,
-      icon: "🔍"
+      icon: "🔍",
+      data_stat: "dns-queue"
     ) %>
     
     <%= render StatsCardComponent.new(
       label: "MX Testing Queue", 
       value: @queue_stats['domain_mx_testing'] || 0,
-      icon: "✉️"
+      icon: "✉️",
+      data_stat: "mx-queue"
     ) %>
     
     <%= render StatsCardComponent.new(
@@ -68,13 +70,15 @@
       value: @queue_stats[:total_processed] || 0,
       icon: "✅",
       trend: "+12.5%",
-      trend_direction: "up"
+      trend_direction: "up",
+      data_stat: "processed"
     ) %>
     
     <%= render StatsCardComponent.new(
       label: "Workers Busy",
       value: @queue_stats[:workers_busy] || 0,
-      icon: "⚡"
+      icon: "⚡",
+      data_stat: "workers"
     ) %>
   </div>
 
