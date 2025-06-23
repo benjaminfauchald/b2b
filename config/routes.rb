@@ -6,6 +6,11 @@ Rails.application.routes.draw do
     collection do
       post :queue_testing
       get :queue_status
+      get :import, to: "domains#import_csv"
+      post :import, to: "domains#process_import"
+      get :import_results, to: "domains#import_results"
+      get :template, to: "domains#download_template"
+      get :export_errors, to: "domains#export_errors"
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

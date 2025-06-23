@@ -457,6 +457,7 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.13.1)
     simplecov_json_formatter (0.1.4)
+    smarter_csv (1.14.4)
     solid_cable (3.0.8)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -589,6 +590,7 @@ DEPENDENCIES
   shoulda-matchers (~> 5.0)
   sidekiq (~> 8.0)
   simplecov
+  smarter_csv (~> 1.8)
   solid_cable
   solid_cache
   solid_queue
