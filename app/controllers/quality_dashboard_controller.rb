@@ -1,25 +1,25 @@
 class QualityDashboardController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_service, only: [:show, :service_hourly_stats, :service_daily_stats]
-  before_action :check_analyst_role, except: [:index, :show, :service_hourly_stats, :service_daily_stats]
+  before_action :set_service, only: [ :show, :service_hourly_stats, :service_daily_stats ]
+  before_action :check_analyst_role, except: [ :index, :show, :service_hourly_stats, :service_daily_stats ]
 
   # Redis cache keys - must match those in QualityMetricsWorker
   CACHE_KEYS = {
-    top_error_services: 'quality_metrics:top_error_services',
-    top_slowest_services: 'quality_metrics:top_slowest_services',
-    daily_stats_summary: 'quality_metrics:daily_stats_summary',
-    hourly_stats_summary: 'quality_metrics:hourly_stats_summary',
-    service_health_status: 'quality_metrics:service_health_status',
+    top_error_services: "quality_metrics:top_error_services",
+    top_slowest_services: "quality_metrics:top_slowest_services",
+    daily_stats_summary: "quality_metrics:daily_stats_summary",
+    hourly_stats_summary: "quality_metrics:hourly_stats_summary",
+    service_health_status: "quality_metrics:service_health_status"
   }.freeze
 
   # Main dashboard page
   def index
     @page_title = "Service Quality Dashboard"
-    
+
     # Get overall stats from Redis cache or fallback to DB
     @daily_summary = fetch_from_cache_or_compute(CACHE_KEYS[:daily_stats_summary]) do
       {
-        total_services: DailyServiceStat.today.count('DISTINCT service_name'),
+        total_services: DailyServiceStat.today.count("DISTINCT service_name"),
         total_runs: DailyServiceStat.today.sum(:total_runs),
         failed_runs: DailyServiceStat.today.sum(:failed_runs),
         error_rate: calculate_overall_error_rate(DailyServiceStat.today),
@@ -29,14 +29,14 @@ class QualityDashboardController < ApplicationController
 
     # Get top error services from cache or fallback to DB
     @top_error_services = fetch_from_cache_or_compute(CACHE_KEYS[:top_error_services]) do
-      DailyServiceStat.where('date >= ?', 1.day.ago.to_date)
+      DailyServiceStat.where("date >= ?", 1.day.ago.to_date)
                       .top_error_services(10)
                       .map { |stat| serialize_stat(stat) }
     end
 
     # Get top slowest services from cache or fallback to DB
     @top_slowest_services = fetch_from_cache_or_compute(CACHE_KEYS[:top_slowest_services]) do
-      DailyServiceStat.where('date >= ?', 1.day.ago.to_date)
+      DailyServiceStat.where("date >= ?", 1.day.ago.to_date)
                       .top_slowest_services(10)
                       .map { |stat| serialize_stat(stat) }
     end
@@ -67,21 +67,21 @@ class QualityDashboardController < ApplicationController
   # Individual service details
   def show
     @page_title = "Service Quality: #{@service_name}"
-    
+
     # Get daily stats for the service (last 30 days)
     @daily_stats = DailyServiceStat.for_service(@service_name)
-                                  .where('date >= ?', 30.days.ago.to_date)
+                                  .where("date >= ?", 30.days.ago.to_date)
                                   .order(date: :desc)
-    
+
     # Get hourly stats for the service (last 24 hours)
     @hourly_stats = HourlyServiceStat.for_service(@service_name)
-                                    .where('date >= ?', 24.hours.ago.to_date)
+                                    .where("date >= ?", 24.hours.ago.to_date)
                                     .order(date: :desc, hour: :desc)
                                     .limit(24)
-    
+
     # Get service configuration
     @service_config = ServiceConfiguration.find_by(service_name: @service_name)
-    
+
     # Get recent audit logs
     @recent_audit_logs = ServiceAuditLog.for_service(@service_name)
                                        .order(created_at: :desc)
@@ -94,7 +94,7 @@ class QualityDashboardController < ApplicationController
           service_name: @service_name,
           daily_stats: @daily_stats.map { |stat| serialize_stat(stat) },
           hourly_stats: @hourly_stats.map { |stat| serialize_stat(stat) },
-          service_config: @service_config.as_json(except: [:created_at, :updated_at]),
+          service_config: @service_config.as_json(except: [ :created_at, :updated_at ]),
           recent_audit_logs: @recent_audit_logs.map { |log| serialize_audit_log(log) }
         }
       end
@@ -109,11 +109,11 @@ class QualityDashboardController < ApplicationController
   # API endpoint for service hourly stats (for AJAX charts)
   def service_hourly_stats
     days = params[:days].present? ? params[:days].to_i : 1
-    
+
     @stats = HourlyServiceStat.for_service(@service_name)
-                             .where('date >= ?', days.days.ago.to_date)
+                             .where("date >= ?", days.days.ago.to_date)
                              .order(date: :asc, hour: :asc)
-    
+
     render json: {
       service_name: @service_name,
       stats: @stats.map { |stat| serialize_stat(stat) }
@@ -125,11 +125,11 @@ class QualityDashboardController < ApplicationController
   # API endpoint for service daily stats (for AJAX charts)
   def service_daily_stats
     days = params[:days].present? ? params[:days].to_i : 30
-    
+
     @stats = DailyServiceStat.for_service(@service_name)
-                            .where('date >= ?', days.days.ago.to_date)
+                            .where("date >= ?", days.days.ago.to_date)
                             .order(date: :asc)
-    
+
     render json: {
       service_name: @service_name,
       stats: @stats.map { |stat| serialize_stat(stat) }
@@ -140,17 +140,17 @@ class QualityDashboardController < ApplicationController
 
   # Trigger a refresh of the materialized views
   def refresh_stats
-    unless current_user.role == 'admin'
+    unless current_user.role == "admin"
       respond_to do |format|
         format.html { redirect_to quality_dashboard_index_path, alert: "You don't have permission to refresh stats" }
         format.json { render json: { error: "Permission denied" }, status: :forbidden }
       end
       return
     end
-    
+
     begin
       QualityMetricsWorker.perform_later
-      
+
       respond_to do |format|
         format.html { redirect_to quality_dashboard_index_path, notice: "Stats refresh has been scheduled" }
         format.json { render json: { message: "Stats refresh has been scheduled" } }
@@ -167,7 +167,7 @@ class QualityDashboardController < ApplicationController
 
   def set_service
     @service_name = params[:id]
-    
+
     # Verify service exists
     unless ServiceConfiguration.exists?(service_name: @service_name)
       raise ActiveRecord::RecordNotFound, "Service '#{@service_name}' not found"
@@ -175,7 +175,7 @@ class QualityDashboardController < ApplicationController
   end
 
   def check_analyst_role
-    unless current_user.role == 'admin' || current_user.role == 'analyst'
+    unless current_user.role == "admin" || current_user.role == "analyst"
       respond_to do |format|
         format.html { redirect_to quality_dashboard_index_path, alert: "You don't have permission to access this page" }
         format.json { render json: { error: "Permission denied" }, status: :forbidden }
@@ -187,7 +187,7 @@ class QualityDashboardController < ApplicationController
   def fetch_from_cache_or_compute(cache_key)
     # Try to get from Redis
     cached_data = Rails.cache.redis.get(cache_key)
-    
+
     if cached_data.present?
       # Parse JSON from cache
       begin
@@ -196,17 +196,17 @@ class QualityDashboardController < ApplicationController
         Rails.logger.error "Failed to parse cached data for #{cache_key}: #{e.message}"
       end
     end
-    
+
     # Cache miss or parse error, compute the data
     computed_data = yield
-    
+
     # Cache the computed data (5 minute expiry)
     begin
       Rails.cache.redis.set(cache_key, computed_data.to_json, ex: 5.minutes.to_i)
     rescue StandardError => e
       Rails.logger.error "Failed to cache data for #{cache_key}: #{e.message}"
     end
-    
+
     computed_data
   end
 
@@ -214,10 +214,10 @@ class QualityDashboardController < ApplicationController
   def compute_service_health_status
     active_services = ServiceConfiguration.where(active: true).pluck(:service_name)
     service_health = {}
-    
+
     active_services.each do |service_name|
       latest_stat = DailyServiceStat.for_service(service_name).recent.first
-      
+
       if latest_stat
         service_health[service_name] = {
           status: latest_stat.status_label,
@@ -231,8 +231,8 @@ class QualityDashboardController < ApplicationController
       else
         # No stats available
         service_health[service_name] = {
-          status: 'Unknown',
-          status_class: 'unknown',
+          status: "Unknown",
+          status_class: "unknown",
           error_rate: nil,
           p95_execution_time_ms: nil,
           last_run_at: nil,
@@ -241,7 +241,7 @@ class QualityDashboardController < ApplicationController
         }
       end
     end
-    
+
     service_health
   end
 
@@ -249,9 +249,9 @@ class QualityDashboardController < ApplicationController
   def calculate_overall_error_rate(stats)
     total_runs = stats.sum(:total_runs)
     failed_runs = stats.sum(:failed_runs)
-    
+
     return 0.0 if total_runs.zero?
-    
+
     (failed_runs.to_f / total_runs * 100).round(2)
   end
 

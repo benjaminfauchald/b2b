@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `PORT=3000 rails server` - Start Rails server on port 3000 (nginx proxies from HTTPS port 443)
 - `rails console` - Open Rails console
 - **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
+- Start rails server automatically when you expect user to test
 
 ### Background Jobs
 - `bundle exec sidekiq` - Start Sidekiq worker for all queues

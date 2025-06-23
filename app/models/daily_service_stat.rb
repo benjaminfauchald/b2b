@@ -1,14 +1,14 @@
 class DailyServiceStat < ApplicationRecord
   # Set table name to match the materialized view
-  self.table_name = 'daily_service_stats'
-  
+  self.table_name = "daily_service_stats"
+
   # Make the model read-only since it's a materialized view
   def readonly?
     true
   end
 
   # Relationships
-  belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name', optional: true
+  belongs_to :service_configuration, foreign_key: "service_name", primary_key: "service_name", optional: true
 
   # Validations
   validates :service_name, presence: true
@@ -24,30 +24,30 @@ class DailyServiceStat < ApplicationRecord
   # Scopes
   scope :recent, -> { order(date: :desc) }
   scope :for_service, ->(service_name) { where(service_name: service_name) }
-  scope :with_errors, -> { where('error_rate > 0') }
-  scope :high_error_rate, -> { where('error_rate > 5') }
-  scope :critical_error_rate, -> { where('error_rate > 20') }
-  scope :slow_services, -> { where('p95_execution_time_ms > 1000') }
+  scope :with_errors, -> { where("error_rate > 0") }
+  scope :high_error_rate, -> { where("error_rate > 5") }
+  scope :critical_error_rate, -> { where("error_rate > 20") }
+  scope :slow_services, -> { where("p95_execution_time_ms > 1000") }
   scope :for_date_range, ->(start_date, end_date) { where(date: start_date..end_date) }
-  scope :last_n_days, ->(days = 7) { where('date >= ?', days.days.ago.to_date) }
+  scope :last_n_days, ->(days = 7) { where("date >= ?", days.days.ago.to_date) }
   scope :today, -> { where(date: Date.current) }
   scope :yesterday, -> { where(date: Date.current - 1.day) }
-  scope :this_week, -> { where('date >= ?', Date.current.beginning_of_week) }
+  scope :this_week, -> { where("date >= ?", Date.current.beginning_of_week) }
   scope :last_week, -> { where(date: (Date.current.beginning_of_week - 7.days)..(Date.current.beginning_of_week - 1.day)) }
 
   # Class methods
   def self.refresh_materialized_view
-    ActiveRecord::Base.connection.execute('REFRESH MATERIALIZED VIEW daily_service_stats')
+    ActiveRecord::Base.connection.execute("REFRESH MATERIALIZED VIEW daily_service_stats")
   end
 
   def self.top_error_services(limit = 5)
-    where('total_runs > 10')
+    where("total_runs > 10")
       .order(error_rate: :desc)
       .limit(limit)
   end
 
   def self.top_slowest_services(limit = 5)
-    where('total_runs > 10')
+    where("total_runs > 10")
       .order(p95_execution_time_ms: :desc)
       .limit(limit)
   end
@@ -79,29 +79,29 @@ class DailyServiceStat < ApplicationRecord
 
   def status_class
     if error_rate > 20
-      'critical'
+      "critical"
     elsif error_rate > 5
-      'warning'
+      "warning"
     else
-      'success'
+      "success"
     end
   end
 
   def status_label
     if error_rate > 20
-      'Critical'
+      "Critical"
     elsif error_rate > 5
-      'Warning'
+      "Warning"
     else
-      'Healthy'
+      "Healthy"
     end
   end
 
   private
 
   def format_duration(ms)
-    return '0ms' if ms.nil? || ms == 0
-    
+    return "0ms" if ms.nil? || ms == 0
+
     if ms < 1000
       "#{ms.round}ms"
     else

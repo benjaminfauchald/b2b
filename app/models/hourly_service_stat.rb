@@ -1,14 +1,14 @@
 class HourlyServiceStat < ApplicationRecord
   # Set table name to match the materialized view
-  self.table_name = 'hourly_service_stats'
-  
+  self.table_name = "hourly_service_stats"
+
   # Make the model read-only since it's a materialized view
   def readonly?
     true
   end
 
   # Relationships
-  belongs_to :service_configuration, foreign_key: 'service_name', primary_key: 'service_name', optional: true
+  belongs_to :service_configuration, foreign_key: "service_name", primary_key: "service_name", optional: true
 
   # Validations
   validates :service_name, presence: true
@@ -25,49 +25,49 @@ class HourlyServiceStat < ApplicationRecord
   # Scopes
   scope :recent, -> { order(date: :desc, hour: :desc) }
   scope :for_service, ->(service_name) { where(service_name: service_name) }
-  scope :with_errors, -> { where('error_rate > 0') }
-  scope :high_error_rate, -> { where('error_rate > 5') }
-  scope :critical_error_rate, -> { where('error_rate > 20') }
-  scope :slow_services, -> { where('p95_execution_time_ms > 1000') }
-  
+  scope :with_errors, -> { where("error_rate > 0") }
+  scope :high_error_rate, -> { where("error_rate > 5") }
+  scope :critical_error_rate, -> { where("error_rate > 20") }
+  scope :slow_services, -> { where("p95_execution_time_ms > 1000") }
+
   # Hour-specific scopes
   scope :for_hour, ->(hour) { where(hour: hour) }
   scope :business_hours, -> { where(hour: 9..17) }
   scope :non_business_hours, -> { where.not(hour: 9..17) }
   scope :night_hours, -> { where(hour: 0..5) }
-  
+
   # Date and time range scopes
-  scope :for_date_and_hour_range, ->(start_datetime, end_datetime) { 
-    where("(date + (hour * interval '1 hour')) BETWEEN ? AND ?", start_datetime, end_datetime) 
+  scope :for_date_and_hour_range, ->(start_datetime, end_datetime) {
+    where("(date + (hour * interval '1 hour')) BETWEEN ? AND ?", start_datetime, end_datetime)
   }
-  scope :last_n_hours, ->(hours = 24) { 
+  scope :last_n_hours, ->(hours = 24) {
     current_time = Time.current
-    where("(date + (hour * interval '1 hour')) >= ?", current_time - hours.hours) 
+    where("(date + (hour * interval '1 hour')) >= ?", current_time - hours.hours)
   }
   scope :today, -> { where(date: Date.current) }
   scope :yesterday, -> { where(date: Date.current - 1.day) }
-  scope :current_hour, -> { 
+  scope :current_hour, -> {
     now = Time.current
-    where(date: now.to_date, hour: now.hour) 
+    where(date: now.to_date, hour: now.hour)
   }
-  scope :previous_hour, -> { 
+  scope :previous_hour, -> {
     one_hour_ago = Time.current - 1.hour
-    where(date: one_hour_ago.to_date, hour: one_hour_ago.hour) 
+    where(date: one_hour_ago.to_date, hour: one_hour_ago.hour)
   }
 
   # Class methods
   def self.refresh_materialized_view
-    ActiveRecord::Base.connection.execute('REFRESH MATERIALIZED VIEW hourly_service_stats')
+    ActiveRecord::Base.connection.execute("REFRESH MATERIALIZED VIEW hourly_service_stats")
   end
 
   def self.top_error_services(limit = 5)
-    where('total_runs > 5')
+    where("total_runs > 5")
       .order(error_rate: :desc)
       .limit(limit)
   end
 
   def self.top_slowest_services(limit = 5)
-    where('total_runs > 5')
+    where("total_runs > 5")
       .order(p95_execution_time_ms: :desc)
       .limit(limit)
   end
@@ -75,7 +75,7 @@ class HourlyServiceStat < ApplicationRecord
   def self.hourly_trend(service_name, hours = 24)
     for_service(service_name)
       .last_n_hours(hours)
-      .order('date ASC, hour ASC')
+      .order("date ASC, hour ASC")
   end
 
   # Helper methods for dashboard display
@@ -105,21 +105,21 @@ class HourlyServiceStat < ApplicationRecord
 
   def status_class
     if error_rate > 20
-      'critical'
+      "critical"
     elsif error_rate > 5
-      'warning'
+      "warning"
     else
-      'success'
+      "success"
     end
   end
 
   def status_label
     if error_rate > 20
-      'Critical'
+      "Critical"
     elsif error_rate > 5
-      'Warning'
+      "Warning"
     else
-      'Healthy'
+      "Healthy"
     end
   end
 
@@ -134,8 +134,8 @@ class HourlyServiceStat < ApplicationRecord
   private
 
   def format_duration(ms)
-    return '0ms' if ms.nil? || ms == 0
-    
+    return "0ms" if ms.nil? || ms == 0
+
     if ms < 1000
       "#{ms.round}ms"
     else
