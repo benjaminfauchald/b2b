@@ -7,17 +7,24 @@ export default class extends Controller {
   ]
 
   connect() {
+    console.log('CSV Upload controller connected!')
     this.maxFileSize = 10 * 1024 * 1024 // 10MB in bytes
     this.allowedTypes = ['text/csv', 'application/csv', 'text/plain']
+    
+    // Test if all targets are available
+    console.log('Drop zone target:', this.hasDropZoneTarget)
+    console.log('File input target:', this.hasFileInputTarget)
   }
 
   openFileSelector() {
+    console.log('Opening file selector...')
     this.fileInputTarget.click()
   }
 
   handleDragOver(event) {
     event.preventDefault()
     event.stopPropagation()
+    console.log('Drag over detected')
     this.dropZoneTarget.classList.add('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20')
   }
 
@@ -30,13 +37,24 @@ export default class extends Controller {
   handleDrop(event) {
     event.preventDefault()
     event.stopPropagation()
+    console.log('File dropped!')
     
     this.dropZoneTarget.classList.remove('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20')
     
     const files = event.dataTransfer.files
+    console.log('Dropped files:', files.length)
     if (files.length > 0) {
-      this.fileInputTarget.files = files
-      this.validateFile()
+      try {
+        this.fileInputTarget.files = files
+        this.validateFile()
+      } catch (error) {
+        console.error('Error setting files:', error)
+        // Fallback: create new FileList
+        const dt = new DataTransfer()
+        dt.items.add(files[0])
+        this.fileInputTarget.files = dt.files
+        this.validateFile()
+      }
     }
   }
 
