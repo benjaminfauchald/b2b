@@ -2,7 +2,7 @@
   <!-- File Upload Zone -->
   <div class="<%= upload_zone_classes %>" 
        data-csv-upload-target="dropZone"
-       data-action="click->csv-upload#openFileSelector dragover->csv-upload#handleDragOver drop->csv-upload#handleDrop dragleave->csv-upload#handleDragLeave"
+       data-action="click->csv-upload#openFileSelector dragover->csv-upload#handleDragOver drop->csv-upload#handleDrop dragleave->csv-upload#handleDragLeave keydown->csv-upload#handleKeyDown"
        role="button"
        aria-label="Upload CSV file"
        tabindex="0">
@@ -29,7 +29,6 @@
          name="csv_file" 
          id="csv_file"
          accept=".csv"
-         required
          class="<%= file_input_classes %>"
          data-csv-upload-target="fileInput"
          data-action="change->csv-upload#validateFile" />

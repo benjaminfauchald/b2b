@@ -21,6 +21,14 @@ export default class extends Controller {
     this.fileInputTarget.click()
   }
 
+  handleKeyDown(event) {
+    // Handle Enter and Space keys
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      this.openFileSelector()
+    }
+  }
+
   handleDragOver(event) {
     event.preventDefault()
     event.stopPropagation()
@@ -189,9 +197,13 @@ export default class extends Controller {
 
   // Handle form submission with progress
   beforeSubmit(event) {
-    if (this.fileInputTarget.files.length === 0) {
+    console.log('Form submission initiated')
+    if (!this.fileInputTarget.files || this.fileInputTarget.files.length === 0) {
       event.preventDefault()
+      event.stopPropagation()
       this.showError('Please select a CSV file before uploading.')
+      // Focus on the drop zone for accessibility
+      this.dropZoneTarget.focus()
       return false
     }
 
