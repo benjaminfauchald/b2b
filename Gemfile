@@ -116,6 +116,7 @@ gem "dry-monitor"           # For monitoring Kafka operations
 gem "httparty"              # For making HTTP requests
 gem "nokogiri"              # For XML parsing
 gem "json-schema", "~> 4.0"
+gem "smarter_csv", "~> 1.8"  # CSV parsing and import functionality
 
 # Console enhancements for all environments
 gem "pry-rails"
