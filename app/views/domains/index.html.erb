@@ -28,35 +28,31 @@
 
   <!-- Testing Controls Section -->
   <div class="mb-8">
-    <%= render CardComponent.new(title: "Queue Testing", description: "Start DNS and MX testing for domains") do %>
-      <%= form_with url: queue_testing_domains_path, method: :post, local: true, class: "space-y-6" do |form| %>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <%= form.label :dns_count, "DNS Testing Count", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-          <%= form.number_field :dns_count, 
-              value: 10, 
-              min: 1, 
-              max: 1000,
-              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" %>
-        </div>
-        
-        <div>
-          <%= form.label :mx_count, "MX Testing Count", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-          <%= form.number_field :mx_count, 
-              value: 10, 
-              min: 1, 
-              max: 1000,
-              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" %>
-        </div>
-      </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <%= render ServiceQueueButtonComponent.new(
+        service_name: "domain_testing",
+        title: "DNS Testing",
+        icon: "🌐",
+        action_path: queue_dns_testing_domains_path,
+        queue_name: "domain_dns_testing"
+      ) %>
       
-      <div class="flex justify-center">
-        <%= form.submit "Queue Testing", 
-            class: "text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-8 py-3 text-center transition-all",
-            id: "queue-button" %>
-      </div>
-    <% end %>
-  <% end %>
+      <%= render ServiceQueueButtonComponent.new(
+        service_name: "domain_mx_testing",
+        title: "MX Testing",
+        icon: "📧",
+        action_path: queue_mx_testing_domains_path,
+        queue_name: "domain_mx_testing"
+      ) %>
+      
+      <%= render ServiceQueueButtonComponent.new(
+        service_name: "domain_a_record_testing",
+        title: "A Record Testing",
+        icon: "🔍",
+        action_path: queue_a_record_testing_domains_path,
+        queue_name: "DomainARecordTestingService"
+      ) %>
+    </div>
   </div>
 
   <!-- Statistics Section -->
@@ -64,15 +60,22 @@
     <%= render StatsCardComponent.new(
       label: "DNS Testing Queue",
       value: @queue_stats['domain_dns_testing'] || 0,
-      icon: "🔍",
-      data_stat: "dns-queue"
+      icon: "🌐",
+      data_stat: "domain_dns_testing"
     ) %>
     
     <%= render StatsCardComponent.new(
       label: "MX Testing Queue", 
       value: @queue_stats['domain_mx_testing'] || 0,
-      icon: "✉️",
-      data_stat: "mx-queue"
+      icon: "📧",
+      data_stat: "domain_mx_testing"
+    ) %>
+    
+    <%= render StatsCardComponent.new(
+      label: "A Record Queue",
+      value: @queue_stats['DomainARecordTestingService'] || 0,
+      icon: "🔍",
+      data_stat: "DomainARecordTestingService"
     ) %>
     
     <%= render StatsCardComponent.new(
@@ -82,13 +85,6 @@
       trend: "+12.5%",
       trend_direction: "up",
       data_stat: "processed"
-    ) %>
-    
-    <%= render StatsCardComponent.new(
-      label: "Workers Busy",
-      value: @queue_stats[:workers_busy] || 0,
-      icon: "⚡",
-      data_stat: "workers"
     ) %>
   </div>
 
@@ -109,6 +105,11 @@
         end
       %>
       <%= render TableComponent.new(headers: headers, rows: rows) %>
+      
+      <!-- Pagination -->
+      <div class="mt-4">
+        <%= render 'shared/pagy_nav', pagy: @pagy %>
+      </div>
     <% else %>
       <div class="text-center py-12">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,15 +138,24 @@ setInterval(function() {
     .then(response => response.json())
     .then(data => {
       // Update queue stats if elements exist
-      const dnsCount = document.querySelector('[data-stat="dns-queue"]');
-      const mxCount = document.querySelector('[data-stat="mx-queue"]');
+      const dnsQueue = document.querySelector('[data-stat="domain_dns_testing"]');
+      const mxQueue = document.querySelector('[data-stat="domain_mx_testing"]');
+      const aRecordQueue = document.querySelector('[data-stat="DomainARecordTestingService"]');
       const processed = document.querySelector('[data-stat="processed"]');
-      const workers = document.querySelector('[data-stat="workers"]');
       
-      if (dnsCount) dnsCount.textContent = data.domain_dns_testing || 0;
-      if (mxCount) mxCount.textContent = data.domain_mx_testing || 0;
-      if (processed) processed.textContent = data.total_processed || 0;
-      if (workers) workers.textContent = data.workers_busy || 0;
+      if (dnsQueue) dnsQueue.textContent = data.queue_stats.domain_dns_testing || 0;
+      if (mxQueue) mxQueue.textContent = data.queue_stats.domain_mx_testing || 0;
+      if (aRecordQueue) aRecordQueue.textContent = data.queue_stats.DomainARecordTestingService || 0;
+      if (processed) processed.textContent = data.queue_stats.total_processed || 0;
+      
+      // Also update queue counts in the service buttons
+      const dnsQueueInButton = document.querySelector('[data-queue-stat="domain_dns_testing"]');
+      const mxQueueInButton = document.querySelector('[data-queue-stat="domain_mx_testing"]');
+      const aRecordQueueInButton = document.querySelector('[data-queue-stat="DomainARecordTestingService"]');
+      
+      if (dnsQueueInButton) dnsQueueInButton.textContent = (data.queue_stats.domain_dns_testing || 0) + ' in queue';
+      if (mxQueueInButton) mxQueueInButton.textContent = (data.queue_stats.domain_mx_testing || 0) + ' in queue';
+      if (aRecordQueueInButton) aRecordQueueInButton.textContent = (data.queue_stats.DomainARecordTestingService || 0) + ' in queue';
     })
     .catch(error => console.log('Error fetching queue status:', error));
 }, 10000);
