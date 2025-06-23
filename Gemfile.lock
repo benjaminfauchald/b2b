@@ -520,7 +520,7 @@ GEM
       method_source (~> 1.0)
     warden (1.2.9)
       rack (>= 2.0.9)
-    waterdrop (2.8.4)
+    waterdrop (2.8.5)
       karafka-core (>= 2.4.9, < 3.0.0)
       karafka-rdkafka (>= 0.19.2)
       zeitwerk (~> 2.3)
@@ -600,7 +600,7 @@ DEPENDENCIES
   turbo-rails
   tzinfo-data
   view_component (~> 3.0)
-  waterdrop (~> 2.8.4)
+  waterdrop (~> 2.8.5)
   web-console
 
 BUNDLED WITH
