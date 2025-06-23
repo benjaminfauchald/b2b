@@ -17,8 +17,9 @@
   <% end %>
 
   <!-- Testing Controls Section -->
-  <%= render CardComponent.new(title: "Queue Testing", description: "Start DNS and MX testing for domains") do %>
-    <%= form_with url: queue_testing_domains_path, method: :post, local: true, class: "space-y-6" do |form| %>
+  <div class="mb-8">
+    <%= render CardComponent.new(title: "Queue Testing", description: "Start DNS and MX testing for domains") do %>
+      <%= form_with url: queue_testing_domains_path, method: :post, local: true, class: "space-y-6" do |form| %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <%= form.label :dns_count, "DNS Testing Count", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
@@ -46,6 +47,7 @@
       </div>
     <% end %>
   <% end %>
+  </div>
 
   <!-- Statistics Section -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

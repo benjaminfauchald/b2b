@@ -3,7 +3,7 @@
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
       <tr>
         <% headers.each do |header| %>
-          <th scope="col" class="px-6 py-3">
+          <th scope="col" class="px-6 py-4 text-left">
             <%= header %>
           </th>
         <% end %>
@@ -18,14 +18,14 @@
         </tr>
       <% else %>
         <% rows.each_with_index do |row, index| %>
-          <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> border-b dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> border-b dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <% row.each_with_index do |cell, cell_index| %>
               <% if cell_index == 0 %>
-                <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                <th scope="row" class="px-6 py-4 font-semibold text-gray-900 dark:text-white">
                   <%= cell %>
                 </th>
               <% else %>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 text-gray-700 dark:text-gray-300">
                   <%= cell %>
                 </td>
               <% end %>
