@@ -1,0 +1,25 @@
+<div class="<%= css_classes %>" <%= tag.attributes(options.except(:class)) %>>
+  <% if title %>
+    <h3 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+      <%= title %>
+    </h3>
+  <% end %>
+  
+  <% if description %>
+    <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
+      <%= description %>
+    </p>
+  <% end %>
+  
+  <% if content? %>
+    <div class="card-content">
+      <%= content %>
+    </div>
+  <% end %>
+  
+  <% if footer %>
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <%= footer %>
+    </div>
+  <% end %>
+</div>

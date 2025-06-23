@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Script to start Rails server with local environment variables
+
+# Load local environment variables if file exists
+if [ -f .env.local ]; then
+  echo "Loading local environment variables from .env.local..."
+  export $(grep -v '^#' .env.local | xargs)
+fi
+
+# Display which database we're connecting to
+echo "Starting Rails server..."
+echo "Database: $PGUSER@$PGHOST:$PGPORT/$PGDATABASE"
+
+# Start Rails server
+PORT=3000 bundle exec rails server -b 0.0.0.0

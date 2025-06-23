@@ -14,6 +14,8 @@ end
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
 require 'shoulda/matchers'
+require 'view_component/test_helpers'
+require 'capybara/rspec'
 require_relative 'support/latest_service_run_stub'
 # Add additional requires below this line. Rails is not loaded until this point!
 
@@ -57,6 +59,10 @@ require_relative 'support/latest_service_run_stub'
 RSpec.configure do |config|
   # Include FactoryBot syntax methods
   config.include FactoryBot::Syntax::Methods
+  
+  # Include ViewComponent test helpers
+  config.include ViewComponent::TestHelpers, type: :component
+  config.include Capybara::RSpecMatchers, type: :component
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [

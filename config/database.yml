@@ -23,9 +23,9 @@ default: &default
 development:
   <<: *default
   database: b2b_development
-  host: <%= ENV['PGHOST'] %>
-  port: <%= ENV['PGPORT'] %>
-  user: <%= ENV['PGUSER'] %>
+  host: <%= ENV['PGHOST'] || 'localhost' %>
+  port: <%= ENV['PGPORT'] || 5432 %>
+  username: <%= ENV['PGUSER'] %>
   password: <%= ENV['PGPASSWORD'] %>
 
   # Schema search path. The server defaults to $user,public
@@ -43,9 +43,9 @@ development:
 test:
   <<: *default
   database: b2b_test
-  host: <%= ENV['PGHOST'] %>
-  port: <%= ENV['PGPORT'] %>
-  user: <%= ENV['PGUSER'] %>
+  host: <%= ENV['PGHOST'] || 'localhost' %>
+  port: <%= ENV['PGPORT'] || 5432 %>
+  username: <%= ENV['PGUSER'] %>
   password: <%= ENV['PGPASSWORD'] %>
 
 # As with config/credentials.yml, you never want to store sensitive information,

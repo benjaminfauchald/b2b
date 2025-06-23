@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Script to start all development services (Rails + Sidekiq)
+
+# Load local environment variables if file exists
+if [ -f .env.local ]; then
+  echo "Loading local environment variables from .env.local..."
+  export $(grep -v '^#' .env.local | xargs)
+fi
+
+# Function to kill all background processes on exit
+cleanup() {
+  echo "Shutting down services..."
+  kill $(jobs -p) 2>/dev/null
+  exit 0
+}
+
+# Set trap to cleanup on script exit
+trap cleanup SIGINT SIGTERM
+
+echo "Starting development services..."
+echo "Database: $PGUSER@$PGHOST:$PGPORT/$PGDATABASE"
+echo ""
+
+# Check if Redis is running
+if ! redis-cli ping > /dev/null 2>&1; then
+  echo "⚠️  Redis is not running. Starting Redis..."
+  brew services start redis
+  sleep 2
+fi
+
+echo "✅ Redis is running"
+
+# Start Sidekiq in background
+echo "🚀 Starting Sidekiq..."
+bundle exec sidekiq &
+SIDEKIQ_PID=$!
+
+# Give Sidekiq a moment to start
+sleep 3
+
+# Start Rails server
+echo "🚀 Starting Rails server on port 3000..."
+PORT=3000 bundle exec rails server -b 0.0.0.0 &
+RAILS_PID=$!
+
+echo ""
+echo "📊 Services started:"
+echo "  - Redis: Running (PID: $(pgrep redis-server))"
+echo "  - Sidekiq: Running (PID: $SIDEKIQ_PID)"
+echo "  - Rails: Running (PID: $RAILS_PID)"
+echo ""
+echo "🌐 Application available at: http://localhost:3000"
+echo "📋 Sidekiq Web UI: http://localhost:3000/sidekiq"
+echo ""
+echo "Press Ctrl+C to stop all services"
+
+# Wait for background processes
+wait

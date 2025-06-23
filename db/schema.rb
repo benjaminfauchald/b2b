@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_22_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,7 +20,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "message_checksum", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index [ "message_id", "message_checksum" ], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
+    t.index ["message_id", "message_checksum"], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
   end
 
   create_table "action_text_rich_texts", force: :cascade do |t|
@@ -30,7 +30,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "record_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index [ "record_type", "record_id", "name" ], name: "index_action_text_rich_texts_uniqueness", unique: true
+    t.index ["record_type", "record_id", "name"], name: "index_action_text_rich_texts_uniqueness", unique: true
   end
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -39,8 +39,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "record_id", null: false
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
-    t.index [ "blob_id" ], name: "index_active_storage_attachments_on_blob_id"
-    t.index [ "record_type", "record_id", "name", "blob_id" ], name: "index_active_storage_attachments_uniqueness", unique: true
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", force: :cascade do |t|
@@ -52,13 +52,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.bigint "byte_size", null: false
     t.string "checksum"
     t.datetime "created_at", null: false
-    t.index [ "key" ], name: "index_active_storage_blobs_on_key", unique: true
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
   create_table "active_storage_variant_records", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
-    t.index [ "blob_id", "variation_digest" ], name: "index_active_storage_variant_records_uniqueness", unique: true
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
   create_table "brreg", id: false, force: :cascade do |t|
@@ -239,7 +239,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.text "segment"
   end
 
-
   create_table "communications", force: :cascade do |t|
     t.datetime "timestamp"
     t.string "event_type"
@@ -344,11 +343,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.decimal "long_term_liabilities"
     t.integer "year"
     t.text "financial_data"
-    t.index [ "linkedin_ai_url" ], name: "index_companies_on_linkedin_ai_url"
-    t.index [ "operating_revenue" ], name: "index_companies_on_operating_revenue"
-    t.index [ "organization_form_description" ], name: "index_companies_on_organization_form_description"
-    t.index [ "registration_number" ], name: "index_companies_on_registration_number_unique", unique: true
-    t.index [ "source_country", "source_registry" ], name: "index_companies_on_source_country_and_source_registry"
+    t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
+    t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
+    t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
+    t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
   end
 
   create_table "domains", force: :cascade do |t|
@@ -385,16 +384,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "table_name", default: "", null: false
     t.string "target_table"
     t.string "record_id"
-    t.index [ "auditable_type", "auditable_id", "service_name" ], name: "index_service_audit_logs_on_auditable_and_service"
-    t.index [ "auditable_type", "auditable_id" ], name: "index_service_audit_logs_on_auditable"
-    t.index [ "created_at" ], name: "index_service_audit_logs_on_created_at"
-    t.index [ "metadata" ], name: "index_service_audit_logs_on_metadata", using: :gin
-    t.index [ "record_id" ], name: "index_service_audit_logs_on_record_id"
-    t.index [ "service_name", "status", "created_at" ], name: "index_service_audit_logs_on_service_status_created"
-    t.index [ "service_name" ], name: "index_service_audit_logs_on_service_name"
-    t.index [ "status" ], name: "index_service_audit_logs_on_status"
-    t.index [ "table_name" ], name: "index_service_audit_logs_on_table_name"
-    t.index [ "target_table" ], name: "index_service_audit_logs_on_target_table"
+    t.index ["auditable_type", "auditable_id", "service_name"], name: "index_service_audit_logs_on_auditable_and_service"
+    t.index ["auditable_type", "auditable_id"], name: "index_service_audit_logs_on_auditable"
+    t.index ["created_at"], name: "index_service_audit_logs_on_created_at"
+    t.index ["metadata"], name: "index_service_audit_logs_on_metadata", using: :gin
+    t.index ["record_id"], name: "index_service_audit_logs_on_record_id"
+    t.index ["service_name", "status", "created_at"], name: "index_service_audit_logs_on_service_status_created"
+    t.index ["service_name"], name: "index_service_audit_logs_on_service_name"
+    t.index ["status"], name: "index_service_audit_logs_on_status"
+    t.index ["table_name"], name: "index_service_audit_logs_on_table_name"
+    t.index ["target_table"], name: "index_service_audit_logs_on_target_table"
   end
 
   create_table "service_configurations", force: :cascade do |t|
@@ -407,9 +406,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.jsonb "settings", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index [ "active" ], name: "index_service_configurations_on_active"
-    t.index [ "service_name" ], name: "index_service_configurations_on_service_name", unique: true
-    t.index [ "settings" ], name: "index_service_configurations_on_settings", using: :gin
+    t.index ["active"], name: "index_service_configurations_on_active"
+    t.index ["service_name"], name: "index_service_configurations_on_service_name", unique: true
+    t.index ["settings"], name: "index_service_configurations_on_settings", using: :gin
   end
 
   create_table "users", force: :cascade do |t|
@@ -429,8 +428,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_16_182357) do
     t.string "last_sign_in_ip"
     t.string "email_provider"
     t.datetime "last_enhanced_at"
-    t.index [ "email" ], name: "index_users_on_email", unique: true
-    t.index [ "reset_password_token" ], name: "index_users_on_reset_password_token", unique: true
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

@@ -13,7 +13,7 @@ class CreateQualityDashboardViews < ActiveRecord::Migration[8.0]
           AVG(execution_time_ms) AS avg_execution_time_ms,
           PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY execution_time_ms) AS p95_execution_time_ms,
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY execution_time_ms) AS p99_execution_time_ms,
-          ROUND((COUNT(CASE WHEN status = 2 THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0)) * 100, 2) AS error_rate,
+          ROUND((COUNT(CASE WHEN status = 2 THEN 1 END)::NUMERIC / NULLIF(COUNT(*), 0)) * 100, 2) AS error_rate,
           MIN(created_at) AS first_run_at,
           MAX(created_at) AS last_run_at
         FROM
@@ -56,7 +56,7 @@ class CreateQualityDashboardViews < ActiveRecord::Migration[8.0]
           AVG(execution_time_ms) AS avg_execution_time_ms,
           PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY execution_time_ms) AS p95_execution_time_ms,
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY execution_time_ms) AS p99_execution_time_ms,
-          ROUND((COUNT(CASE WHEN status = 2 THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0)) * 100, 2) AS error_rate,
+          ROUND((COUNT(CASE WHEN status = 2 THEN 1 END)::NUMERIC / NULLIF(COUNT(*), 0)) * 100, 2) AS error_rate,
           MIN(created_at) AS first_run_at,
           MAX(created_at) AS last_run_at
         FROM
@@ -92,7 +92,7 @@ class CreateQualityDashboardViews < ActiveRecord::Migration[8.0]
       CREATE INDEX idx_daily_service_stats_service_name ON daily_service_stats(service_name);
       CREATE INDEX idx_daily_service_stats_date ON daily_service_stats(date);
       CREATE INDEX idx_daily_service_stats_error_rate ON daily_service_stats(error_rate DESC);
-      
+
       CREATE UNIQUE INDEX idx_hourly_service_stats_id ON hourly_service_stats(id);
       CREATE INDEX idx_hourly_service_stats_service_name ON hourly_service_stats(service_name);
       CREATE INDEX idx_hourly_service_stats_date_hour ON hourly_service_stats(date, hour);

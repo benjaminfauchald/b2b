@@ -1,454 +1,136 @@
-<p style="color: green"><%= notice %></p>
-
 <% content_for :title, "Domain Testing Dashboard" %>
 
-<style>
-.testing-dashboard {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-.dashboard-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.dashboard-title {
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-.dashboard-subtitle {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-}
-
-.testing-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 30px;
-  border-radius: 15px;
-  margin-bottom: 30px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-.testing-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.form-label {
-  font-size: 1.2rem;
-  font-weight: 600;
-  text-align: center;
-}
-
-.count-input {
-  padding: 15px 20px;
-  font-size: 1.5rem;
-  border: none;
-  border-radius: 10px;
-  width: 200px;
-  text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.queue-button {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 15px 40px;
-  font-size: 1.2rem;
-  font-weight: 600;
-  border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.queue-button:hover:not(:disabled) {
-  background: #c0392b;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-}
-
-.queue-button:disabled {
-  background: #95a5a6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.status-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.status-card {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  border-left: 5px solid #3498db;
-}
-
-.status-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 15px;
-}
-
-.status-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #ecf0f1;
-}
-
-.status-item:last-child {
-  border-bottom: none;
-}
-
-.status-label {
-  color: #7f8c8d;
-  font-weight: 500;
-}
-
-.status-value {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.message-area {
-  margin-top: 20px;
-  padding: 15px;
-  border-radius: 8px;
-  display: none;
-}
-
-.message-success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.message-error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.domains-section {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.domains-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.domains-title {
-  font-size: 1.5rem;
-  color: #2c3e50;
-  margin: 0;
-}
-
-.new-domain-btn {
-  background: #27ae60;
-  color: white;
-  padding: 10px 20px;
-  text-decoration: none;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: background 0.3s ease;
-}
-
-.new-domain-btn:hover {
-  background: #229954;
-  color: white;
-  text-decoration: none;
-}
-
-.spinner {
-  display: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #ffffff;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-left: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading {
-  display: inline-block;
-}
-</style>
-
-<div class="testing-dashboard">
-  <div class="dashboard-header">
-    <h1 class="dashboard-title">🌐 Domain Testing Dashboard</h1>
-    <p class="dashboard-subtitle">Queue domains for DNS and MX record testing</p>
-  </div>
-
-  <div class="testing-section">
-    <div class="testing-form">
-      <div class="form-group">
-        <label class="form-label" for="domain-count">
-          How many domains would you like to test?
-        </label>
-        <input 
-          type="number" 
-          id="domain-count" 
-          class="count-input" 
-          placeholder="Enter number"
-          min="1" 
-          max="1000" 
-          value="5"
-        >
-        <small style="opacity: 0.8;">Enter a number between 1 and 1000</small>
-      </div>
-      
-      <button type="button" id="queue-domains-btn" class="queue-button">
-        🚀 Queue Domains for Testing
-        <span class="spinner" id="loading-spinner"></span>
-      </button>
-      
-      <div id="message-area" class="message-area"></div>
-    </div>
-  </div>
-
-  <div class="status-section">
-    <div class="status-card">
-      <h3 class="status-title">📊 Queue Status</h3>
-      <div class="status-item">
-        <span class="status-label">DNS Testing Queue:</span>
-        <span class="status-value" id="dns-queue-count"><%= @queue_stats['domain_dns_testing'] || 0 %></span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">MX Testing Queue:</span>
-        <span class="status-value" id="mx-queue-count"><%= @queue_stats['domain_mx_testing'] || 0 %></span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Default Queue:</span>
-        <span class="status-value" id="default-queue-count"><%= @queue_stats['default'] || 0 %></span>
-      </div>
-    </div>
-
-    <div class="status-card">
-      <h3 class="status-title">⚡ System Status</h3>
-      <div class="status-item">
-        <span class="status-label">Total Processed:</span>
-        <span class="status-value"><%= @queue_stats[:total_processed] || 0 %></span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Total Failed:</span>
-        <span class="status-value"><%= @queue_stats[:total_failed] || 0 %></span>
-      </div>
-      <div class="status-item">
-        <span class="status-label">Workers Busy:</span>
-        <span class="status-value"><%= @queue_stats[:workers_busy] || 0 %></span>
-      </div>
-    </div>
-  </div>
-
-  <div class="domains-section">
-    <div class="domains-header">
-      <h2 class="domains-title">Domain List</h2>
-      <%= link_to "Add New Domain", new_domain_path, class: "new-domain-btn" %>
-    </div>
-    
-    <div id="domains">
-      <% if @domains.any? %>
-        <% @domains.each do |domain| %>
-          <%= render domain %>
-          <p>
-            <%= link_to "Show this domain", domain %>
-          </p>
-        <% end %>
-      <% else %>
-        <p style="text-align: center; color: #7f8c8d; padding: 40px;">
-          No domains found. <a href="<%= new_domain_path %>">Add your first domain</a> to get started!
-        </p>
+<div class="w-full">
+  <%= render PageHeaderComponent.new(
+    title: "Domain Testing Dashboard", 
+    subtitle: "Manage and monitor your domain testing operations"
+  ) do |component|
+    component.with_actions do %>
+      <%= link_to new_domain_path, 
+          class: "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium text-sm transition-colors" do %>
+        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add New Domain
       <% end %>
-    </div>
+    <% end %>
+  <% end %>
+
+  <!-- Testing Controls Section -->
+  <%= render CardComponent.new(title: "Queue Testing", description: "Start DNS and MX testing for domains") do %>
+    <%= form_with url: queue_testing_domains_path, method: :post, local: true, class: "space-y-6" do |form| %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <%= form.label :dns_count, "DNS Testing Count", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+          <%= form.number_field :dns_count, 
+              value: 10, 
+              min: 1, 
+              max: 1000,
+              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" %>
+        </div>
+        
+        <div>
+          <%= form.label :mx_count, "MX Testing Count", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+          <%= form.number_field :mx_count, 
+              value: 10, 
+              min: 1, 
+              max: 1000,
+              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" %>
+        </div>
+      </div>
+      
+      <div class="flex justify-center">
+        <%= form.submit "Queue Testing", 
+            class: "text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-8 py-3 text-center transition-all",
+            id: "queue-button" %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <!-- Statistics Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <%= render StatsCardComponent.new(
+      label: "DNS Testing Queue",
+      value: @queue_stats['domain_dns_testing'] || 0,
+      icon: "🔍"
+    ) %>
+    
+    <%= render StatsCardComponent.new(
+      label: "MX Testing Queue", 
+      value: @queue_stats['domain_mx_testing'] || 0,
+      icon: "✉️"
+    ) %>
+    
+    <%= render StatsCardComponent.new(
+      label: "Total Processed",
+      value: @queue_stats[:total_processed] || 0,
+      icon: "✅",
+      trend: "+12.5%",
+      trend_direction: "up"
+    ) %>
+    
+    <%= render StatsCardComponent.new(
+      label: "Workers Busy",
+      value: @queue_stats[:workers_busy] || 0,
+      icon: "⚡"
+    ) %>
   </div>
+
+  <!-- Domains Table Section -->
+  <%= render CardComponent.new(title: "Domain List") do %>
+    <% if @domains.any? %>
+      <% 
+        headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "Actions"]
+        rows = @domains.map do |domain|
+          [
+            domain.name,
+            domain.status || "Unknown",
+            domain.updated_at&.strftime("%Y-%m-%d %H:%M") || "Never",
+            domain.dns_status || "Not tested",
+            domain.mx_status || "Not tested",
+            link_to("View", domain_path(domain), class: "text-blue-600 hover:text-blue-800 font-medium")
+          ]
+        end
+      %>
+      <%= render TableComponent.new(headers: headers, rows: rows) %>
+    <% else %>
+      <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No domains</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding your first domain.</p>
+        <div class="mt-6">
+          <%= link_to new_domain_path,
+              class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" do %>
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add Domain
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const queueButton = document.getElementById('queue-domains-btn');
-  const countInput = document.getElementById('domain-count');
-  const messageArea = document.getElementById('message-area');
-  const spinner = document.getElementById('loading-spinner');
-  
-  // Queue status elements
-  const dnsQueueCount = document.getElementById('dns-queue-count');
-  const mxQueueCount = document.getElementById('mx-queue-count');
-  const defaultQueueCount = document.getElementById('default-queue-count');
-
-  function showMessage(message, isSuccess = true) {
-    messageArea.textContent = message;
-    messageArea.className = `message-area ${isSuccess ? 'message-success' : 'message-error'}`;
-    messageArea.style.display = 'block';
-    
-    // Hide message after 5 seconds
-    setTimeout(() => {
-      messageArea.style.display = 'none';
-    }, 5000);
-  }
-
-  function setLoading(loading) {
-    queueButton.disabled = loading;
-    if (loading) {
-      spinner.classList.add('loading');
-      queueButton.innerHTML = '⏳ Queueing Domains... <span class="spinner loading" id="loading-spinner"></span>';
-    } else {
-      spinner.classList.remove('loading');
-      queueButton.innerHTML = '🚀 Queue Domains for Testing <span class="spinner" id="loading-spinner"></span>';
-    }
-  }
-
-  function updateQueueStats(stats) {
-    if (stats) {
-      if (stats.domain_dns_testing !== undefined) {
-        dnsQueueCount.textContent = stats.domain_dns_testing;
-      }
-      if (stats.domain_mx_testing !== undefined) {
-        mxQueueCount.textContent = stats.domain_mx_testing;
-      }
-      if (stats.default !== undefined) {
-        defaultQueueCount.textContent = stats.default;
-      }
-    }
-  }
-
-  function refreshQueueStatus() {
-    fetch('/domains/queue_status', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-      }
-    })
+// Auto-refresh queue status every 10 seconds
+setInterval(function() {
+  fetch('<%= queue_status_domains_path %>')
     .then(response => response.json())
     .then(data => {
-      if (data.success) {
-        updateQueueStats(data.queue_stats);
-      }
-    })
-    .catch(error => {
-      console.error('Error refreshing queue status:', error);
-    });
-  }
-
-  // Validate input as user types
-  countInput.addEventListener('input', function() {
-    const value = parseInt(this.value);
-    const isValid = value >= 1 && value <= 1000;
-    
-    queueButton.disabled = !isValid || this.value === '';
-    
-    if (this.value !== '' && !isValid) {
-      this.style.borderColor = '#e74c3c';
-    } else {
-      this.style.borderColor = '';
-    }
-  });
-
-  // Handle form submission
-  queueButton.addEventListener('click', function() {
-    const count = parseInt(countInput.value);
-    
-    if (!count || count < 1 || count > 1000) {
-      showMessage('Please enter a valid number between 1 and 1000', false);
-      countInput.focus();
-      return;
-    }
-
-    setLoading(true);
-    
-    // Optimistic UI update
-    const currentDnsCount = parseInt(dnsQueueCount.textContent) || 0;
-    dnsQueueCount.textContent = currentDnsCount + count;
-
-    fetch('/domains/queue_testing', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-      },
-      body: JSON.stringify({ count: count })
-    })
-    .then(response => response.json())
-    .then(data => {
-      setLoading(false);
+      // Update queue stats if elements exist
+      const dnsCount = document.querySelector('[data-stat="dns-queue"]');
+      const mxCount = document.querySelector('[data-stat="mx-queue"]');
+      const processed = document.querySelector('[data-stat="processed"]');
+      const workers = document.querySelector('[data-stat="workers"]');
       
-      if (data.success) {
-        showMessage(data.message, true);
-        updateQueueStats(data.queue_stats);
-        
-        // Add some visual feedback
-        queueButton.style.background = '#27ae60';
-        queueButton.innerHTML = '✅ Domains Queued Successfully!';
-        
-        setTimeout(() => {
-          queueButton.style.background = '#e74c3c';
-          queueButton.innerHTML = '🚀 Queue Domains for Testing <span class="spinner" id="loading-spinner"></span>';
-        }, 2000);
-        
-      } else {
-        showMessage(data.message, false);
-        // Revert optimistic update
-        refreshQueueStatus();
-      }
+      if (dnsCount) dnsCount.textContent = data.domain_dns_testing || 0;
+      if (mxCount) mxCount.textContent = data.domain_mx_testing || 0;
+      if (processed) processed.textContent = data.total_processed || 0;
+      if (workers) workers.textContent = data.workers_busy || 0;
     })
-    .catch(error => {
-      setLoading(false);
-      showMessage('Error queueing domains. Please try again.', false);
-      console.error('Error:', error);
-      // Revert optimistic update
-      refreshQueueStatus();
-    });
-  });
-
-  // Auto-refresh queue status every 10 seconds
-  setInterval(refreshQueueStatus, 10000);
-
-  // Allow Enter key in input field
-  countInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      queueButton.click();
-    }
-  });
-
-  // Focus on input field when page loads
-  countInput.focus();
-  countInput.select();
-});
+    .catch(error => console.log('Error fetching queue status:', error));
+}, 10000);
 </script>

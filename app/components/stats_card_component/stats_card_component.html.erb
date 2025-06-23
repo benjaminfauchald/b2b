@@ -1,0 +1,19 @@
+<div class="flex items-center p-4 bg-white rounded-lg shadow dark:bg-gray-800">
+  <% if icon %>
+    <div class="inline-flex flex-shrink-0 items-center justify-center h-16 w-16 rounded-lg <%= color_classes %>">
+      <span class="text-4xl"><%= icon %></span>
+    </div>
+  <% end %>
+  
+  <div class="<%= icon ? 'ml-5' : '' %> flex-grow">
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400"><%= label %></p>
+    <div class="flex items-baseline">
+      <p class="text-2xl font-semibold text-gray-900 dark:text-white"><%= value %></p>
+      <% if trend %>
+        <span class="ml-2 flex items-baseline text-sm font-semibold <%= trend_color %>">
+          <%= trend_icon %> <%= trend %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+</div>

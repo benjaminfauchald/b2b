@@ -1,0 +1,38 @@
+<div class="bg-white dark:bg-gray-800 <%= wrapper_classes %>">
+  <table class="<%= table_classes %>">
+    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+      <tr>
+        <% headers.each do |header| %>
+          <th scope="col" class="px-6 py-3">
+            <%= header %>
+          </th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if rows.empty? %>
+        <tr class="bg-white dark:bg-gray-900">
+          <td colspan="<%= headers.length %>" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+            No data available
+          </td>
+        </tr>
+      <% else %>
+        <% rows.each_with_index do |row, index| %>
+          <tr class="<%= index.even? ? 'bg-white' : 'bg-gray-50' %> border-b dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <% row.each_with_index do |cell, cell_index| %>
+              <% if cell_index == 0 %>
+                <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                  <%= cell %>
+                </th>
+              <% else %>
+                <td class="px-6 py-4">
+                  <%= cell %>
+                </td>
+              <% end %>
+            <% end %>
+          </tr>
+        <% end %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
