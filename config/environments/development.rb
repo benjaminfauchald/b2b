@@ -6,6 +6,7 @@ Rails.application.configure do
   # Allow ngrok hosts
   config.hosts << /[a-z0-9-]+\.ngrok-free\.app/
   config.hosts << "localhost"
+  config.hosts << "local.connectica.no"
 
   # Fix CSRF issues with ngrok
   config.force_ssl = false

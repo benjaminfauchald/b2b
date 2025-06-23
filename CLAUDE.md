@@ -10,6 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
 - Start rails server automatically when you expect user to test
 
+### Environment Variables
+- All environment variables for Rails is in `.env.local`
+
 ### Background Jobs
 - `bundle exec sidekiq` - Start Sidekiq worker for all queues
 - `bundle exec sidekiq -q [queue_name]` - Start worker for specific queue (e.g., brreg_migration, company_financials)
