@@ -1,11 +1,22 @@
-<% content_for :title, "New domain" %>
+<% content_for :title, "Add New Domain" %>
 
-<h1>New domain</h1>
+<div class="w-full max-w-2xl mx-auto">
+  <%= render PageHeaderComponent.new(
+    title: "Add New Domain", 
+    subtitle: "Enter a domain to start DNS and MX testing"
+  ) do |component|
+    component.with_actions do %>
+      <%= link_to domains_path, 
+          class: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 font-medium text-sm transition-colors" do %>
+        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back to Dashboard
+      <% end %>
+    <% end %>
+  <% end %>
 
-<%= render "form", domain: @domain %>
-
-<br>
-
-<div>
-  <%= link_to "Back to domains", domains_path %>
+  <%= render CardComponent.new do %>
+    <%= render "form", domain: @domain %>
+  <% end %>
 </div>
