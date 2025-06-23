@@ -19,8 +19,8 @@
     </div>
 
     <%= render CardComponent.new do %>
-      <!-- SSO Login Options -->
-      <%= render SsoLoginComponent.new %>
+      <!-- SSO Login Options - Only show GitHub since it's working -->
+      <%= render SsoLoginComponent.new(providers: [:github]) %>
 
       <!-- Divider -->
       <div class="relative my-6">
