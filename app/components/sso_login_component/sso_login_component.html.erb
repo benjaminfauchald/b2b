@@ -1,0 +1,27 @@
+<div class="<%= container_classes %> sso-login-component">
+  <% if enabled_providers.any? %>
+    <div class="relative">
+      <div class="absolute inset-0 flex items-center">
+        <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+      </div>
+      <div class="relative flex justify-center text-sm">
+        <span class="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+          <%= divider_text %>
+        </span>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <% enabled_providers.each do |config| %>
+        <%= render OauthButtonComponent.new(**config) %>
+      <% end %>
+    </div>
+
+    <div class="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+      By continuing, you agree to our 
+      <a href="#" class="text-blue-600 hover:text-blue-500 dark:text-blue-400">Terms of Service</a> 
+      and 
+      <a href="#" class="text-blue-600 hover:text-blue-500 dark:text-blue-400">Privacy Policy</a>
+    </div>
+  <% end %>
+</div>
