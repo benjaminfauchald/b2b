@@ -10,7 +10,7 @@ class SsoLoginComponent < ViewComponent::Base
 
   def container_classes
     base_classes = [
-      "space-y-4"
+      "w-full"
     ]
 
     [ base_classes, options[:class] ].flatten.compact.join(" ")

@@ -22,16 +22,16 @@ class OauthButtonComponent < ViewComponent::Base
       "items-center",
       "justify-center",
       "px-4",
-      "py-3",
+      "py-2.5",
       "text-sm",
       "font-medium",
       "text-white",
-      "rounded-lg",
-      "transition-all",
+      "rounded-md",
+      "transition-colors",
       "duration-200",
-      "focus:ring-4",
+      "focus:ring-2",
+      "focus:ring-offset-2",
       "focus:outline-none",
-      "hover:shadow-lg",
       "disabled:opacity-50",
       "disabled:cursor-not-allowed"
     ]
@@ -48,11 +48,11 @@ class OauthButtonComponent < ViewComponent::Base
   def default_color
     case provider.to_s
     when "google_oauth2", "google"
-      "bg-red-600 hover:bg-red-700 focus:ring-red-300"
+      "bg-red-600 hover:bg-red-700 focus:ring-red-500"
     when "github"
-      "bg-gray-800 hover:bg-gray-900 focus:ring-gray-300"
+      "bg-gray-800 hover:bg-gray-900 focus:ring-gray-500"
     else
-      "bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
+      "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
     end
   end
 
