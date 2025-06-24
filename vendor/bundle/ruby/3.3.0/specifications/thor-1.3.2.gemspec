@@ -17,10 +17,10 @@ Gem::Specification.new do |s|
   s.homepage = "http://whatisthor.com/".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 2.6.0".freeze)
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.5.11".freeze
   s.summary = "Thor is a toolkit for building powerful command-line interfaces.".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

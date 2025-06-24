@@ -5,10 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Rails Server
-- `PORT=3000 rails server` - Start Rails server on port 3000 (nginx proxies from HTTPS port 443)
-- `rails console` - Open Rails console
+- `./bin/rails server -p 3000` - Start Rails server on port 3000 (nginx proxies from HTTPS port 443)
+- `./bin/rails console` - Open Rails console
+- **Alternative**: `bundle exec rails server -p 3000` or `bundle exec rails console`
 - **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
 - Start rails server automatically when you expect user to test
+- **Note**: Always use `./bin/rails` or `bundle exec rails` instead of just `rails` to avoid rbenv issues
 
 ### Environment Variables
 - All environment variables for Rails is in `.env.local`
@@ -32,16 +34,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Best practice**: Always run `./bin/check` before committing
 
 ### Database
-- `rails db:migrate` - Run migrations
-- `rails db:seed` - Run seeds
-- `rails db:reset` - Reset database (drop, create, migrate, seed)
+- `./bin/rails db:migrate` - Run migrations
+- `./bin/rails db:seed` - Run seeds
+- `./bin/rails db:reset` - Reset database (drop, create, migrate, seed)
 
 ### Service Management
-- `rake service_audit:refresh_needed` - Check which services need refresh
-- `rake financials:sample` - Update financial data for sample companies
-- `rake financials:queue[count]` - Queue companies for financial updates
-- `rake domain_testing:sample` - Test DNS for sample domains
-- `rake domain_testing:queue[count]` - Queue domains for DNS testing
+- `./bin/rake service_audit:refresh_needed` - Check which services need refresh
+- `./bin/rake financials:sample` - Update financial data for sample companies
+- `./bin/rake financials:queue[count]` - Queue companies for financial updates
+- `./bin/rake domain_testing:sample` - Test DNS for sample domains
+- `./bin/rake domain_testing:queue[count]` - Queue domains for DNS testing
 
 ### Kafka (Optional)
 - Kafka is conditionally enabled via `KAFKA_ENABLED=true` environment variable
@@ -56,18 +58,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture Overview
 
 ### Service-Oriented Architecture
-This application follows a service-oriented pattern with the following key components:
+This application follows a **standardized service-oriented pattern** documented in `docs/SERVICE_ARCHITECTURE_STANDARD.md`.
+
+**📋 IMPORTANT**: All new services MUST follow the architecture standard. See documentation:
+- `docs/SERVICE_ARCHITECTURE_STANDARD.md` - Complete standard requirements
+- `docs/DOMAIN_SERVICES_IMPLEMENTATION.md` - Implementation examples
+- `docs/service_architecture/SERVICE_TEMPLATE.md` - Template for new services
 
 **Services** (`app/services/`):
 - All services inherit from `ApplicationService`
-- Services implement a `perform` method and are called via `.call`
-- Built-in audit logging and error handling
-- Example: `CompanyFinancialsService`, `DomainTestingService`
+- Services implement a `call` method (not `perform`)
+- Handle both individual records and batch processing
+- Built-in audit logging via `ServiceAuditLog`
+- Example: `DomainTestingService`, `DomainMxTestingService`
 
 **Workers** (`app/workers/`):
-- Sidekiq background job processors
-- Handle async processing of services
-- Example: `CompanyFinancialsWorker`, `DomainTestingWorker`
+- Lightweight Sidekiq job processors
+- Only handle job execution and error logging
+- Delegate all business logic to services
+- Follow exact pattern from architecture standard
+- Example: `DomainDnsTestingWorker`, `DomainMxTestingWorker`
 
 **Consumers** (`app/consumers/`) - Optional Kafka Integration:
 - Karafka-based Kafka message consumers
@@ -155,10 +165,11 @@ All auditable models include `ServiceAuditable` concern, providing:
 5. Guard enables auto-testing during development
 
 ### File Organization
-- `app/services/` - Business logic services
-- `app/workers/` - Background job processors
+- `app/services/` - Business logic services (must follow architecture standard)
+- `app/workers/` - Background job processors (must follow architecture standard)
 - `app/consumers/` - Kafka message consumers (optional)
 - `lib/tasks/` - Operational rake tasks
 - `spec/` - RSpec test suite
+- `docs/` - Architecture documentation and standards
 - `config/initializers/kafka.rb` - Kafka configuration (conditional)
 - `config/karafka.rb` - Kafka consumer configuration

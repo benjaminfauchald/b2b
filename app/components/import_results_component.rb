@@ -55,7 +55,9 @@ class ImportResultsComponent < ViewComponent::Base
   end
 
   def metrics_classes
-    "mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
+    has_duplicates = result.respond_to?(:duplicate_count) && result.duplicate_count > 0
+    grid_cols = has_duplicates ? "sm:grid-cols-4" : "sm:grid-cols-3"
+    "mt-4 grid grid-cols-1 #{grid_cols} gap-4"
   end
 
   def metric_card_classes
@@ -150,15 +152,32 @@ class ImportResultsComponent < ViewComponent::Base
   end
 
   def has_imported_domains?
-    result.imported_domains.any?
+    return false unless result.respond_to?(:imported_domains)
+    result.imported_domains&.any? || false
   end
 
   def has_failed_domains?
-    result.failed_domains.any?
+    return result.failed_domains&.any? || false if result.respond_to?(:failed_domains)
+    return result[:failed_domains]&.any? || false if result.is_a?(Hash)
+    false
+  end
+
+  def has_errors_to_export?
+    has_failed = has_failed_domains?
+    has_duplicates = false
+    
+    if result.respond_to?(:duplicate_domains)
+      has_duplicates = result.duplicate_domains&.any? || false
+    elsif result.is_a?(Hash)
+      has_duplicates = result[:duplicate_domains]&.any? || false
+    end
+    
+    has_failed || has_duplicates
   end
 
   def mobile_friendly_errors
-    result.failed_domains.map do |failed_domain|
+    domains = result.respond_to?(:failed_domains) ? result.failed_domains : (result[:failed_domains] || [])
+    domains.map do |failed_domain|
       {
         summary: "Row #{failed_domain[:row]}: #{failed_domain[:domain].presence || '(blank)'}",
         errors: failed_domain[:errors].join(", ")

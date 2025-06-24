@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_23_062937) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_23_191001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -343,11 +343,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_23_062937) do
     t.decimal "long_term_liabilities"
     t.integer "year"
     t.text "financial_data"
+    t.datetime "financial_data_updated_at"
+    t.jsonb "web_pages"
+    t.datetime "web_discovery_updated_at"
+    t.jsonb "employees_data"
+    t.datetime "employee_discovery_updated_at"
+    t.index ["employee_discovery_updated_at"], name: "index_companies_on_employee_discovery_updated_at"
+    t.index ["employees_data"], name: "index_companies_on_employees_data", using: :gin
+    t.index ["financial_data_updated_at"], name: "index_companies_on_financial_data_updated_at"
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["linkedin_last_processed_at"], name: "index_companies_on_linkedin_last_processed_at"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
     t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
     t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
+    t.index ["web_discovery_updated_at"], name: "index_companies_on_web_discovery_updated_at"
+    t.index ["web_pages"], name: "index_companies_on_web_pages", using: :gin
   end
 
   create_table "domains", force: :cascade do |t|

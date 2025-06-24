@@ -248,10 +248,10 @@ document.addEventListener('DOMContentLoaded', function() {
               countInput.max = Math.min(data.available_count, 1000);
               
               // Reset to sensible default
-              const newMax = Math.min(data.available_count, 100);
+              const newMax = Math.min(data.available_count, 10);
               countInput.value = newMax;
             } else {
-              countInput.value = 100;
+              countInput.value = 10;
             }
             
             await updateQueueStatus();

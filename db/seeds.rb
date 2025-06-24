@@ -55,6 +55,62 @@ ServiceConfiguration.find_or_create_by(service_name: 'domain_a_record_testing') 
   }
 end
 
+# Company Financial Data Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'company_financial_data') do |config|
+  config.refresh_interval_hours = 720  # 30 days
+  config.batch_size = 100
+  config.retry_attempts = 3
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    api_timeout_seconds: 10,
+    rate_limit_delay_seconds: 1,
+    cache_responses: true
+  }
+end
+
+# Company Web Discovery Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'company_web_discovery') do |config|
+  config.refresh_interval_hours = 1440  # 60 days
+  config.batch_size = 50
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    search_timeout_seconds: 30,
+    max_results_per_search: 10,
+    verify_ssl_certificates: true
+  }
+end
+
+# Company LinkedIn Discovery Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'company_linkedin_discovery') do |config|
+  config.refresh_interval_hours = 1440  # 60 days
+  config.batch_size = 50
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = []
+  config.settings = {
+    search_timeout_seconds: 30,
+    use_company_name_variations: true,
+    confidence_threshold: 0.7
+  }
+end
+
+# Company Employee Discovery Service Configuration
+ServiceConfiguration.find_or_create_by(service_name: 'company_employee_discovery') do |config|
+  config.refresh_interval_hours = 2160  # 90 days
+  config.batch_size = 25
+  config.retry_attempts = 2
+  config.active = true
+  config.depends_on_services = ['company_linkedin_discovery']
+  config.settings = {
+    search_timeout_seconds: 45,
+    max_employees_per_company: 50,
+    include_former_employees: false
+  }
+end
+
 # Automatic Audit Configuration
 ServiceConfiguration.find_or_create_by(service_name: 'automatic_audit') do |config|
   config.refresh_interval_hours = 0  # No refresh needed for automatic audits

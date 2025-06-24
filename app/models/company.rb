@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Company < ApplicationRecord
+  include ServiceAuditable
+  
   # Associations
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
 

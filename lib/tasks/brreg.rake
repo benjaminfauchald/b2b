@@ -406,67 +406,29 @@ namespace :brreg do
     File.delete("tmp/domain_migration_progress.txt") if File.exist?("tmp/domain_migration_progress.txt") && error_count == 0
   end
 
-  desc "Migrate BRREG data from remote database to local Company model"
-  task migrate_to_companies: :environment do
-    puts "Starting BRREG to Company migration..."
+  desc "Migrate Company data from app.connectica.no to localhost"
+  task migrate_companies_from_production: :environment do
+    puts "Starting Company migration from app.connectica.no to localhost..."
 
     # Progress tracking
-    progress_file = Rails.root.join("tmp", "brreg_company_migration_progress.txt")
+    progress_file = Rails.root.join("tmp", "company_migration_progress.txt")
     start_from = 0
 
     # Resume from last processed record if progress file exists
     if File.exist?(progress_file)
       start_from = File.read(progress_file).strip.to_i
-      puts "Resuming from organisasjonsnummer: #{start_from}"
+      puts "Resuming from company ID: #{start_from}"
     end
 
-    # Database connection settings
+    # Database connection settings for remote production database
     remote_db_config = {
-      host: "b2b.connectica.no",
+      host: "app.connectica.no",
       port: 5432,
-      database: "brreg",
-      username: "postgres",
+      dbname: "b2b_production",
+      user: "benjamin",
       password: "Charcoal2020!"
     }
 
-    # Field mapping from remote BRREG to Company model
-    field_mapping = {
-      "organisasjonsnummer" => "registration_number",
-      "navn" => "company_name",
-      "organisasjonsform_kode" => "organization_form_code",
-      "organisasjonsform_beskrivelse" => "organization_form_description",
-      "naeringskode1_kode" => "primary_industry_code",
-      "naeringskode1_beskrivelse" => "primary_industry_description",
-      "naeringskode2_kode" => "secondary_industry_code",
-      "naeringskode2_beskrivelse" => "secondary_industry_description",
-      "naeringskode3_kode" => "tertiary_industry_code",
-      "naeringskode3_beskrivelse" => "tertiary_industry_description",
-      "antallansatte" => "employee_count",
-      "forretningsadresse" => "business_address",
-      "forretningsadresse_poststed" => "business_city",
-      "forretningsadresse_postnummer" => "business_postal_code",
-      "forretningsadresse_kommune" => "business_municipality",
-      "forretningsadresse_land" => "business_country",
-      "postadresse" => "postal_address",
-      "postadresse_poststed" => "postal_city",
-      "postadresse_postnummer" => "postal_code",
-      "postadresse_kommune" => "postal_municipality",
-      "postadresse_land" => "postal_country",
-      "telefon" => "phone",
-      "epost" => "email",
-      "mobiltelefon" => "mobile",
-      "hjemmeside" => "website",
-      "stiftelsesdato" => "registration_date",
-      "registreringsdatoenhetsregisteret" => "registration_date",
-      "konkurs" => "bankruptcy",
-      "konkursdato" => "bankruptcy_date",
-      "underavvikling" => "under_liquidation",
-      "underavviklingdato" => "liquidation_date",
-      "slettedato" => "deregistration_date",
-      "slettegrunnkode_beskrivelse" => "deregistration_reason",
-      "registrertimvaregisteret" => "vat_registered",
-      "registreringsdatomerverdiavgiftsregisteret" => "vat_registration_date"
-    }
 
     batch_size = ENV["BATCH_SIZE"]&.to_i || 1000
     total_migrated = 0
@@ -593,6 +555,64 @@ namespace :brreg do
   end
 
   private
+
+  def field_mapping
+    {
+      # Basic company information
+      "organisasjonsnummer" => "registration_number",
+      "navn" => "company_name",
+      "organisasjonsform_kode" => "organization_form_code",
+      "organisasjonsform_beskrivelse" => "organization_form_description",
+      
+      # Industry codes
+      "naeringskode1_kode" => "industry_code_1",
+      "naeringskode1_beskrivelse" => "industry_code_1_description",
+      "naeringskode2_kode" => "industry_code_2",
+      "naeringskode2_beskrivelse" => "industry_code_2_description",
+      "naeringskode3_kode" => "industry_code_3",
+      "naeringskode3_beskrivelse" => "industry_code_3_description",
+      
+      # Contact information
+      "hjemmeside" => "website",
+      "telefon" => "phone",
+      "mobiltelefon" => "mobile",
+      "epostadresse" => "email",
+      
+      # Address fields - Postal
+      "postadresse_adresse" => "postal_address",
+      "postadresse_postnummer" => "postal_code",
+      "postadresse_poststed" => "postal_city",
+      "postadresse_kommune" => "postal_municipality",
+      "postadresse_kommunenummer" => "postal_municipality_no",
+      "postadresse_land" => "postal_country",
+      "postadresse_landkode" => "postal_country_code",
+      
+      # Address fields - Business
+      "forretningsadresse_adresse" => "business_address",
+      "forretningsadresse_postnummer" => "business_code",
+      "forretningsadresse_poststed" => "business_city",
+      "forretningsadresse_kommune" => "business_municipality",
+      "forretningsadresse_kommunenummer" => "business_municipality_no",
+      "forretningsadresse_land" => "business_country",
+      "forretningsadresse_landkode" => "business_country_code",
+      
+      # Employee information
+      "antallansatte" => "employee_count",
+      
+      # Dates
+      "stiftelsesdato" => "founding_date",
+      "registreringsdatoenhetsregisteret" => "registration_date",
+      "registreringsdatovatskattemyndighetene" => "vat_registration_date",
+      "konkursdato" => "bankruptcy_date",
+      "avviklingsdato" => "liquidation_date",
+      "slettetdato" => "deregistration_date",
+      
+      # Status flags
+      "konkurs" => "bankruptcy",
+      "underavvikling" => "under_liquidation",
+      "registrertimvaregisteret" => "vat_registered"
+    }
+  end
 
   def company_changed?(company, brreg_record)
     company.new_record? ||

@@ -17,10 +17,10 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/bkeepers/dotenv".freeze
   s.licenses = ["MIT".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.0".freeze)
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.6.2".freeze
   s.summary = "Loads environment variables from `.env`.".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

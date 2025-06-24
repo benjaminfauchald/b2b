@@ -24,7 +24,7 @@
       <input type="number" 
              name="count" 
              id="count"
-             value="100" 
+             value="<%= [domains_needing_service, 10].min %>" 
              min="1" 
              max="<%= [domains_needing_service, 1000].min %>"
              class="<%= input_classes %>"

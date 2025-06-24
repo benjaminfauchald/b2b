@@ -1,0 +1,81 @@
+<div class="bg-white shadow rounded-lg">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-medium text-gray-900">Financial Data</h3>
+      <div class="flex items-center space-x-4">
+        <span class="text-sm text-gray-500">Year: <%= financial_year %></span>
+        <span class="text-sm text-gray-500">Updated: <%= last_updated %></span>
+      </div>
+    </div>
+  </div>
+
+  <% if has_financial_data? %>
+    <div class="p-6">
+      <!-- Key Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <% financial_metrics.each do |metric| %>
+          <div>
+            <p class="text-sm text-gray-600"><%= metric[:label] %></p>
+            <p class="text-xl font-semibold <%= metric[:color] %>">
+              <%= format_value(metric[:value], metric[:format]) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Asset Breakdown -->
+      <% if asset_breakdown.any? %>
+        <div class="mb-8">
+          <h4 class="text-base font-medium text-gray-900 mb-4">Asset Breakdown</h4>
+          <div class="space-y-3">
+            <% asset_breakdown.each do |item| %>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-gray-600"><%= item[:label] %></span>
+                  <span class="font-medium"><%= format_value(item[:value], :currency) %> (<%= item[:percentage] %>%)</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-blue-600 h-2 rounded-full" style="width: <%= item[:percentage] %>%"></div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Liability Breakdown -->
+      <% if liability_breakdown.any? %>
+        <div>
+          <h4 class="text-base font-medium text-gray-900 mb-4">Liability Breakdown</h4>
+          <div class="space-y-3">
+            <% liability_breakdown.each do |item| %>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-gray-600"><%= item[:label] %></span>
+                  <span class="font-medium"><%= format_value(item[:value], :currency) %> (<%= item[:percentage] %>%)</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-orange-600 h-2 rounded-full" style="width: <%= item[:percentage] %>%"></div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="p-6">
+      <div class="text-center py-8">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <p class="mt-2 text-sm text-gray-600">No financial data available</p>
+        <button data-turbo-method="post" 
+                data-turbo-action="<%= queue_single_financial_data_company_path(company) %>"
+                class="mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+          Fetch Financial Data
+        </button>
+      </div>
+    </div>
+  <% end %>
+</div>

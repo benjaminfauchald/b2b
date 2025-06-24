@@ -65,7 +65,7 @@ export default class extends Controller {
           this.updateAvailableCount(data.available_count)
         }
         // Reset form to sensible default
-        const newMax = Math.min(data.available_count || maxAvailable, 100)
+        const newMax = Math.min(data.available_count || maxAvailable, 10)
         countInput.value = newMax
         // Trigger a queue status update and wait for it to complete
         await this.updateQueueStats()
@@ -222,7 +222,7 @@ export default class extends Controller {
       
       // If current value exceeds available, reduce it
       if (parseInt(countInput.value) > availableCount) {
-        countInput.value = Math.min(availableCount, 100);
+        countInput.value = Math.min(availableCount, 10);
       }
     }
   }

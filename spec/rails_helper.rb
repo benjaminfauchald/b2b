@@ -16,7 +16,11 @@ require 'rspec/rails'
 require 'shoulda/matchers'
 require 'view_component/test_helpers'
 require 'capybara/rspec'
+require 'webmock/rspec'
 require_relative 'support/latest_service_run_stub'
+
+# Configure WebMock
+WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in

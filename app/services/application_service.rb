@@ -18,6 +18,9 @@ class ApplicationService
   validates :service_name, presence: true, format: { with: /\A[a-z0-9_]+\z/, message: "can only contain lowercase letters, numbers, and underscores" }
 
   def initialize(service_name:, action: "process", batch_size: 1000, **attributes)
+    # Initialize ActiveModel::Attributes
+    @attributes = {}
+    
     @service_name = service_name
     @action = action
     @batch_size = batch_size
@@ -107,21 +110,68 @@ class ApplicationService
 
   # Audit logging for service operations
   def audit_service_operation(auditable = nil)
-    audit_log = ServiceAuditLog.create!(
-      auditable: auditable,
-      service_name: service_name,
-      operation_type: action,
-      status: :pending,
-      columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : [ "none" ]),
-      metadata: (defined?(context) && context.present? ? context : { error: "no metadata" })
-    )
+    puts "\n=== audit_service_operation called ==="
+    puts "auditable: #{auditable.inspect}"
+    puts "service_name: #{service_name}"
+    puts "action: #{action}"
+    
+    begin
+      puts "Creating ServiceAuditLog"
+      # Services don't have saved_changes - that's an ActiveRecord feature
+      columns = ["none"]
+      
+      puts "columns_affected will be: #{columns.inspect}"
+      
+      metadata_value = { error: "no metadata" }
+      if defined?(context) && context.present?
+        puts "context is defined: #{context.inspect}"
+        metadata_value = context
+      end
+      
+      audit_log = ServiceAuditLog.create!(
+        auditable: auditable,
+        service_name: service_name,
+        operation_type: action,
+        status: :pending,
+        columns_affected: columns,
+        metadata: metadata_value,
+        table_name: auditable ? auditable.class.table_name : 'unknown',
+        record_id: auditable ? auditable.id.to_s : 'unknown',
+        started_at: Time.current
+      )
+      puts "ServiceAuditLog created: #{audit_log.inspect}"
+    rescue => e
+      puts "ERROR creating ServiceAuditLog: #{e.class.name}: #{e.message}"
+      puts e.backtrace.first(5).join("\n")
+      raise
+    end
 
     begin
+      puts "Yielding to block"
       result = yield(audit_log)
-      audit_log.mark_success!(result: result, context: result.respond_to?(:saved_changes) ? result.saved_changes.keys : [], columns_affected: (respond_to?(:saved_changes) ? saved_changes.keys : []))
+      puts "Block completed, result: #{result.class.name}"
+      
+      puts "Calling mark_success!"
+      # Don't overwrite metadata, just mark as success and calculate execution time
+      audit_log.update!(
+        status: :success,
+        completed_at: Time.current,
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
+      )
+      puts "mark_success! completed"
+      
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e, { "error" => e.message }, [])
+      puts "ERROR in audit_service_operation block: #{e.class.name}: #{e.message}"
+      
+      # Check if this is a rate limit error with retry_after
+      metadata = { "error" => e.message }
+      if e.message.include?('rate limit') && e.respond_to?(:retry_after)
+        metadata["rate_limited"] = true
+        metadata["retry_after"] = e.retry_after
+      end
+      
+      audit_log.mark_failed!(e.message, metadata, [])
       raise e
     end
   end

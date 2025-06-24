@@ -13,12 +13,12 @@ NULLCMD = :
 #### Start of system configuration section. ####
 
 srcdir = .
-topdir = /Users/benjamin/.rbenv/versions/3.3.0/include/ruby-3.3.0
+topdir = /Users/benjamin/.rbenv/versions/3.3.8/include/ruby-3.3.0
 hdrdir = $(topdir)
-arch_hdrdir = /Users/benjamin/.rbenv/versions/3.3.0/include/ruby-3.3.0/arm64-darwin24
+arch_hdrdir = /Users/benjamin/.rbenv/versions/3.3.8/include/ruby-3.3.0/arm64-darwin24
 PATH_SEPARATOR = :
 VPATH = $(srcdir):$(arch_hdrdir)/ruby:$(hdrdir)/ruby
-prefix = $(DESTDIR)/Users/benjamin/.rbenv/versions/3.3.0
+prefix = $(DESTDIR)/Users/benjamin/.rbenv/versions/3.3.8
 rubysitearchprefix = $(rubylibprefix)/$(sitearch)
 rubyarchprefix = $(rubylibprefix)/$(arch)
 rubylibprefix = $(libdir)/$(RUBY_BASE_NAME)
@@ -67,7 +67,7 @@ archdir = $(rubyarchdir)
 
 CC_WRAPPER = 
 CC = clang
-CXX = clang++
+CXX = clang++ -std=gnu++11
 LIBRUBY = $(LIBRUBY_SO)
 LIBRUBY_A = lib$(RUBY_SO_NAME)-static.a
 LIBRUBYARG_SHARED = -l$(RUBY_SO_NAME)
@@ -96,7 +96,7 @@ ARCH_FLAG = -arch arm64
 DLDFLAGS = $(ldflags) $(dldflags) $(ARCH_FLAG)
 LDSHARED = $(CC) -dynamic -bundle
 LDSHAREDXX = $(CXX) -dynamic -bundle
-AR = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar
+AR = ar
 EXEEXT = 
 
 RUBY_INSTALL_NAME = $(RUBY_BASE_NAME)

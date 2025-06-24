@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 class DomainImportResult
-  attr_reader :imported_count, :failed_count, :imported_domains, :failed_domains,
-              :error_message, :processing_time, :csv_errors
+  attr_reader :imported_count, :failed_count, :duplicate_count, :imported_domains, :failed_domains,
+              :duplicate_domains, :error_message, :processing_time, :csv_errors
 
   def initialize
     @imported_count = 0
     @failed_count = 0
+    @duplicate_count = 0
     @imported_domains = []
     @failed_domains = []
+    @duplicate_domains = []
     @error_message = nil
     @processing_time = nil
     @csv_errors = []
@@ -33,6 +35,14 @@ class DomainImportResult
     @failed_count += 1
   end
 
+  def add_duplicate_domain(domain_name, row_number)
+    @duplicate_domains << {
+      domain: domain_name,
+      row: row_number
+    }
+    @duplicate_count += 1
+  end
+
   def add_csv_error(error_message)
     @csv_errors << error_message
   end
@@ -46,7 +56,7 @@ class DomainImportResult
   end
 
   def total_count
-    @imported_count + @failed_count
+    @imported_count + @failed_count + @duplicate_count
   end
 
   def has_csv_errors?
@@ -62,14 +72,14 @@ class DomainImportResult
       return "CSV parsing errors occurred"
     end
 
-    case
-    when success?
-      pluralize(@imported_count, "domain") + " imported successfully"
-    when @imported_count > 0 && @failed_count > 0
-      "#{@imported_count} of #{total_count} domains imported successfully, #{@failed_count} failed"
-    else
-      "#{@imported_count} domains imported, #{@failed_count} failed"
-    end
+    parts = []
+    parts << "#{@imported_count} imported" if @imported_count > 0
+    parts << "#{@failed_count} failed" if @failed_count > 0
+    parts << "#{@duplicate_count} skipped (duplicates)" if @duplicate_count > 0
+
+    return "No domains processed" if parts.empty?
+    
+    parts.join(", ")
   end
 
   def domains_per_second
@@ -83,9 +93,11 @@ class DomainImportResult
       success: success?,
       imported_count: @imported_count,
       failed_count: @failed_count,
+      duplicate_count: @duplicate_count,
       total_count: total_count,
       imported_domains: @imported_domains,
       failed_domains: @failed_domains,
+      duplicate_domains: @duplicate_domains,
       error_message: @error_message,
       processing_time: @processing_time,
       csv_errors: @csv_errors,

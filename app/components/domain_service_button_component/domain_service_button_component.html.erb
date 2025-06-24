@@ -1,0 +1,49 @@
+<div class="flex items-center justify-between">
+  <div class="flex-1">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <%= service_config[:icon] %>
+        <span class="ml-2"><%= service_config[:name] %> Status</span>
+      </span>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= status_badge_classes %>">
+        <% if pending_test? %>
+          <%= spinner_icon %>
+          <span class="ml-1">Testing...</span>
+        <% else %>
+          <%= status_text %>
+        <% end %>
+      </span>
+    </div>
+    <% if last_tested_time %>
+      <p class="text-xs text-gray-500">
+        Last tested: <%= time_ago_in_words(last_tested_time) %> ago
+      </p>
+    <% else %>
+      <p class="text-xs text-gray-500">Never tested</p>
+    <% end %>
+  </div>
+  
+  <div class="ml-4">
+    <%= form_with url: action_path, method: :post, remote: true, 
+                  id: form_id, 
+                  class: "domain-service-queue-form",
+                  data: { 
+                    domain_id: domain.id, 
+                    service: service,
+                    form_id: form_id
+                  } do |form| %>
+      <button type="submit" 
+              class="<%= button_classes %>"
+              data-button-id="<%= form_id %>"
+              <%= "disabled" if button_disabled? %>>
+        <% if pending_test? %>
+          <%= spinner_icon %>
+          <span class="ml-1">Testing...</span>
+        <% else %>
+          <%= service_config[:icon] %>
+          <span class="ml-2"><%= button_text %></span>
+        <% end %>
+      </button>
+    <% end %>
+  </div>
+</div>

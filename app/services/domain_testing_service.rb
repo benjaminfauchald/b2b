@@ -14,36 +14,9 @@ class DomainTestingService < ApplicationService
   end
 
   def call
-    results = { processed: 0, successful: 0, failed: 0, errors: 0 }
-    Domain.needing_service(service_name).find_each(batch_size: batch_size) do |domain|
-      audit_log = ServiceAuditLog.create!(
-        auditable: domain,
-        service_name: service_name,
-        operation_type: action,
-        status: :pending,
-        columns_affected: [ "dns" ],
-        metadata: { domain_name: domain.domain }
-      )
-      begin
-        outcome = test_domain_dns(domain, audit_log)
-        if outcome[:status] == :success
-          audit_log.mark_success!({
-            "domain_name" => domain.domain,
-            "dns_status" => domain.dns,
-            "test_duration_ms" => outcome[:context]["test_duration_ms"]
-          }, [ "dns" ])
-          results[:successful] += 1
-        else
-          audit_log.mark_failed!("DNS test failed", { "error" => "DNS test failed", "domain_name" => domain.domain }, [])
-          results[:failed] += 1
-        end
-        results[:processed] += 1
-      rescue => e
-        audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, [])
-        results[:errors] += 1
-      end
-    end
-    results
+    return test_single_domain if domain
+    return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
+    test_domains_in_batches(Domain.needing_service(service_name))
   end
 
   # Legacy class methods for backward compatibility
@@ -194,15 +167,48 @@ class DomainTestingService < ApplicationService
   private
 
   def test_single_domain
-    start_time = Time.current
-    result = perform_dns_test
-    duration = Time.current - start_time
+    audit_log = nil
+    begin
+      audit_log = ServiceAuditLog.create!(
+        auditable: domain,
+        service_name: service_name,
+        operation_type: action,
+        status: :pending,
+        columns_affected: ["dns"],
+        metadata: { domain_name: domain.domain },
+        table_name: domain.class.table_name,
+        record_id: domain.id.to_s,
+        started_at: Time.current
+      )
 
-    {
-      status: result[:status],
-      records: result[:records],
-      duration: duration
-    }
+      result = perform_dns_test
+      update_domain_status(domain, result)
+      
+      audit_log.update!(
+        status: :success,
+        completed_at: Time.current,
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
+        metadata: audit_log.metadata.merge({
+          dns_status: domain.dns,
+          test_result: result[:status]
+        })
+      )
+      
+      result
+    rescue StandardError => e
+      if audit_log
+        audit_log.update!(
+          status: :failed,
+          completed_at: Time.current,
+          execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
+          metadata: audit_log.metadata.merge({
+            error: e.message,
+            dns_status: domain.dns
+          })
+        )
+      end
+      raise e
+    end
   end
 
   def perform_dns_test
@@ -222,6 +228,15 @@ class DomainTestingService < ApplicationService
       status: "error",
       records: { error: e.message }
     }
+  end
+
+  def update_domain_status(domain, result)
+    case result[:status]
+    when "success"
+      domain.update_columns(dns: true)
+    when "no_records", "error"
+      domain.update_columns(dns: false)
+    end
   end
 
   def perform_dns_test_for_domain(domain)
