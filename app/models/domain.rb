@@ -36,12 +36,21 @@ class Domain < ApplicationRecord
     dns.nil? || needs_service?("domain_testing")
   end
 
+  # Override from ServiceAuditable to handle domain-specific logic
   def self.needing_service(service_name)
     case service_name.to_s
     when "domain_mx_testing"
+      # MX testing needs DNS to be active and WWW to be tested
       where(dns: true, www: true, mx: nil)
+    when "domain_a_record_testing"
+      # A record testing needs DNS to be active but WWW not tested
+      dns_active.where(www: nil)
+    when "domain_testing"
+      # Use the ServiceAuditable logic for DNS testing
+      super(service_name)
     else
-      all
+      # Fall back to ServiceAuditable logic
+      super(service_name)
     end
   end
 end

@@ -22,14 +22,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Rails Server
-- `./bin/rake restart` - **ALWAYS USE THIS** to restart Rails server (kills old processes and starts fresh)
+### Rails Server & Development Stack
+- `./bin/rake dev` - **RECOMMENDED** Start full development stack (Rails + ngrok tunnel)
+- `./bin/rake dev:stop` - Stop all development services
+- `./bin/rake dev:status` - Check status of development services
+- `./bin/rake restart` - Restart only Rails server (kills old processes and starts fresh)
 - `./bin/rake kill` - Kill any Rails server running on port 3000
 - `./bin/rails console` - Open Rails console
-- **CRITICAL**: Always use `./bin/rake restart` when testing new code to ensure no cached code is running
-- **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
-- Start rails server automatically when you expect user to test using `./bin/rake restart`
-- **Note**: Always use `./bin/rails` or `bundle exec rails` instead of just `rails` to avoid rbenv issues
+
+### Ngrok Tunnel Management
+- `./bin/rake ngrok:start` - Start ngrok tunnel for local.connectica.no
+- `./bin/rake ngrok:stop` - Stop ngrok tunnel
+- `./bin/rake ngrok:restart` - Restart ngrok tunnel
+- `./bin/rake ngrok:status` - Check ngrok status and logs
+
+**Access URLs:**
+- Local: http://localhost:3000
+- Ngrok: https://local.connectica.no
+
+**CRITICAL**: Always use `./bin/rake dev` when testing to ensure both Rails and ngrok are running with fresh code
+**Note**: Always use `./bin/rails` or `bundle exec rails` instead of just `rails` to avoid rbenv issues
 
 ### Environment Variables
 - All environment variables for Rails is in `.env.local`

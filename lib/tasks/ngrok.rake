@@ -26,6 +26,7 @@ namespace :ngrok do
     FileUtils.mkdir_p('log')
     
     # Start ngrok with nohup
+    # Using your paid ngrok plan with custom domain for OAuth2 testing
     cmd = "nohup ngrok http 3000 --domain=local.connectica.no > log/ngrok.log 2>&1 &"
     system(cmd)
     

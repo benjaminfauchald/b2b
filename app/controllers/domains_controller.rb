@@ -131,7 +131,7 @@ class DomainsController < ApplicationController
     available_domains = Domain.needing_service("domain_testing")
     available_count = available_domains.count
     
-    # Check if we have enough domains to queue
+    # Check if we have any domains to queue
     if available_count == 0
       render json: { 
         success: false, 
@@ -141,17 +141,11 @@ class DomainsController < ApplicationController
       return
     end
     
-    if count > available_count
-      render json: { 
-        success: false, 
-        message: "Only #{available_count} domains need DNS testing, but #{count} were requested",
-        available_count: available_count
-      }
-      return
-    end
-
-    # Queue the requested number of domains
-    domains = available_domains.limit(count)
+    # Adjust count to available domains if necessary
+    actual_count = [count, available_count].min
+    
+    # Queue up to the requested number of domains (or all available if less)
+    domains = available_domains.limit(actual_count)
     queued = 0
     
     domains.each do |domain|
@@ -161,8 +155,11 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: "Queued #{queued} domains for DNS testing",
+      message: actual_count < count ? 
+        "Queued all #{queued} available domains for DNS testing (requested: #{count})" : 
+        "Queued #{queued} domains for DNS testing",
       queued_count: queued,
+      requested_count: count,
       available_count: available_count,
       queue_stats: get_queue_stats
     }
@@ -192,7 +189,7 @@ class DomainsController < ApplicationController
     available_domains = Domain.needing_service("domain_mx_testing")
     available_count = available_domains.count
     
-    # Check if we have enough domains to queue
+    # Check if we have any domains to queue
     if available_count == 0
       render json: { 
         success: false, 
@@ -202,17 +199,11 @@ class DomainsController < ApplicationController
       return
     end
     
-    if count > available_count
-      render json: { 
-        success: false, 
-        message: "Only #{available_count} domains need MX testing, but #{count} were requested",
-        available_count: available_count
-      }
-      return
-    end
-
-    # Queue the requested number of domains
-    domains = available_domains.limit(count)
+    # Adjust count to available domains if necessary
+    actual_count = [count, available_count].min
+    
+    # Queue up to the requested number of domains (or all available if less)
+    domains = available_domains.limit(actual_count)
     queued = 0
     
     domains.each do |domain|
@@ -222,8 +213,11 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: "Queued #{queued} domains for MX testing",
+      message: actual_count < count ? 
+        "Queued all #{queued} available domains for MX testing (requested: #{count})" : 
+        "Queued #{queued} domains for MX testing",
       queued_count: queued,
+      requested_count: count,
       available_count: available_count,
       queue_stats: get_queue_stats
     }
@@ -253,7 +247,7 @@ class DomainsController < ApplicationController
     available_domains = Domain.dns_active.where(www: nil)
     available_count = available_domains.count
     
-    # Check if we have enough domains to queue
+    # Check if we have any domains to queue
     if available_count == 0
       render json: { 
         success: false, 
@@ -263,17 +257,11 @@ class DomainsController < ApplicationController
       return
     end
     
-    if count > available_count
-      render json: { 
-        success: false, 
-        message: "Only #{available_count} domains need A Record testing, but #{count} were requested",
-        available_count: available_count
-      }
-      return
-    end
-
-    # Queue the requested number of domains
-    domains = available_domains.limit(count)
+    # Adjust count to available domains if necessary
+    actual_count = [count, available_count].min
+    
+    # Queue up to the requested number of domains (or all available if less)
+    domains = available_domains.limit(actual_count)
     queued = 0
     
     domains.each do |domain|
@@ -283,8 +271,11 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: "Queued #{queued} domains for A Record testing",
+      message: actual_count < count ? 
+        "Queued all #{queued} available domains for A Record testing (requested: #{count})" : 
+        "Queued #{queued} domains for A Record testing",
       queued_count: queued,
+      requested_count: count,
       available_count: available_count,
       queue_stats: get_queue_stats
     }
