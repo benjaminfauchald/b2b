@@ -1,0 +1,40 @@
+<div class="<%= card_classes %>" 
+     data-service="<%= service_name %>"
+     data-controller="service-queue"
+     data-service-queue-service-name-value="<%= service_name %>">
+  <div class="flex items-center mb-4">
+    <span class="text-2xl mr-2"><%= icon %></span>
+    <h3 class="<%= heading_classes %>">
+      <%= title %>
+    </h3>
+  </div>
+  
+  <div class="mb-4 <%= text_muted_classes %>">
+    <p><%= domains_needing_service %> domains need testing</p>
+    <p data-queue-stat="<%= queue_name %>"><%= queue_depth %> in queue</p>
+  </div>
+  
+  <form data-service-queue-target="form" 
+        data-action="submit->service-queue#submit" 
+        action="<%= action_path %>" 
+        method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <div class="mb-4">
+      <label for="count" class="<%= label_classes %>">Batch Size</label>
+      <input type="number" 
+             name="count" 
+             id="count"
+             value="100" 
+             min="1" 
+             max="1000"
+             class="<%= input_classes %>"
+             data-service-queue-target="countInput" />
+    </div>
+    
+    <button type="submit" 
+            class="<%= button_classes %>"
+            data-service-queue-target="submitButton">
+      Queue Testing
+    </button>
+  </form>
+</div>

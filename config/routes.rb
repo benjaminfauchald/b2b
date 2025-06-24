@@ -8,12 +8,40 @@ Rails.application.routes.draw do
   resources :domains do
     collection do
       post :queue_testing
+      post :queue_dns_testing
+      post :queue_mx_testing
+      post :queue_a_record_testing
       get :queue_status
       get :import, to: "domains#import_csv"
       post :import, to: "domains#process_import"
       get :import_results, to: "domains#import_results"
       get :template, to: "domains#download_template"
       get :export_errors, to: "domains#export_errors"
+    end
+    
+    member do
+      post :queue_single_dns
+      post :queue_single_mx
+      post :queue_single_www
+    end
+  end
+
+  resources :companies do
+    collection do
+      # Enhancement service queue actions
+      post :queue_financial_data
+      post :queue_web_discovery
+      post :queue_linkedin_discovery
+      post :queue_employee_discovery
+      get :enhancement_queue_status
+    end
+    
+    member do
+      # Individual company service triggers
+      post :queue_single_financial_data
+      post :queue_single_web_discovery
+      post :queue_single_linkedin_discovery
+      post :queue_single_employee_discovery
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

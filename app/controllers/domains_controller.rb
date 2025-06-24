@@ -1,9 +1,9 @@
-require 'ostruct'
-require 'csv'
+require "ostruct"
+require "csv"
 
 class DomainsController < ApplicationController
-  before_action :set_domain, only: %i[ show edit update destroy ]
-  skip_before_action :verify_authenticity_token, only: [ :queue_testing, :queue_dns_testing, :queue_mx_testing, :queue_a_record_testing ]
+  before_action :set_domain, only: %i[ show edit update destroy queue_single_dns queue_single_mx queue_single_www ]
+  skip_before_action :verify_authenticity_token, only: [ :queue_testing, :queue_dns_testing, :queue_mx_testing, :queue_a_record_testing, :queue_single_dns, :queue_single_mx, :queue_single_www ]
 
   # GET /domains or /domains.json
   def index
@@ -113,17 +113,17 @@ class DomainsController < ApplicationController
       render json: { success: false, message: "DNS testing service is disabled" }
       return
     end
-    
+
     count = params[:count]&.to_i || 100
     domains = Domain.needing_service("domain_testing").limit(count)
-    
+
     queued = 0
     domains.each do |domain|
       DomainDnsTestingWorker.perform_async(domain.id)
       queued += 1
     end
-    
-    render json: { 
+
+    render json: {
       success: true,
       message: "Queued #{queued} domains for DNS testing",
       queued_count: queued,
@@ -137,17 +137,17 @@ class DomainsController < ApplicationController
       render json: { success: false, message: "MX testing service is disabled" }
       return
     end
-    
+
     count = params[:count]&.to_i || 100
     domains = Domain.needing_service("domain_mx_testing").limit(count)
-    
+
     queued = 0
     domains.each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       queued += 1
     end
-    
-    render json: { 
+
+    render json: {
       success: true,
       message: "Queued #{queued} domains for MX testing",
       queued_count: queued,
@@ -161,17 +161,17 @@ class DomainsController < ApplicationController
       render json: { success: false, message: "A Record testing service is disabled" }
       return
     end
-    
+
     count = params[:count]&.to_i || 100
     domains = Domain.dns_active.where(www: nil).limit(count)
-    
+
     queued = 0
     domains.each do |domain|
       DomainARecordTestingWorker.perform_async(domain.id)
       queued += 1
     end
-    
-    render json: { 
+
+    render json: {
       success: true,
       message: "Queued #{queued} domains for A Record testing",
       queued_count: queued,
@@ -185,6 +185,135 @@ class DomainsController < ApplicationController
       success: true,
       queue_stats: get_queue_stats
     }
+  end
+
+  # POST /domains/:id/queue_single_dns
+  def queue_single_dns
+    unless ServiceConfiguration.active?("domain_testing")
+      render json: { success: false, message: "DNS testing service is disabled" }
+      return
+    end
+
+    begin
+      # Create service audit log for queueing action
+      audit_log = ServiceAuditLog.create!(
+        auditable: @domain,
+        service_name: "domain_testing",
+        operation_type: "queue_individual",
+        status: "pending",
+        table_name: @domain.class.table_name,
+        record_id: @domain.id.to_s,
+        columns_affected: ["dns"],
+        metadata: {
+          action: "manual_queue",
+          user_id: current_user.id,
+          timestamp: Time.current
+        }
+      )
+
+      job_id = DomainDnsTestingWorker.perform_async(@domain.id)
+
+      render json: {
+        success: true,
+        message: "Domain queued for DNS testing",
+        domain_id: @domain.id,
+        service: "dns",
+        job_id: job_id,
+        worker: "DomainDnsTestingWorker",
+        audit_log_id: audit_log.id
+      }
+    rescue => e
+      render json: {
+        success: false,
+        message: "Failed to queue domain for DNS testing: #{e.message}"
+      }
+    end
+  end
+
+  # POST /domains/:id/queue_single_mx
+  def queue_single_mx
+    unless ServiceConfiguration.active?("domain_mx_testing")
+      render json: { success: false, message: "MX testing service is disabled" }
+      return
+    end
+
+    begin
+      # Create service audit log for queueing action
+      audit_log = ServiceAuditLog.create!(
+        auditable: @domain,
+        service_name: "domain_mx_testing",
+        operation_type: "queue_individual",
+        status: "pending",
+        table_name: @domain.class.table_name,
+        record_id: @domain.id.to_s,
+        columns_affected: ["mx"],
+        metadata: {
+          action: "manual_queue",
+          user_id: current_user.id,
+          timestamp: Time.current
+        }
+      )
+
+      job_id = DomainMxTestingWorker.perform_async(@domain.id)
+
+      render json: {
+        success: true,
+        message: "Domain queued for MX testing",
+        domain_id: @domain.id,
+        service: "mx",
+        job_id: job_id,
+        worker: "DomainMxTestingWorker",
+        audit_log_id: audit_log.id
+      }
+    rescue => e
+      render json: {
+        success: false,
+        message: "Failed to queue domain for MX testing: #{e.message}"
+      }
+    end
+  end
+
+  # POST /domains/:id/queue_single_www
+  def queue_single_www
+    unless ServiceConfiguration.active?("domain_a_record_testing")
+      render json: { success: false, message: "WWW testing service is disabled" }
+      return
+    end
+
+    begin
+      # Create service audit log for queueing action
+      audit_log = ServiceAuditLog.create!(
+        auditable: @domain,
+        service_name: "domain_a_record_testing",
+        operation_type: "queue_individual",
+        status: "pending",
+        table_name: @domain.class.table_name,
+        record_id: @domain.id.to_s,
+        columns_affected: ["www"],
+        metadata: {
+          action: "manual_queue",
+          user_id: current_user.id,
+          timestamp: Time.current
+        }
+      )
+
+      job_id = DomainARecordTestingWorker.perform_async(@domain.id)
+
+      render json: {
+        success: true,
+        message: "Domain queued for WWW testing",
+        domain_id: @domain.id,
+        service: "www",
+        job_id: job_id,
+        worker: "DomainARecordTestingWorker",
+        audit_log_id: audit_log.id
+      }
+    rescue => e
+      render json: {
+        success: false,
+        message: "Failed to queue domain for WWW testing: #{e.message}"
+      }
+    end
   end
 
   # GET /domains/import
@@ -209,14 +338,14 @@ class DomainsController < ApplicationController
       puts "\n=== CONTROLLER: Starting CSV import ==="
       puts "File name: #{params[:csv_file].original_filename}"
       puts "File size: #{params[:csv_file].size}"
-      
+
       import_service = DomainImportService.new(
         file: params[:csv_file],
         user: current_user
       )
 
       result = import_service.perform
-      
+
       puts "Import result: #{result.to_h.inspect}"
 
       # Store only summary in session (not full details to avoid cookie overflow)
@@ -278,29 +407,29 @@ class DomainsController < ApplicationController
 
     begin
       import_result = JSON.parse(session[:import_results], object_class: OpenStruct)
-      
+
       # Generate CSV with actual error data
       csv_content = CSV.generate(headers: true) do |csv|
-        csv << ['Row', 'Domain', 'Errors']
-        
+        csv << [ "Row", "Domain", "Errors" ]
+
         # Add failed domains
         if import_result.failed_domains.present?
           import_result.failed_domains.each do |failed_domain|
             csv << [
-              failed_domain['row'] || failed_domain[:row],
-              failed_domain['domain'] || failed_domain[:domain] || '(blank)',
-              Array(failed_domain['errors'] || failed_domain[:errors]).join('; ')
+              failed_domain["row"] || failed_domain[:row],
+              failed_domain["domain"] || failed_domain[:domain] || "(blank)",
+              Array(failed_domain["errors"] || failed_domain[:errors]).join("; ")
             ]
           end
         end
-        
+
         # Add duplicate domains if any
         if import_result.duplicate_domains.present?
           import_result.duplicate_domains.each do |dup_domain|
             csv << [
-              dup_domain['row'] || dup_domain[:row],
-              dup_domain['domain'] || dup_domain[:domain],
-              'Domain already exists (duplicate)'
+              dup_domain["row"] || dup_domain[:row],
+              dup_domain["domain"] || dup_domain[:domain],
+              "Domain already exists (duplicate)"
             ]
           end
         end
@@ -319,6 +448,12 @@ class DomainsController < ApplicationController
     # Use callbacks to share common setup or constraints between actions.
     def set_domain
       @domain = Domain.find(params.expect(:id))
+    rescue ActiveRecord::RecordNotFound
+      if request.format.json? || action_name.start_with?("queue_single_")
+        render json: { success: false, message: "Domain not found" }, status: :not_found
+      else
+        redirect_to domains_path, alert: "Domain not found"
+      end
     end
 
     # Only allow a list of trusted parameters through.
