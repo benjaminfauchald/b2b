@@ -1,29 +1,37 @@
-<div class="flex items-center justify-between">
-  <div class="flex-1">
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
+<div class="space-y-4">
+  <!-- Service Header -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center">
+      <span class="text-gray-600 dark:text-gray-400">
         <%= service_config[:icon] %>
-        <span class="ml-2"><%= service_config[:name] %> Status</span>
       </span>
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= status_badge_classes %>">
-        <% if pending_test? %>
-          <%= spinner_icon %>
-          <span class="ml-1">Testing...</span>
-        <% else %>
-          <%= status_text %>
-        <% end %>
+      <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+        <%= service_config[:name] %> Status
       </span>
     </div>
+    
+    <!-- Status Badge -->
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium <%= status_badge_classes %>">
+      <% if pending_test? %>
+        <%= spinner_icon %>
+        <span class="ml-1">Testing...</span>
+      <% else %>
+        <%= status_text %>
+      <% end %>
+    </span>
+  </div>
+  
+  <!-- Last Tested Info -->
+  <div class="text-xs text-gray-500 dark:text-gray-400">
     <% if last_tested_time %>
-      <p class="text-xs text-gray-500">
-        Last tested: <%= time_ago_in_words(last_tested_time) %> ago
-      </p>
+      Last tested: <%= time_ago_in_words(last_tested_time) %> ago
     <% else %>
-      <p class="text-xs text-gray-500">Never tested</p>
+      Never tested
     <% end %>
   </div>
   
-  <div class="ml-4">
+  <!-- Action Button -->
+  <div>
     <%= form_with url: action_path, method: :post, remote: true, 
                   id: form_id, 
                   class: "domain-service-queue-form",
@@ -33,7 +41,7 @@
                     form_id: form_id
                   } do |form| %>
       <button type="submit" 
-              class="<%= button_classes %>"
+              class="w-full <%= button_classes %>"
               data-button-id="<%= form_id %>"
               <%= "disabled" if button_disabled? %>>
         <% if pending_test? %>

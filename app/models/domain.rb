@@ -40,8 +40,8 @@ class Domain < ApplicationRecord
   def self.needing_service(service_name)
     case service_name.to_s
     when "domain_mx_testing"
-      # MX testing needs DNS to be active and WWW to be tested
-      where(dns: true, www: true, mx: nil)
+      # MX testing needs DNS to be active
+      where(dns: true, mx: nil)
     when "domain_a_record_testing"
       # A record testing needs DNS to be active but WWW not tested
       dns_active.where(www: nil)
