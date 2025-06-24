@@ -18,10 +18,28 @@ export default class extends Controller {
     const form = this.formTarget
     const submitButton = this.submitButtonTarget
     const countInput = this.countInputTarget
-    const count = countInput.value
+    const count = parseInt(countInput.value)
+    const maxAvailable = parseInt(countInput.dataset.maxAvailable || 1000)
     
     console.log("Form action:", form.action)
     console.log("Count value:", count)
+    console.log("Max available:", maxAvailable)
+    
+    // Client-side validation
+    if (count <= 0) {
+      this.showError('Count must be greater than 0')
+      return
+    }
+    
+    if (count > maxAvailable) {
+      this.showError(`Only ${maxAvailable} domains are available for testing`)
+      return
+    }
+    
+    if (count > 1000) {
+      this.showError('Cannot queue more than 1000 domains at once')
+      return
+    }
     
     // Disable form during submission IMMEDIATELY
     this.setLoading(true)
@@ -42,8 +60,13 @@ export default class extends Controller {
       
       if (data.success) {
         this.showSuccess(data.message, data.queued_count)
-        // Reset form to default
-        countInput.value = 100
+        // Update available count if provided
+        if (data.available_count !== undefined) {
+          this.updateAvailableCount(data.available_count)
+        }
+        // Reset form to sensible default
+        const newMax = Math.min(data.available_count || maxAvailable, 100)
+        countInput.value = newMax
         // Trigger a queue status update and wait for it to complete
         await this.updateQueueStats()
         // Only re-enable the button after queue stats are updated
@@ -182,5 +205,25 @@ export default class extends Controller {
     if (dnsQueueInButton) dnsQueueInButton.textContent = (queueStats.domain_dns_testing || 0) + ' in queue';
     if (mxQueueInButton) mxQueueInButton.textContent = (queueStats.domain_mx_testing || 0) + ' in queue';
     if (aRecordQueueInButton) aRecordQueueInButton.textContent = (queueStats.DomainARecordTestingService || 0) + ' in queue';
+  }
+  
+  updateAvailableCount(availableCount) {
+    // Update the available count display for this service
+    const availableElement = document.querySelector(`[data-available-count="${this.serviceNameValue}"]`);
+    if (availableElement) {
+      availableElement.textContent = `${availableCount} domains need testing`;
+    }
+    
+    // Update the input max attribute and data attribute
+    const countInput = this.countInputTarget;
+    if (countInput) {
+      countInput.dataset.maxAvailable = availableCount;
+      countInput.max = Math.min(availableCount, 1000);
+      
+      // If current value exceeds available, reduce it
+      if (parseInt(countInput.value) > availableCount) {
+        countInput.value = Math.min(availableCount, 100);
+      }
+    }
   }
 }

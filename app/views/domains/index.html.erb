@@ -186,6 +186,25 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         console.log('Form submit intercepted!');
         
+        const count = parseInt(countInput.value);
+        const maxAvailable = parseInt(countInput.dataset.maxAvailable || 1000);
+        
+        // Client-side validation
+        if (count <= 0) {
+          showToast('Count must be greater than 0', 'error');
+          return;
+        }
+        
+        if (count > maxAvailable) {
+          showToast(`Only ${maxAvailable} domains are available for testing`, 'error');
+          return;
+        }
+        
+        if (count > 1000) {
+          showToast('Cannot queue more than 1000 domains at once', 'error');
+          return;
+        }
+        
         // Disable button immediately
         submitButton.disabled = true;
         countInput.disabled = true;
@@ -215,7 +234,26 @@ document.addEventListener('DOMContentLoaded', function() {
           if (data.success) {
             // Show success message
             showToast(data.message + ` (${data.queued_count} domains queued)`, 'success');
-            countInput.value = 100;
+            
+            // Update available count if provided
+            if (data.available_count !== undefined) {
+              const serviceName = form.closest('[data-service]').dataset.service;
+              const availableElement = document.querySelector(`[data-available-count="${serviceName}"]`);
+              if (availableElement) {
+                availableElement.textContent = `${data.available_count} domains need testing`;
+              }
+              
+              // Update input constraints
+              countInput.dataset.maxAvailable = data.available_count;
+              countInput.max = Math.min(data.available_count, 1000);
+              
+              // Reset to sensible default
+              const newMax = Math.min(data.available_count, 100);
+              countInput.value = newMax;
+            } else {
+              countInput.value = 100;
+            }
+            
             await updateQueueStatus();
           } else {
             showToast(data.message || 'Failed to queue domains', 'error');
