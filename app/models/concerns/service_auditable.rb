@@ -137,21 +137,23 @@ module ServiceAuditable
   end
 
   # Class methods
-  def self.needing_service(service_name)
-    service_config = ServiceConfiguration.find_by(service_name: service_name)
-    return [] unless service_config&.active?
+  class_methods do
+    def needing_service(service_name)
+      service_config = ServiceConfiguration.find_by(service_name: service_name)
+      return none unless service_config&.active?
 
-    # Use a robust join for all AR models
-    left = arel_table
-    logs = ServiceAuditLog.arel_table
-    join_cond = logs[:auditable_type].eq(name)
-      .and(logs[:auditable_id].eq(left[:id]))
-      .and(logs[:service_name].eq(service_name))
-      .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
+      # Use a robust join for all AR models
+      left = arel_table
+      logs = ServiceAuditLog.arel_table
+      join_cond = logs[:auditable_type].eq(name)
+        .and(logs[:auditable_id].eq(left[:id]))
+        .and(logs[:service_name].eq(service_name))
+        .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
 
-    joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
-      .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?",
-             service_config.refresh_interval_hours.hours.ago)
+      joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
+        .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?",
+               service_config.refresh_interval_hours.hours.ago)
+    end
   end
 
   private

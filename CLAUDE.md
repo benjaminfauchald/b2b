@@ -2,14 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Mentorship
+
+### Learning Ruby on Rails the Right Way
+- Always prioritize understanding the Rails conventions and idiomatic Ruby
+- Break down complex problems into smaller, manageable service objects
+- Focus on writing clean, readable code that follows the Single Responsibility Principle
+- Learn to leverage Rails built-in tools and generators instead of reinventing the wheel
+- Practice using Rails conventions like RESTful routes, strong parameters, and model validations
+- Study and implement service objects to keep controllers thin and business logic organized
+- Embrace test-driven development (TDD) to write more reliable and maintainable code
+- Learn to use Rails console (`./bin/rails console`) for quick debugging and exploration
+- Always ask "What would a senior Rails developer do?" when designing solutions
+- Read the Rails guides, source code, and follow best practices from experienced developers
+- Understand the importance of separation of concerns in Rails applications
+- Practice refactoring and continuously improve your code quality
+- Learn to use Ruby's powerful metaprogramming features judiciously
+- Familiarize yourself with common Rails design patterns and architectural approaches
+
 ## Development Commands
 
 ### Rails Server
-- `./bin/rails server -p 3000` - Start Rails server on port 3000 (nginx proxies from HTTPS port 443)
+- `./bin/rake restart` - **ALWAYS USE THIS** to restart Rails server (kills old processes and starts fresh)
+- `./bin/rake kill` - Kill any Rails server running on port 3000
 - `./bin/rails console` - Open Rails console
-- **Alternative**: `bundle exec rails server -p 3000` or `bundle exec rails console`
+- **CRITICAL**: Always use `./bin/rake restart` when testing new code to ensure no cached code is running
 - **Important**: Use port 3000 for production (nginx SSL proxy setup) and bind to 0.0.0.0 for external interface access
-- Start rails server automatically when you expect user to test
+- Start rails server automatically when you expect user to test using `./bin/rake restart`
 - **Note**: Always use `./bin/rails` or `bundle exec rails` instead of just `rails` to avoid rbenv issues
 
 ### Environment Variables
