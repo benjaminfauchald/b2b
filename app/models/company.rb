@@ -50,6 +50,35 @@ class Company < ApplicationRecord
     web_discovery_candidates
   }
 
+  # Update web discovery scopes to order by revenue (highest first)
+  scope :web_discovery_candidates_ordered, -> {
+    web_discovery_candidates.order(operating_revenue: :desc)
+  }
+
+  scope :needing_web_discovery_ordered, -> {
+    needing_web_discovery.order(operating_revenue: :desc)
+  }
+
+  # Scopes for LinkedIn discovery
+  # Companies with revenue > 10M NOK and no LinkedIn URL that need LinkedIn discovery
+  scope :linkedin_discovery_candidates, -> {
+    where("operating_revenue > ?", 10_000_000)
+    .where("linkedin_url IS NULL OR linkedin_url = ''")
+    .order(operating_revenue: :desc)
+  }
+
+  # Companies that are LinkedIn discovery candidates AND haven't been processed yet
+  scope :needing_linkedin_discovery, -> {
+    linkedin_discovery_candidates
+    .where("linkedin_data IS NULL OR linkedin_data = '{}' OR jsonb_array_length(linkedin_data) = 0")
+    .order(operating_revenue: :desc)
+  }
+
+  # Companies that are LinkedIn discovery candidates regardless of processing status
+  scope :linkedin_discovery_potential, -> {
+    linkedin_discovery_candidates
+  }
+
   # Instance Methods
 
   # Update financial data asynchronously

@@ -43,6 +43,7 @@ Rails.application.routes.draw do
       post :queue_single_web_discovery
       post :queue_single_linkedin_discovery
       post :queue_single_employee_discovery
+      get :financial_data
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
@@ -60,6 +61,14 @@ Rails.application.routes.draw do
 
   # Welcome page
   get "welcome", to: "welcome#index"
+
+  # Test routes (development only)
+  if Rails.env.development?
+    get "test/web_discovery", to: "test#web_discovery_test"
+    post "test/run_web_discovery", to: "test#run_web_discovery"
+    get "test/linkedin_discovery", to: "test#linkedin_discovery_test"
+    post "test/run_linkedin_discovery", to: "test#run_linkedin_discovery"
+  end
 
   # Defines the root path route ("/")
   root "welcome#index"

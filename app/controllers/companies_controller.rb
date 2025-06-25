@@ -31,8 +31,20 @@ class CompaniesController < ApplicationController
   def show
     @financial_data = @company.financial_data
     @service_audit_logs = @company.service_audit_logs
-                                  .order(created_at: :desc)
-                                  .limit(10)
+                                .order(created_at: :desc)
+                                .limit(10)
+  end
+
+  def financial_data
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "company_financial_data_#{@company.id}",
+          partial: "companies/financial_data_card",
+          locals: { company: @company }
+        )
+      end
+    end
   end
 
   def new
@@ -116,6 +128,9 @@ class CompaniesController < ApplicationController
       queued += 1
     end
 
+    # Invalidate cache immediately when queue changes
+    Rails.cache.delete("service_stats_data")
+
     render json: {
       success: true,
       message: "Queued #{queued} companies for financial data update",
@@ -176,6 +191,9 @@ class CompaniesController < ApplicationController
       queued += 1
     end
 
+    # Invalidate cache immediately when queue changes
+    Rails.cache.delete("service_stats_data")
+
     render json: {
       success: true,
       message: "Queued #{queued} companies for web discovery",
@@ -235,6 +253,9 @@ class CompaniesController < ApplicationController
       CompanyLinkedinDiscoveryWorker.perform_async(company.id)
       queued += 1
     end
+
+    # Invalidate cache immediately when queue changes
+    Rails.cache.delete("service_stats_data")
 
     render json: {
       success: true,
@@ -317,13 +338,19 @@ class CompaniesController < ApplicationController
   def service_stats
     respond_to do |format|
       format.turbo_stream do
+        # Cache the stats for 2 seconds to reduce database load on rapid polling
+        stats_data = Rails.cache.fetch("service_stats_data", expires_in: 2.seconds) do
+          calculate_service_stats
+        end
+        
         queue_stats = get_queue_stats
+        
         render turbo_stream: [
           turbo_stream.replace("company_financial_data_stats",
             partial: "companies/service_stats",
             locals: {
               service_name: "company_financial_data",
-              companies_needing: Company.needing_service("company_financial_data").count,
+              companies_needing: stats_data[:financial_needing],
               queue_depth: queue_stats["company_financial_data"] || 0
             }
           ),
@@ -331,8 +358,8 @@ class CompaniesController < ApplicationController
             partial: "companies/service_stats",
             locals: {
               service_name: "company_web_discovery",
-              companies_needing: Company.needing_service("company_web_discovery").count,
-              companies_potential: Company.web_discovery_potential.count,
+              companies_needing: stats_data[:web_discovery_needing],
+              companies_potential: stats_data[:web_discovery_potential],
               queue_depth: queue_stats["company_web_discovery"] || 0
             }
           ),
@@ -340,7 +367,7 @@ class CompaniesController < ApplicationController
             partial: "companies/service_stats",
             locals: {
               service_name: "company_linkedin_discovery",
-              companies_needing: Company.needing_service("company_linkedin_discovery").count,
+              companies_needing: stats_data[:linkedin_needing],
               queue_depth: queue_stats["company_linkedin_discovery"] || 0
             }
           ),
@@ -378,6 +405,9 @@ class CompaniesController < ApplicationController
       )
 
       job_id = CompanyFinancialDataWorker.perform_async(@company.id)
+
+      # Invalidate cache immediately when queue changes
+      Rails.cache.delete("service_stats_data")
 
       render json: {
         success: true,
@@ -422,6 +452,9 @@ class CompaniesController < ApplicationController
 
       job_id = CompanyWebDiscoveryWorker.perform_async(@company.id)
 
+      # Invalidate cache immediately when queue changes
+      Rails.cache.delete("service_stats_data")
+
       render json: {
         success: true,
         message: "Company queued for web discovery",
@@ -464,6 +497,9 @@ class CompaniesController < ApplicationController
       )
 
       job_id = CompanyLinkedinDiscoveryWorker.perform_async(@company.id)
+
+      # Invalidate cache immediately when queue changes
+      Rails.cache.delete("service_stats_data")
 
       render json: {
         success: true,
@@ -508,6 +544,9 @@ class CompaniesController < ApplicationController
 
       job_id = CompanyEmployeeDiscoveryWorker.perform_async(@company.id)
 
+      # Invalidate cache immediately when queue changes
+      Rails.cache.delete("service_stats_data")
+
       render json: {
         success: true,
         message: "Company queued for employee discovery",
@@ -529,6 +568,15 @@ class CompaniesController < ApplicationController
 
   def set_company
     @company = Company.find(params[:id])
+  end
+
+  def calculate_service_stats
+    {
+      financial_needing: Company.needing_service("company_financial_data").count,
+      web_discovery_needing: Company.needing_service("company_web_discovery").count,
+      web_discovery_potential: Company.web_discovery_potential.count,
+      linkedin_needing: Company.needing_service("company_linkedin_discovery").count
+    }
   end
 
   def company_params

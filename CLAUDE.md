@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./bin/rails console` - Open Rails console
 - **IMPORTANT**: Rails server ALWAYS starts on port 3000 and binds to 0.0.0.0
 - `rake test:restart` - Restart Rails server for testing purposes
+- **BEST PRACTICE**: Use `bundle exec rake test:restart` instead of Bash(PORT=3000 rails server &) or any other starting of rails
 
 ## API Notes
 
@@ -21,3 +22,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Example working company URL with financial info: https://data.brreg.no/regnskapsregisteret/regnskap/989164155
 - Example company URL without financial info (returns 404): https://data.brreg.no/regnskapsregisteret/regnskap/932968126
 - The api.brreg.no API gives 404 if there is not found any financial data. It's not an error, it's a feature
+
+## Development Best Practices
+- Never use localhost for any server setup or testing use local.connectica.no

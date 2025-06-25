@@ -426,6 +426,9 @@ class CompanyFinancialsService
       if changed_fields.any?
         @company.update!(update_attrs)
         @logger.info "Updated financial data for #{@org_number}. Changed fields: #{changed_fields.join(', ')}"
+        
+        # Broadcast the update via ActionCable
+        broadcast_financial_update(changed_fields, financials)
       else
         @logger.info "No changes in financial data for #{@org_number}"
       end
@@ -531,5 +534,23 @@ class CompanyFinancialsService
       backtrace: error.backtrace.first(5),
       attempt: @attempts
     )
+  end
+
+  def broadcast_financial_update(changed_fields, financials)
+    return unless defined?(CompanyFinancialsChannel)
+    
+    begin
+      @logger.info "[#{SERVICE_NAME}] Broadcasting financial update for company #{@company.id}"
+      
+      CompanyFinancialsChannel.broadcast_financial_update(@company, {
+        status: 'success',
+        changed_fields: changed_fields,
+        financials: financials,
+        company_id: @company.id,
+        registration_number: @org_number
+      })
+    rescue => e
+      @logger.error "[#{SERVICE_NAME}] Failed to broadcast financial update: #{e.message}"
+    end
   end
 end

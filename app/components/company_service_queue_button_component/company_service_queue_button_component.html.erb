@@ -26,9 +26,6 @@
         <p data-available-count="<%= service_name %>">
           <%= number_with_delimiter(companies_needing_service) %> of <%= number_with_delimiter(web_discovery_potential) %> companies need processing
         </p>
-        <p class="text-xs mt-1">
-          Companies with revenue > 10M NOK and no website
-        </p>
       <% else %>
         <p data-available-count="<%= service_name %>"><%= number_with_delimiter(companies_needing_service) %> companies need processing</p>
       <% end %>

@@ -49,7 +49,7 @@ end
 
 # 4. Test Web Discovery Service
 puts "\n4️⃣ Testing Web Discovery Service..."
-web_service = CompanyWebDiscoveryService.new(company)
+web_service = CompanyWebDiscoveryService.new(company_id: company.id)
 result = web_service.perform
 if result.success?
   puts "✅ Web discovery service: #{result.message}"
@@ -60,7 +60,7 @@ end
 
 # 5. Test LinkedIn Discovery Service
 puts "\n5️⃣ Testing LinkedIn Discovery Service..."
-linkedin_service = CompanyLinkedinDiscoveryService.new(company)
+linkedin_service = CompanyLinkedinDiscoveryService.new(company_id: company.id)
 result = linkedin_service.perform
 if result.success?
   puts "✅ LinkedIn discovery service: #{result.message}"

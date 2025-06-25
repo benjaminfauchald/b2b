@@ -9,7 +9,7 @@ class CompanyLinkedinDiscoveryWorker
 
     Rails.logger.info "Starting LinkedIn discovery for company #{company.id} - #{company.company_name}"
 
-    service = CompanyLinkedinDiscoveryService.new(company)
+    service = CompanyLinkedinDiscoveryService.new(company_id: company.id)
     result = service.perform
 
     if result.success?

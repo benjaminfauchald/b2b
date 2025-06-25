@@ -9,7 +9,7 @@ class CompanyWebDiscoveryWorker
 
     Rails.logger.info "Starting web discovery for company #{company.id} - #{company.company_name}"
 
-    service = CompanyWebDiscoveryService.new(company)
+    service = CompanyWebDiscoveryService.new(company_id: company.id)
     result = service.perform
 
     if result.success?

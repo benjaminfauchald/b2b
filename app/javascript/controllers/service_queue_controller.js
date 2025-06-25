@@ -62,6 +62,11 @@ export default class extends Controller {
       
       if (data.success) {
         this.showSuccess(data.message, data.queued_count)
+        
+        // Trigger immediate service stats update for real-time feel
+        const serviceStatsEvent = new CustomEvent('service-stats:update')
+        document.dispatchEvent(serviceStatsEvent)
+        
         // Update available count if provided
         if (data.available_count !== undefined) {
           this.updateAvailableCount(data.available_count)
@@ -189,6 +194,10 @@ export default class extends Controller {
         this.updateQueueElements(data.queue_stats)
         console.log('Queue stats updated successfully')
       }
+      
+      // Trigger immediate service stats update for real-time feel
+      const serviceStatsEvent = new CustomEvent('service-stats:update')
+      document.dispatchEvent(serviceStatsEvent)
       
       // Also trigger the global event for other listeners
       const event = new CustomEvent('updateQueueStats')

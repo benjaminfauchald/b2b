@@ -1,33 +1,29 @@
 <% content_for :title, "Domain Testing Dashboard" %>
 
-<div class="w-full">
-  <%= render PageHeaderComponent.new(
-    title: "Domain Testing Dashboard", 
-    subtitle: "Manage and monitor your domain testing operations"
-  ) do |component|
-    component.with_actions do %>
-      <div class="flex space-x-3">
-        <%= link_to import_domains_path, 
-            class: "px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium text-sm transition-colors" do %>
-          <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-          </svg>
-          Import CSV
-        <% end %>
-        
-        <%= link_to new_domain_path, 
-            class: "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium text-sm transition-colors" do %>
-          <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Add New Domain
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <!-- Testing Controls Section -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Page Header -->
   <div class="mb-8">
+    <div class="sm:flex sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Domains</h1>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+          Manage and monitor your domain testing operations
+        </p>
+      </div>
+      <div class="mt-4 sm:mt-0">
+        <div class="flex space-x-3">
+          <%= link_to "Import CSV", import_domains_path, 
+              class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" %>
+          <%= link_to "New Domain", new_domain_path, 
+              class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Testing Queue Management -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <%= render ServiceQueueButtonComponent.new(
         service_name: "domain_testing",
@@ -55,37 +51,43 @@
     </div>
   </div>
 
-  <!-- Statistics Section -->
+  <!-- Queue Statistics -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <%= render StatsCardComponent.new(
-      label: "DNS Testing Queue",
-      value: @queue_stats['domain_dns_testing'] || 0,
-      icon: "🌐",
-      data_stat: "domain_dns_testing"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">DNS Testing Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="domain_dns_testing">
+          <%= number_with_delimiter(@queue_stats&.dig('domain_dns_testing') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "MX Testing Queue", 
-      value: @queue_stats['domain_mx_testing'] || 0,
-      icon: "📧",
-      data_stat: "domain_mx_testing"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">MX Testing Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="domain_mx_testing">
+          <%= number_with_delimiter(@queue_stats&.dig('domain_mx_testing') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "A Record Queue",
-      value: @queue_stats['DomainARecordTestingService'] || 0,
-      icon: "🔍",
-      data_stat: "DomainARecordTestingService"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">A Record Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="DomainARecordTestingService">
+          <%= number_with_delimiter(@queue_stats&.dig('DomainARecordTestingService') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "Total Processed",
-      value: @queue_stats[:total_processed] || 0,
-      icon: "✅",
-      trend: "+12.5%",
-      trend_direction: "up",
-      data_stat: "processed"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Processed</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="processed">
+          <%= number_with_delimiter(@queue_stats&.dig(:total_processed) || 0) %>
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- Domains Table Section -->

@@ -6,9 +6,9 @@ require "google/apis/customsearch_v1"
 require "openai"
 
 class CompanyWebDiscoveryService < ApplicationService
-  def initialize(company_id)
+  def initialize(company_id:, **options)
     @company = Company.find(company_id)
-    super(service_name: "company_web_discovery", action: "discover")
+    super(service_name: "company_web_discovery", action: "discover", **options)
   end
 
   def perform
@@ -143,7 +143,7 @@ class CompanyWebDiscoveryService < ApplicationService
 
       response = search.list_cses(
         q: query,
-        cx: ENV["GOOGLE_SEARCH_ENGINE_ID"],
+        cx: ENV["GOOGLE_SEARCH_ENGINE_WEB_ID"],
         num: 10,
         safe: "active"
       )
@@ -377,7 +377,7 @@ class CompanyWebDiscoveryService < ApplicationService
   end
 
   def google_api_configured?
-    ENV["GOOGLE_SEARCH_API_KEY"].present? && ENV["GOOGLE_SEARCH_ENGINE_ID"].present?
+    ENV["GOOGLE_SEARCH_API_KEY"].present? && ENV["GOOGLE_SEARCH_ENGINE_WEB_ID"].present?
   end
 
   def openai_configured?
