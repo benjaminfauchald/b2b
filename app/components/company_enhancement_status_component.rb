@@ -88,11 +88,11 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
 
   def status_color(service)
     if service[:has_data]
-      "text-green-600"
+      "text-green-600 dark:text-green-400"
     elsif service[:last_updated]
-      "text-yellow-600"
+      "text-yellow-600 dark:text-yellow-400"
     else
-      "text-gray-400"
+      "text-gray-400 dark:text-gray-500"
     end
   end
 

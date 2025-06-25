@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="space-y-4" data-service="<%= service %>" data-domain-id="<%= domain.id %>">
   <!-- Service Header -->
   <div class="flex items-center justify-between">
     <div class="flex items-center">
@@ -11,7 +11,9 @@
     </div>
     
     <!-- Status Badge -->
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium <%= status_badge_classes %>">
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium <%= status_badge_classes %>" 
+          data-status-target="status"
+          data-test-status="<%= test_status %>">
       <% if pending_test? %>
         <%= spinner_icon %>
         <span class="ml-1">Testing...</span>
@@ -38,11 +40,14 @@
                   data: { 
                     domain_id: domain.id, 
                     service: service,
-                    form_id: form_id
+                    form_id: form_id,
+                    domain_service_queue_target: "form"
                   } do |form| %>
       <button type="submit" 
               class="w-full <%= button_classes %>"
               data-button-id="<%= form_id %>"
+              data-domain-service-queue-target="button"
+              data-service="<%= service %>"
               <%= "disabled" if button_disabled? %>>
         <% if pending_test? %>
           <%= spinner_icon %>

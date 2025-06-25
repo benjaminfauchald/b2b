@@ -68,14 +68,20 @@ class DomainServiceButtonComponent < ViewComponent::Base
   end
 
   def pending_test?
-    # Check if there's a pending audit log or job in the queue
-    has_pending_audit = domain.service_audit_logs
+    # Check if the most recent audit log is pending
+    most_recent_audit = domain.service_audit_logs
                              .where(service_name: service_config[:service_name])
-                             .where(status: "pending")
                              .where("created_at > ?", 10.minutes.ago)
-                             .exists?
-
-    has_pending_audit || job_queued?
+                             .order(created_at: :desc)
+                             .first
+    
+    # If we have a recent audit log, check if it's still pending
+    if most_recent_audit
+      return most_recent_audit.status == "pending"
+    end
+    
+    # Otherwise check if job is queued
+    job_queued?
   end
 
   def job_queued?

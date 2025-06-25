@@ -1,15 +1,15 @@
-<div class="bg-white shadow rounded-lg p-6">
-  <h3 class="text-lg font-medium text-gray-900 mb-4">Enhancement Services</h3>
+<div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+  <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Enhancement Services</h3>
   
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <% services.each do |service| %>
-      <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div class="border dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div class="flex items-start justify-between">
           <div class="flex items-start space-x-3">
             <!-- Service Icon -->
             <div class="flex-shrink-0">
-              <div class="w-10 h-10 bg-<%= service[:color] %>-100 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-<%= service[:color] %>-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 bg-<%= service[:color] %>-100 dark:bg-<%= service[:color] %>-900/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-<%= service[:color] %>-600 dark:text-<%= service[:color] %>-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <% case service[:icon] %>
                   <% when "currency-dollar" %>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -26,11 +26,11 @@
             
             <!-- Service Info -->
             <div class="flex-1">
-              <h4 class="text-sm font-medium text-gray-900"><%= service[:name] %></h4>
-              <p class="text-xs text-gray-500 mt-1">
+              <h4 class="text-sm font-medium text-gray-900 dark:text-white"><%= service[:name] %></h4>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Last updated: <%= last_update_text(service[:last_updated]) %>
               </p>
-              <p class="text-sm text-gray-700 mt-2">
+              <p class="text-sm text-gray-700 dark:text-gray-300 mt-2">
                 <%= service[:data_summary] %>
               </p>
             </div>

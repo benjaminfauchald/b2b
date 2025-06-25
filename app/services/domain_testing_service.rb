@@ -184,6 +184,11 @@ class DomainTestingService < ApplicationService
       result = perform_dns_test
       update_domain_status(domain, result)
       
+      # If DNS test was successful, automatically queue MX and A Record tests
+      if result[:dns_active]
+        queue_follow_up_tests
+      end
+      
       audit_log.update!(
         status: :success,
         completed_at: Time.current,
@@ -286,6 +291,22 @@ class DomainTestingService < ApplicationService
       audit_log.mark_success!
     else
       audit_log.mark_failed!("DNS test failed")
+    end
+  end
+
+  def queue_follow_up_tests
+    Rails.logger.info("DNS test successful for domain #{domain.domain}, queueing MX and A Record tests")
+    
+    # Queue MX testing if not already tested
+    if domain.mx.nil?
+      DomainMxTestingWorker.perform_async(domain.id)
+      Rails.logger.info("Queued MX testing for domain #{domain.domain}")
+    end
+    
+    # Queue A Record testing if not already tested
+    if domain.www.nil?
+      DomainARecordTestingWorker.perform_async(domain.id)
+      Rails.logger.info("Queued A Record testing for domain #{domain.domain}")
     end
   end
 end
