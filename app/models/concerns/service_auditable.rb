@@ -41,6 +41,16 @@ module ServiceAuditable
   def needs_service?(service_name)
     service_configuration = ServiceConfiguration.find_by(service_name: service_name)
     return false unless service_configuration&.active?
+    
+    # For Company financial data, check business logic criteria first
+    if self.class == Company && service_name == "company_financial_data"
+      # Only process companies that match the business criteria
+      return false unless source_country == "NO" && 
+                         source_registry == "brreg" && 
+                         ordinary_result.nil? && 
+                         ["AS", "ASA", "DA", "ANS"].include?(organization_form_code)
+    end
+    
     last_run = last_service_run(service_name)
     return true unless last_run
     refresh_threshold = service_configuration.refresh_interval_hours.hours.ago
@@ -142,9 +152,11 @@ module ServiceAuditable
       service_config = ServiceConfiguration.find_by(service_name: service_name)
       return none unless service_config&.active?
 
-      # Special handling for company_web_discovery - use custom scope
+      # Special handling for company services - use targeted scopes
       if self == Company && service_name == "company_web_discovery"
         return needing_web_discovery
+      elsif self == Company && service_name == "company_financial_data"
+        return needs_financial_update
       end
 
       # Use a simpler subquery approach that mirrors the instance method logic

@@ -18,11 +18,15 @@ export default class extends Controller {
     const form = this.formTarget
     const submitButton = this.submitButtonTarget
     const countInput = this.countInputTarget
-    const count = parseInt(countInput.value)
+    
+    // Make sure we get the current value from the input field
+    const count = parseInt(countInput.value) || 0
     const maxAvailable = parseInt(countInput.dataset.maxAvailable || 1000)
     
     console.log("Form action:", form.action)
-    console.log("Count value:", count)
+    console.log("Count input element:", countInput)
+    console.log("Count value from input:", countInput.value)
+    console.log("Parsed count:", count)
     console.log("Max available:", maxAvailable)
     
     // Client-side validation
@@ -71,9 +75,11 @@ export default class extends Controller {
         if (data.available_count !== undefined) {
           this.updateAvailableCount(data.available_count)
         }
-        // Reset form to sensible default
-        const newMax = Math.min(data.available_count || maxAvailable, 10)
-        countInput.value = newMax
+        // Update max attributes but don't change the user's input value
+        if (data.available_count !== undefined) {
+          countInput.max = Math.min(data.available_count, 1000)
+          countInput.dataset.maxAvailable = data.available_count
+        }
         // Trigger a queue status update and wait for it to complete
         await this.updateQueueStats()
         // Only re-enable the button after queue stats are updated
@@ -215,24 +221,25 @@ export default class extends Controller {
     document.querySelectorAll('[data-queue-stat]').forEach(element => {
       const queueName = element.getAttribute('data-queue-stat');
       if (queueStats[queueName] !== undefined) {
+        const formattedValue = (queueStats[queueName] || 0).toLocaleString();
         // If it's in a button, add " in queue" text
         if (element.classList.contains('queue-button-stat') || element.textContent.includes('in queue')) {
-          element.textContent = (queueStats[queueName] || 0) + ' in queue';
+          element.textContent = formattedValue + ' in queue';
         } else {
-          element.textContent = queueStats[queueName] || 0;
+          element.textContent = formattedValue;
         }
       }
     });
     
     // Update total processed stat
     const processed = document.querySelector('[data-stat="processed"]');
-    if (processed) processed.textContent = queueStats.total_processed || 0;
+    if (processed) processed.textContent = (queueStats.total_processed || 0).toLocaleString();
     
     // Update generic stat elements
     document.querySelectorAll('[data-stat]').forEach(element => {
       const statName = element.getAttribute('data-stat');
       if (queueStats[statName] !== undefined) {
-        element.textContent = queueStats[statName] || 0;
+        element.textContent = (queueStats[statName] || 0).toLocaleString();
       }
     });
   }
@@ -242,7 +249,8 @@ export default class extends Controller {
     const availableElement = document.querySelector(`[data-available-count="${this.serviceNameValue}"]`);
     if (availableElement) {
       const entityType = window.location.pathname.includes('/companies') ? 'companies need processing' : 'domains need testing';
-      availableElement.textContent = `${availableCount} ${entityType}`;
+      const formattedCount = availableCount.toLocaleString();
+      availableElement.textContent = `${formattedCount} ${entityType}`;
     }
     
     // Update the input max attribute and data attribute
@@ -251,9 +259,9 @@ export default class extends Controller {
       countInput.dataset.maxAvailable = availableCount;
       countInput.max = Math.min(availableCount, 1000);
       
-      // If current value exceeds available, reduce it
-      if (parseInt(countInput.value) > availableCount) {
-        countInput.value = Math.min(availableCount, 10);
+      // Only reduce value if it exceeds available AND input is not currently focused
+      if (parseInt(countInput.value) > availableCount && document.activeElement !== countInput) {
+        countInput.value = Math.min(availableCount, parseInt(countInput.value));
       }
     }
   }

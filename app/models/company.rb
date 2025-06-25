@@ -13,10 +13,11 @@ class Company < ApplicationRecord
   scope :with_financial_data, -> { where.not(ordinary_result: nil, annual_result: nil) }
   scope :without_financial_data, -> { where(ordinary_result: nil, annual_result: nil) }
   scope :needs_financial_update, -> {
-    twelve_months_ago = 12.months.ago
+    service_config = ServiceConfiguration.find_by(service_name: "company_financial_data")
+    refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
     subquery = ServiceAuditLog
-      .where(service_name: "company_financials", status: ServiceAuditLog.statuses[:success])
-      .where("completed_at > ?", twelve_months_ago)
+      .where(service_name: "company_financial_data", status: ServiceAuditLog.statuses[:success])
+      .where("completed_at > ?", refresh_threshold)
       .select(:auditable_id)
       .distinct
 

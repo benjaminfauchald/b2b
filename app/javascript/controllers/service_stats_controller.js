@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static values = { 
     url: String,
-    interval: { type: Number, default: 3000 } // 3 second default
+    interval: { type: Number, default: 1000 } // 1 second default for real-time updates
   }
 
   connect() {
@@ -67,7 +67,11 @@ export default class extends Controller {
 
   async poll() {
     try {
-      const response = await fetch(this.urlValue, {
+      // Add cache busting to ensure fresh data
+      const url = new URL(this.urlValue, window.location.origin)
+      url.searchParams.set('_t', Date.now())
+      
+      const response = await fetch(url, {
         headers: {
           'Accept': 'text/vnd.turbo-stream.html',
           'X-Requested-With': 'XMLHttpRequest'
