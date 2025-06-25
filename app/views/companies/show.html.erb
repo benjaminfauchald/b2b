@@ -149,8 +149,13 @@
   <%= render CompanyEnhancementStatusComponent.new(company: @company) %>
 
   <!-- Financial Data -->
-  <div class="mt-6">
-    <%= render CompanyFinancialDataComponent.new(company: @company) %>
+  <div class="mt-6" 
+       data-controller="company-financials" 
+       data-company-financials-company-id-value="<%= @company.id %>"
+       data-company-financials-fallback-interval-value="30000">
+    <div id="company_financial_data_<%= @company.id %>">
+      <%= render CompanyFinancialDataComponent.new(company: @company) %>
+    </div>
   </div>
 
   <!-- Service Audit Logs -->
