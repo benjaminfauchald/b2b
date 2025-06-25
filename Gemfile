@@ -123,6 +123,8 @@ gem "httparty"              # For making HTTP requests
 gem "nokogiri"              # For XML parsing
 gem "json-schema", "~> 4.0"
 gem "smarter_csv", "~> 1.8"  # CSV parsing and import functionality
+gem "google-api-client"     # Google Custom Search API
+gem "ruby-openai"           # OpenAI API for content validation
 
 # Console enhancements for all environments
 gem "pry-rails"
