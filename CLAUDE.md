@@ -25,3 +25,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Best Practices
 - Never use localhost for any server setup or testing use local.connectica.no
+- Always touch a file before you write to avoid this error "Error: File has not been read yet. Read it first before writing to it."

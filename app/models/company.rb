@@ -61,18 +61,16 @@ class Company < ApplicationRecord
   }
 
   # Scopes for LinkedIn discovery
-  # Companies with revenue > 10M NOK and no LinkedIn URL that need LinkedIn discovery
+  # Companies with revenue > 10M NOK that need LinkedIn discovery
   scope :linkedin_discovery_candidates, -> {
     where("operating_revenue > ?", 10_000_000)
-    .where("linkedin_url IS NULL OR linkedin_url = ''")
     .order(operating_revenue: :desc)
   }
 
-  # Companies that are LinkedIn discovery candidates AND haven't been processed yet
+  # Companies that are LinkedIn discovery candidates AND have no LinkedIn data yet
   scope :needing_linkedin_discovery, -> {
     linkedin_discovery_candidates
-    .where("linkedin_data IS NULL OR linkedin_data = '{}' OR jsonb_array_length(linkedin_data) = 0")
-    .order(operating_revenue: :desc)
+    .where("(linkedin_url IS NULL OR linkedin_url = '') AND (linkedin_ai_url IS NULL OR linkedin_ai_url = '')")
   }
 
   # Companies that are LinkedIn discovery candidates regardless of processing status

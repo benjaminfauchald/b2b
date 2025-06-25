@@ -157,6 +157,14 @@ module ServiceAuditable
         return needing_web_discovery
       elsif self == Company && service_name == "company_financial_data"
         return needs_financial_update
+      elsif self == Company && service_name == "company_linkedin_discovery"
+        return needing_linkedin_discovery
+      elsif self == Person && service_name == "person_profile_extraction"
+        return needs_profile_extraction
+      elsif self == Person && service_name == "person_email_extraction"
+        return needs_email_extraction
+      elsif self == Person && service_name == "person_social_media_extraction"
+        return needs_social_media_extraction
       end
 
       # Use a simpler subquery approach that mirrors the instance method logic

@@ -53,6 +53,9 @@ export default class extends Controller {
     try {
       const formData = new FormData(form)
       
+      // Ensure count value is explicitly set in FormData
+      formData.set('count', count.toString())
+      
       const response = await fetch(form.action, {
         method: 'POST',
         body: formData,
