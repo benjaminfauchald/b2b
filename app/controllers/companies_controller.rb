@@ -338,8 +338,8 @@ class CompaniesController < ApplicationController
   def service_stats
     respond_to do |format|
       format.turbo_stream do
-        # Cache the stats for 2 seconds to reduce database load on rapid polling
-        stats_data = Rails.cache.fetch("service_stats_data", expires_in: 2.seconds) do
+        # Cache the stats for 1 second to ensure real-time updates
+        stats_data = Rails.cache.fetch("service_stats_data", expires_in: 1.second) do
           calculate_service_stats
         end
         

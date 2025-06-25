@@ -75,32 +75,65 @@ class CompanyWebDiscoveryService < ApplicationService
   end
 
   def discover_web_pages
-    Rails.logger.info "Starting web discovery for: #{@company.company_name}"
+    start_time = Time.current
+    Rails.logger.info "🔍 Starting web discovery for: #{@company.company_name}"
 
     # Generate search queries
+    queries_start = Time.current
     search_queries = generate_search_queries
+    Rails.logger.info "📝 Generated #{search_queries.size} search queries in #{(Time.current - queries_start).round(2)}s"
 
     # Search using Google Custom Search API
+    search_start = Time.current
     all_results = []
-    search_queries.each do |query|
+    search_queries.each_with_index do |query, index|
+      query_start = Time.current
       results = google_search(query)
+      query_time = (Time.current - query_start).round(2)
+      Rails.logger.info "🔍 Query #{index + 1}/#{search_queries.size}: '#{query}' -> #{results&.size || 0} results (#{query_time}s)"
       all_results.concat(results) if results
+      # Stop if we have enough results to work with
+      break if all_results.size >= 20
     end
+    Rails.logger.info "🔍 Google searches completed in #{(Time.current - search_start).round(2)}s, total results: #{all_results.size}"
 
     # Remove duplicates by URL
+    dedup_start = Time.current
     unique_results = all_results.uniq { |r| normalize_url(r[:url]) }
+    Rails.logger.info "🔧 Deduplication: #{all_results.size} -> #{unique_results.size} results (#{(Time.current - dedup_start).round(2)}s)"
+
+    # Limit to first 10 results for faster processing
+    unique_results = unique_results.first(10)
+    Rails.logger.info "📊 Processing top #{unique_results.size} results"
 
     # Validate and score each result
+    validation_start = Time.current
     validated_results = []
-    unique_results.each do |result|
+    unique_results.each_with_index do |result, index|
+      url_start = Time.current
       if valid_company_website?(result[:url])
         validated = validate_and_score_website(result)
-        validated_results << validated if validated
+        if validated
+          validated_results << validated
+          url_time = (Time.current - url_start).round(2)
+          Rails.logger.info "✅ URL #{index + 1}/#{unique_results.size}: #{result[:url]} -> confidence #{validated[:confidence]} (#{url_time}s)"
+        else
+          Rails.logger.info "❌ URL #{index + 1}/#{unique_results.size}: #{result[:url]} -> validation failed"
+        end
+      else
+        Rails.logger.info "🚫 URL #{index + 1}/#{unique_results.size}: #{result[:url]} -> invalid/unreachable"
       end
     end
+    
+    validation_time = (Time.current - validation_start).round(2)
+    Rails.logger.info "🔍 Validation completed in #{validation_time}s, #{validated_results.size} valid results"
 
     # Sort by confidence score
-    validated_results.sort_by { |r| -r[:confidence] }
+    sorted_results = validated_results.sort_by { |r| -r[:confidence] }
+    total_time = (Time.current - start_time).round(2)
+    Rails.logger.info "🎯 Web discovery completed in #{total_time}s, best result: #{sorted_results.first&.dig(:url)} (confidence: #{sorted_results.first&.dig(:confidence)})"
+    
+    sorted_results
   end
 
   def generate_search_queries
@@ -109,10 +142,11 @@ class CompanyWebDiscoveryService < ApplicationService
     # Clean company name by removing legal and geographical suffixes
     clean_name = clean_company_name(@company.company_name)
 
-    # Primary search queries using cleaned name
-    queries << "#{clean_name} official website"
-    queries << "#{clean_name} Norway"
+    # Primary search queries using cleaned name - prioritize Norwegian terms
     queries << "#{clean_name} Norge"
+    queries << "#{clean_name} Norway"
+    queries << "#{clean_name} official website"
+    queries << "#{clean_name} .no site:no"
     queries << "#{clean_name} company"
 
     # Also try with original name as fallback
@@ -248,14 +282,12 @@ class CompanyWebDiscoveryService < ApplicationService
       page_title = doc.at_css("title")&.text&.strip || ""
       meta_description = doc.at_css('meta[name="description"]')&.attr("content") || ""
 
-      # Check if content matches company using AI
-      confidence = calculate_confidence_score(
+      # Check if content matches company using basic scoring (skip AI for now)
+      confidence = basic_confidence_score({
         url: url,
         title: page_title,
-        description: meta_description,
-        content: extract_text_content(doc),
-        search_result: result
-      )
+        description: meta_description
+      })
 
       {
         url: url,
@@ -387,9 +419,20 @@ class CompanyWebDiscoveryService < ApplicationService
       score += 10
     end
 
-    # Norwegian domain bonus
+    # Strong preference for Norwegian domains
     if data[:url].include?(".no")
+      score += 15  # Increased from 5 to 15
+    end
+
+    # Additional bonus for Norwegian keywords in URL
+    if url_lower.include?("norge") || url_lower.include?("norway")
       score += 5
+    end
+
+    # Bonus for exact brand match in domain
+    clean_domain_name = clean_name.downcase.gsub(/\s+/, "")
+    if url_lower.include?(clean_domain_name) && clean_domain_name.length > 3
+      score += 10
     end
 
     [ score, 95 ].min
@@ -411,13 +454,38 @@ class CompanyWebDiscoveryService < ApplicationService
     # Take the highest confidence URL as the main website
     if discovered_pages.any?
       best_match = discovered_pages.first
-      @company.website = best_match[:url] if best_match[:confidence] >= 70
+      if best_match[:confidence] >= 70
+        # Clean the URL to base domain
+        @company.website = clean_url_to_base_domain(best_match[:url])
+      end
     end
 
     # Store all discovered pages as array (not JSON string)
     @company.web_pages = discovered_pages
     @company.web_discovery_updated_at = Time.current
     @company.save!
+  end
+
+  def clean_url_to_base_domain(url)
+    begin
+      uri = URI.parse(url)
+      
+      # Return original if scheme or host is missing
+      return url unless uri.scheme && uri.host
+      
+      # Extract base domain
+      base_url = "#{uri.scheme}://#{uri.host}"
+      
+      # Add www if the original had it and the base doesn't
+      if uri.host && !uri.host.start_with?('www.') && url.include?('://www.')
+        base_url = "#{uri.scheme}://www.#{uri.host}"
+      end
+      
+      base_url
+    rescue URI::InvalidURIError => e
+      Rails.logger.warn "Could not parse URL #{url}: #{e.message}"
+      url # Return original if parsing fails
+    end
   end
 
   def success_result(message, data = {})

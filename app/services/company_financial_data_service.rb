@@ -95,7 +95,33 @@ class CompanyFinancialDataService < ApplicationService
       case response.code.to_i
       when 200
         data = JSON.parse(response.body, symbolize_names: true)
-        { success: true, data: data }
+        
+        # Handle Array response - extract most recent financial data
+        if data.is_a?(Array)
+          if data.empty?
+            return { success: true, data: nil, no_data_available: true }
+          end
+          
+          # Get the most recent financial record
+          latest_record = data.max_by { |record| record[:regnskapsperiode]&.dig(:fraDato) || "0000-01-01" }
+          
+          # Transform API response to expected format
+          transformed_data = {
+            revenue: latest_record.dig(:resultatregnskapResult, :driftsresultat, :driftsinntekter, :sum),
+            profit: latest_record.dig(:resultatregnskapResult, :driftsresultat, :driftsresultat),
+            equity: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :egenkapital, :sum),
+            total_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :sum),
+            current_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :omloepsmidler, :sum),
+            fixed_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :anleggsmidler, :sum),
+            current_liabilities: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :kortsiktigGjeld, :sum),
+            long_term_liabilities: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :langsiktigGjeld, :sum),
+            year: latest_record.dig(:regnskapsperiode, :fraDato)&.slice(0, 4)&.to_i
+          }
+          
+          { success: true, data: transformed_data }
+        else
+          { success: true, data: data }
+        end
       when 404
         # 404 means no financial data available for this company
         { success: true, data: nil, no_data_available: true }

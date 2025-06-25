@@ -110,60 +110,38 @@ class ApplicationService
 
   # Audit logging for service operations
   def audit_service_operation(auditable = nil)
-    puts "\n=== audit_service_operation called ==="
-    puts "auditable: #{auditable.inspect}"
-    puts "service_name: #{service_name}"
-    puts "action: #{action}"
+    # Services don't have saved_changes - that's an ActiveRecord feature
+    columns = [ "none" ]
 
-    begin
-      puts "Creating ServiceAuditLog"
-      # Services don't have saved_changes - that's an ActiveRecord feature
-      columns = [ "none" ]
-
-      puts "columns_affected will be: #{columns.inspect}"
-
-      metadata_value = { error: "no metadata" }
-      if defined?(context) && context.present?
-        puts "context is defined: #{context.inspect}"
-        metadata_value = context
-      end
-
-      audit_log = ServiceAuditLog.create!(
-        auditable: auditable,
-        service_name: service_name,
-        operation_type: action,
-        status: :pending,
-        columns_affected: columns,
-        metadata: metadata_value,
-        table_name: auditable ? auditable.class.table_name : "unknown",
-        record_id: auditable ? auditable.id.to_s : "unknown",
-        started_at: Time.current
-      )
-      puts "ServiceAuditLog created: #{audit_log.inspect}"
-    rescue => e
-      puts "ERROR creating ServiceAuditLog: #{e.class.name}: #{e.message}"
-      puts e.backtrace.first(5).join("\n")
-      raise
+    metadata_value = { error: "no metadata" }
+    if defined?(context) && context.present?
+      metadata_value = context
     end
 
-    begin
-      puts "Yielding to block"
-      result = yield(audit_log)
-      puts "Block completed, result: #{result.class.name}"
+    audit_log = ServiceAuditLog.create!(
+      auditable: auditable,
+      service_name: service_name,
+      operation_type: action,
+      status: :pending,
+      columns_affected: columns,
+      metadata: metadata_value,
+      table_name: auditable ? auditable.class.table_name : "unknown",
+      record_id: auditable ? auditable.id.to_s : "unknown",
+      started_at: Time.current
+    )
 
-      puts "Calling mark_success!"
+    begin
+      result = yield(audit_log)
+
       # Don't overwrite metadata, just mark as success and calculate execution time
       audit_log.update!(
         status: :success,
         completed_at: Time.current,
         execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
       )
-      puts "mark_success! completed"
 
       result
     rescue StandardError => e
-      puts "ERROR in audit_service_operation block: #{e.class.name}: #{e.message}"
-
       # Check if this is a rate limit error with retry_after
       metadata = { "error" => e.message }
       if e.message.include?("rate limit") && e.respond_to?(:retry_after)

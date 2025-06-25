@@ -314,6 +314,32 @@ RSpec.describe CompanyWebDiscoveryService do
     end
   end
 
+  describe '#clean_url_to_base_domain' do
+    it 'cleans URLs to base domain' do
+      expect(service.send(:clean_url_to_base_domain, 'https://example.com/path/to/page')).to eq('https://example.com')
+      expect(service.send(:clean_url_to_base_domain, 'https://www.example.com/path/to/page')).to eq('https://www.example.com')
+      expect(service.send(:clean_url_to_base_domain, 'http://site.no/very/deep/path')).to eq('http://site.no')
+    end
+
+    it 'preserves www subdomain when present' do
+      expect(service.send(:clean_url_to_base_domain, 'https://www.elkjop.no/products/phones')).to eq('https://www.elkjop.no')
+    end
+
+    it 'handles URLs without paths' do
+      expect(service.send(:clean_url_to_base_domain, 'https://example.com')).to eq('https://example.com')
+      expect(service.send(:clean_url_to_base_domain, 'https://www.example.com/')).to eq('https://www.example.com')
+    end
+
+    it 'handles query parameters and fragments' do
+      expect(service.send(:clean_url_to_base_domain, 'https://example.com/path?param=value#section')).to eq('https://example.com')
+    end
+
+    it 'returns original URL if parsing fails' do
+      invalid_url = 'not-a-valid-url'
+      expect(service.send(:clean_url_to_base_domain, invalid_url)).to eq(invalid_url)
+    end
+  end
+
   describe '#needs_update?' do
     let(:service_config) do
       ServiceConfiguration.find_or_create_by(service_name: 'company_web_discovery') do |config|

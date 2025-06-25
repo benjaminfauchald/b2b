@@ -147,17 +147,19 @@ module ServiceAuditable
         return needing_web_discovery
       end
 
-      # Use a robust join for all AR models
-      left = arel_table
-      logs = ServiceAuditLog.arel_table
-      join_cond = logs[:auditable_type].eq(name)
-        .and(logs[:auditable_id].eq(left[:id]))
-        .and(logs[:service_name].eq(service_name))
-        .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
+      # Use a simpler subquery approach that mirrors the instance method logic
+      refresh_threshold = service_config.refresh_interval_hours.hours.ago
+      
+      # Find records that either have no successful audit logs OR their most recent successful log is stale
+      records_with_recent_success = ServiceAuditLog
+        .where(auditable_type: name)
+        .where(service_name: service_name)
+        .where(status: ServiceAuditLog.statuses[:success])
+        .where("completed_at >= ?", refresh_threshold)
+        .select(:auditable_id)
+        .distinct
 
-      joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
-        .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?",
-               service_config.refresh_interval_hours.hours.ago)
+      where.not(id: records_with_recent_success)
     end
   end
 
