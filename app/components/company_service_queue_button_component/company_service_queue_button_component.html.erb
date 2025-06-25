@@ -1,0 +1,63 @@
+<div class="<%= card_classes %>" 
+     data-service="<%= service_name %>"
+     data-controller="service-queue"
+     data-service-queue-service-name-value="<%= service_name %>">
+  <div class="flex items-center mb-4">
+    <div class="flex-shrink-0 w-10 h-10 mr-3 flex items-center justify-center">
+      <svg class="w-8 h-8 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <% case icon %>
+        <% when "currency-dollar" %>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <% when "globe-alt" %>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+        <% when "user-group" %>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        <% end %>
+      </svg>
+    </div>
+    <h3 class="<%= heading_classes %>">
+      <%= title %>
+    </h3>
+  </div>
+  
+  <div class="mb-4 <%= text_muted_classes %>">
+    <turbo-frame id="<%= service_name %>_stats">
+      <% if web_discovery_service? %>
+        <p data-available-count="<%= service_name %>">
+          <%= number_with_delimiter(companies_needing_service) %> of <%= number_with_delimiter(web_discovery_potential) %> companies need processing
+        </p>
+        <p class="text-xs mt-1">
+          Companies with revenue > 10M NOK and no website
+        </p>
+      <% else %>
+        <p data-available-count="<%= service_name %>"><%= number_with_delimiter(companies_needing_service) %> companies need processing</p>
+      <% end %>
+      <p data-queue-stat="<%= queue_name %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
+    </turbo-frame>
+  </div>
+  
+  <form data-service-queue-target="form" 
+        data-action="submit->service-queue#submit" 
+        action="<%= action_path %>" 
+        method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <div class="mb-4">
+      <label for="count" class="<%= label_classes %>">Batch Size</label>
+      <input type="number" 
+             name="count" 
+             id="count"
+             value="<%= [companies_needing_service, 10].min %>" 
+             min="1" 
+             max="<%= [companies_needing_service, 1000].min %>"
+             class="<%= input_classes %>"
+             data-service-queue-target="countInput"
+             data-max-available="<%= companies_needing_service %>" />
+    </div>
+    
+    <button type="submit" 
+            class="<%= button_classes %>"
+            data-service-queue-target="submitButton">
+      Queue Processing
+    </button>
+  </form>
+</div>

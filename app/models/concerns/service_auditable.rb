@@ -142,6 +142,11 @@ module ServiceAuditable
       service_config = ServiceConfiguration.find_by(service_name: service_name)
       return none unless service_config&.active?
 
+      # Special handling for company_web_discovery - use custom scope
+      if self == Company && service_name == "company_web_discovery"
+        return needing_web_discovery
+      end
+
       # Use a robust join for all AR models
       left = arel_table
       logs = ServiceAuditLog.arel_table

@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe CompanyLinkedinDiscoveryService do
   let(:company) { create(:company, registration_number: '123456789', company_name: 'Test Company AS') }
   let(:service) { described_class.new(company) }
-  
+
   describe '#perform' do
     context 'when service configuration is active' do
       before do
@@ -46,10 +46,10 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'discovers and updates linkedin profiles' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.data[:linkedin_profiles]).to eq(linkedin_data)
-            
+
             company.reload
             expect(company.linkedin_url).to eq('https://linkedin.com/company/test-company-as')
             expect(company.linkedin_ai_confidence).to eq(98)
@@ -60,7 +60,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
             expect {
               service.perform
             }.to change(ServiceAuditLog, :count).by(1)
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('company_linkedin_discovery')
             expect(audit_log.status).to eq('success')
@@ -78,14 +78,14 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'updates employee count from linkedin data' do
             service.perform
-            
+
             company.reload
             expect(company.linkedin_employee_count).to eq(150)
           end
 
           it 'marks linkedin as processed' do
             service.perform
-            
+
             company.reload
             expect(company.linkedin_processed).to be true
           end
@@ -112,10 +112,10 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'stores alternatives but does not set primary URL' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.message).to include('Low confidence matches found')
-            
+
             company.reload
             expect(company.linkedin_url).to be_nil
             expect(company.linkedin_alternatives).to eq(linkedin_data[:alternate_urls])
@@ -124,7 +124,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'creates audit log with low_confidence metadata' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.metadata['low_confidence']).to be true
             expect(audit_log.metadata['highest_confidence']).to eq(0.45)
@@ -138,10 +138,10 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'handles empty results gracefully' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.message).to include('No LinkedIn profiles found')
-            
+
             company.reload
             expect(company.linkedin_url).to be_nil
             expect(company.linkedin_processed).to be true
@@ -149,7 +149,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'creates audit log with not_found status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('success')
             expect(audit_log.metadata['profiles_found']).to eq(0)
@@ -163,14 +163,14 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'handles API errors' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('LinkedIn API error')
           end
 
           it 'creates audit log with error status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('error')
             expect(audit_log.error_message).to be_present
@@ -184,7 +184,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'handles rate limits gracefully' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('rate limit')
             expect(result.retry_after).to eq(7200)
@@ -192,7 +192,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'creates audit log with rate_limited status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('rate_limited')
             expect(audit_log.metadata['retry_after']).to eq(7200)
@@ -206,7 +206,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
               company_info: {
                 employees: 200,
                 industry: 'Information Technology',
-                specialties: ['Cloud Computing', 'AI', 'SaaS'],
+                specialties: [ 'Cloud Computing', 'AI', 'SaaS' ],
                 founded_year: 2010
               }
             }
@@ -218,7 +218,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
           it 'enriches company data from LinkedIn' do
             service.perform
-            
+
             company.reload
             expect(company.linkedin_employee_count).to eq(200)
             # Additional enrichment could update other fields based on business logic
@@ -233,16 +233,16 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
         it 'returns early without making API call' do
           expect_no_linkedin_api_calls
-          
+
           result = service.perform
-          
+
           expect(result).to be_success
           expect(result.message).to eq('LinkedIn discovery data is up to date')
         end
 
         it 'creates audit log with skipped status' do
           service.perform
-          
+
           audit_log = ServiceAuditLog.last
           expect(audit_log.status).to eq('skipped')
           expect(audit_log.metadata['reason']).to eq('up_to_date')
@@ -259,7 +259,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
 
       it 'does not perform service' do
         result = service.perform
-        
+
         expect(result).not_to be_success
         expect(result.error).to eq('Service is disabled')
       end
@@ -353,7 +353,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
       .to_return(
         status: 429,
         body: { error: 'Rate limit exceeded' }.to_json,
-        headers: { 
+        headers: {
           'Content-Type' => 'application/json',
           'Retry-After' => '7200'
         }

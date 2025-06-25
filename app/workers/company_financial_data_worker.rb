@@ -1,19 +1,19 @@
 class CompanyFinancialDataWorker
   include Sidekiq::Worker
-  
-  sidekiq_options queue: 'company_financial_data', retry: 3
-  
+
+  sidekiq_options queue: "company_financial_data", retry: 3
+
   def perform(company_id)
     company = Company.find_by(id: company_id)
-    
+
     unless company
       Rails.logger.error "Company not found: #{company_id}"
       return
     end
-    
+
     service = CompanyFinancialDataService.new(company)
     result = service.perform
-    
+
     if result.success?
       Rails.logger.info "Successfully processed financial data for company #{company_id}"
     else

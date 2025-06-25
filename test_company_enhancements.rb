@@ -25,7 +25,7 @@ puts "✅ Created company: #{company.company_name} (ID: #{company.id})"
 
 # 2. Check service configurations
 puts "\n2️⃣ Checking service configurations..."
-services = ['company_financial_data', 'company_web_discovery', 'company_linkedin_discovery', 'company_employee_discovery']
+services = [ 'company_financial_data', 'company_web_discovery', 'company_linkedin_discovery', 'company_employee_discovery' ]
 services.each do |service_name|
   config = ServiceConfiguration.find_by(service_name: service_name)
   if config

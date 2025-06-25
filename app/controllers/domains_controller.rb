@@ -115,13 +115,13 @@ class DomainsController < ApplicationController
     end
 
     count = params[:count]&.to_i || 100
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 domains at once" }
       return
@@ -130,24 +130,24 @@ class DomainsController < ApplicationController
     # Get available domains that need testing
     available_domains = Domain.needing_service("domain_testing")
     available_count = available_domains.count
-    
+
     # Check if we have any domains to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No domains need DNS testing at this time",
         available_count: 0
       }
       return
     end
-    
+
     # Adjust count to available domains if necessary
-    actual_count = [count, available_count].min
-    
+    actual_count = [ count, available_count ].min
+
     # Queue up to the requested number of domains (or all available if less)
     domains = available_domains.limit(actual_count)
     queued = 0
-    
+
     domains.each do |domain|
       DomainDnsTestingWorker.perform_async(domain.id)
       queued += 1
@@ -155,8 +155,8 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: actual_count < count ? 
-        "Queued all #{queued} available domains for DNS testing (requested: #{count})" : 
+      message: actual_count < count ?
+        "Queued all #{queued} available domains for DNS testing (requested: #{count})" :
         "Queued #{queued} domains for DNS testing",
       queued_count: queued,
       requested_count: count,
@@ -173,13 +173,13 @@ class DomainsController < ApplicationController
     end
 
     count = params[:count]&.to_i || 100
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 domains at once" }
       return
@@ -188,24 +188,24 @@ class DomainsController < ApplicationController
     # Get available domains that need testing
     available_domains = Domain.needing_service("domain_mx_testing")
     available_count = available_domains.count
-    
+
     # Check if we have any domains to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No domains need MX testing at this time",
         available_count: 0
       }
       return
     end
-    
+
     # Adjust count to available domains if necessary
-    actual_count = [count, available_count].min
-    
+    actual_count = [ count, available_count ].min
+
     # Queue up to the requested number of domains (or all available if less)
     domains = available_domains.limit(actual_count)
     queued = 0
-    
+
     domains.each do |domain|
       DomainMxTestingWorker.perform_async(domain.id)
       queued += 1
@@ -213,8 +213,8 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: actual_count < count ? 
-        "Queued all #{queued} available domains for MX testing (requested: #{count})" : 
+      message: actual_count < count ?
+        "Queued all #{queued} available domains for MX testing (requested: #{count})" :
         "Queued #{queued} domains for MX testing",
       queued_count: queued,
       requested_count: count,
@@ -231,13 +231,13 @@ class DomainsController < ApplicationController
     end
 
     count = params[:count]&.to_i || 100
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 domains at once" }
       return
@@ -246,24 +246,24 @@ class DomainsController < ApplicationController
     # Get available domains that need testing (domains with active DNS but no WWW test)
     available_domains = Domain.dns_active.where(www: nil)
     available_count = available_domains.count
-    
+
     # Check if we have any domains to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No domains need A Record testing at this time",
         available_count: 0
       }
       return
     end
-    
+
     # Adjust count to available domains if necessary
-    actual_count = [count, available_count].min
-    
+    actual_count = [ count, available_count ].min
+
     # Queue up to the requested number of domains (or all available if less)
     domains = available_domains.limit(actual_count)
     queued = 0
-    
+
     domains.each do |domain|
       DomainARecordTestingWorker.perform_async(domain.id)
       queued += 1
@@ -271,8 +271,8 @@ class DomainsController < ApplicationController
 
     render json: {
       success: true,
-      message: actual_count < count ? 
-        "Queued all #{queued} available domains for A Record testing (requested: #{count})" : 
+      message: actual_count < count ?
+        "Queued all #{queued} available domains for A Record testing (requested: #{count})" :
         "Queued #{queued} domains for A Record testing",
       queued_count: queued,
       requested_count: count,
@@ -305,7 +305,7 @@ class DomainsController < ApplicationController
         status: "pending",
         table_name: @domain.class.table_name,
         record_id: @domain.id.to_s,
-        columns_affected: ["dns"],
+        columns_affected: [ "dns" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -348,7 +348,7 @@ class DomainsController < ApplicationController
         status: "pending",
         table_name: @domain.class.table_name,
         record_id: @domain.id.to_s,
-        columns_affected: ["mx"],
+        columns_affected: [ "mx" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -391,7 +391,7 @@ class DomainsController < ApplicationController
         status: "pending",
         table_name: @domain.class.table_name,
         record_id: @domain.id.to_s,
-        columns_affected: ["www"],
+        columns_affected: [ "www" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,

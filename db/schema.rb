@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_23_191001) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_25_123502) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -351,8 +351,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_23_191001) do
     t.index ["employee_discovery_updated_at"], name: "index_companies_on_employee_discovery_updated_at"
     t.index ["employees_data"], name: "index_companies_on_employees_data", using: :gin
     t.index ["financial_data_updated_at"], name: "index_companies_on_financial_data_updated_at"
+    t.index ["id"], name: "index_companies_needing_web_discovery", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)) AND ((web_pages IS NULL) OR (web_pages = '{}'::jsonb) OR (jsonb_array_length(web_pages) = 0)))"
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
     t.index ["linkedin_last_processed_at"], name: "index_companies_on_linkedin_last_processed_at"
+    t.index ["operating_revenue", "website"], name: "index_companies_web_discovery_candidates", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)))"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
     t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true

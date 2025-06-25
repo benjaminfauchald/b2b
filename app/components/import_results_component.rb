@@ -165,13 +165,13 @@ class ImportResultsComponent < ViewComponent::Base
   def has_errors_to_export?
     has_failed = has_failed_domains?
     has_duplicates = false
-    
+
     if result.respond_to?(:duplicate_domains)
       has_duplicates = result.duplicate_domains&.any? || false
     elsif result.is_a?(Hash)
       has_duplicates = result[:duplicate_domains]&.any? || false
     end
-    
+
     has_failed || has_duplicates
   end
 

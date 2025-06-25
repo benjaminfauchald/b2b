@@ -1,0 +1,41 @@
+<div class="relative">
+  <!-- Status Badge -->
+  <div class="flex items-center justify-between mb-2">
+    <span class="<%= status_badge_classes %> inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+      <%= status_text %>
+    </span>
+    <% if last_tested_time %>
+      <span class="text-xs text-gray-500">
+        <%= time_ago_in_words(last_tested_time) %> ago
+      </span>
+    <% end %>
+  </div>
+
+  <!-- Service Button -->
+  <%= form_with url: action_path, method: :post, 
+                data: { 
+                  turbo_frame: "_top",
+                  controller: "service-button",
+                  action: "ajax:beforeSend->service-button#disableButton ajax:complete->service-button#handleResponse"
+                },
+                html: { id: form_id } do |form| %>
+    <button type="submit" 
+            class="<%= button_classes %> w-full"
+            <%= 'disabled' if button_disabled? %>
+            data-service-button-target="button">
+      <span data-service-button-target="spinner" class="hidden">
+        <%= spinner_icon %>
+      </span>
+      <span data-service-button-target="icon">
+        <%= service_config[:icon] %>
+      </span>
+      <span data-service-button-target="text" class="ml-2">
+        <%= button_text %>
+      </span>
+    </button>
+  <% end %>
+
+  <% unless service_active? %>
+    <p class="text-xs text-gray-500 mt-1 text-center">Service disabled</p>
+  <% end %>
+</div>

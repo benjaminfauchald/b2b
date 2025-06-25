@@ -94,7 +94,7 @@ class DomainARecordTestingService < ApplicationService
         service_name: service_name,
         operation_type: action,
         status: :pending,
-        columns_affected: ["www"],
+        columns_affected: [ "www" ],
         metadata: { domain_name: domain.domain },
         table_name: domain.class.table_name,
         record_id: domain.id.to_s,
@@ -103,7 +103,7 @@ class DomainARecordTestingService < ApplicationService
 
       result = perform_a_record_test
       update_domain_status(domain, result)
-      
+
       audit_log.update!(
         status: :success,
         completed_at: Time.current,
@@ -113,7 +113,7 @@ class DomainARecordTestingService < ApplicationService
           test_result: result[:status]
         })
       )
-      
+
       result
     rescue StandardError => e
       if audit_log

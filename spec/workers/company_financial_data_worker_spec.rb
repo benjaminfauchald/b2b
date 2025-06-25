@@ -100,7 +100,7 @@ RSpec.describe CompanyFinancialDataWorker, type: :worker do
 
       it 'enqueues with correct arguments' do
         described_class.perform_async(company.id)
-        expect(described_class.jobs.last['args']).to eq([company.id])
+        expect(described_class.jobs.last['args']).to eq([ company.id ])
       end
 
       it 'can be performed inline' do
@@ -108,7 +108,7 @@ RSpec.describe CompanyFinancialDataWorker, type: :worker do
           service_double = instance_double(CompanyFinancialDataService)
           allow(CompanyFinancialDataService).to receive(:new).and_return(service_double)
           allow(service_double).to receive(:perform).and_return(OpenStruct.new(success?: true))
-          
+
           expect(service_double).to receive(:perform)
           described_class.perform_async(company.id)
         end

@@ -18,7 +18,7 @@ Rails.application.routes.draw do
       get :template, to: "domains#download_template"
       get :export_errors, to: "domains#export_errors"
     end
-    
+
     member do
       post :queue_single_dns
       post :queue_single_mx
@@ -34,8 +34,9 @@ Rails.application.routes.draw do
       post :queue_linkedin_discovery
       post :queue_employee_discovery
       get :enhancement_queue_status
+      get :service_stats
     end
-    
+
     member do
       # Individual company service triggers
       post :queue_single_financial_data
@@ -57,8 +58,11 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # Welcome page
+  get "welcome", to: "welcome#index"
+
   # Defines the root path route ("/")
-  root "domains#index"
+  root "welcome#index"
 
   namespace :webhooks do
     post "/instantly", to: "instantly_webhook#create"

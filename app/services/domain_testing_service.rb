@@ -174,7 +174,7 @@ class DomainTestingService < ApplicationService
         service_name: service_name,
         operation_type: action,
         status: :pending,
-        columns_affected: ["dns"],
+        columns_affected: [ "dns" ],
         metadata: { domain_name: domain.domain },
         table_name: domain.class.table_name,
         record_id: domain.id.to_s,
@@ -183,12 +183,12 @@ class DomainTestingService < ApplicationService
 
       result = perform_dns_test
       update_domain_status(domain, result)
-      
+
       # If DNS test was successful, automatically queue MX and A Record tests
       if result[:dns_active]
         queue_follow_up_tests
       end
-      
+
       audit_log.update!(
         status: :success,
         completed_at: Time.current,
@@ -198,7 +198,7 @@ class DomainTestingService < ApplicationService
           test_result: result[:status]
         })
       )
-      
+
       result
     rescue StandardError => e
       if audit_log
@@ -296,13 +296,13 @@ class DomainTestingService < ApplicationService
 
   def queue_follow_up_tests
     Rails.logger.info("DNS test successful for domain #{domain.domain}, queueing MX and A Record tests")
-    
+
     # Queue MX testing if not already tested
     if domain.mx.nil?
       DomainMxTestingWorker.perform_async(domain.id)
       Rails.logger.info("Queued MX testing for domain #{domain.domain}")
     end
-    
+
     # Queue A Record testing if not already tested
     if domain.www.nil?
       DomainARecordTestingWorker.perform_async(domain.id)

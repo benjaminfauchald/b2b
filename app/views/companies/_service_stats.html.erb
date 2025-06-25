@@ -1,0 +1,13 @@
+<turbo-frame id="<%= service_name %>_stats">
+  <% if service_name == "company_web_discovery" && defined?(companies_potential) %>
+    <p data-available-count="<%= service_name %>" data-raw-count="<%= companies_needing %>">
+      <%= number_with_delimiter(companies_needing) %> of <%= number_with_delimiter(companies_potential) %> companies need processing
+    </p>
+    <p class="text-xs mt-1">
+      Companies with revenue > 10M NOK and no website
+    </p>
+  <% else %>
+    <p data-available-count="<%= service_name %>" data-raw-count="<%= companies_needing %>"><%= number_with_delimiter(companies_needing) %> companies need processing</p>
+  <% end %>
+  <p data-queue-stat="<%= service_name %>" data-raw-queue="<%= queue_depth %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
+</turbo-frame>

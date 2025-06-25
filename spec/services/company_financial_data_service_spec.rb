@@ -2,14 +2,14 @@ require 'rails_helper'
 
 RSpec.describe CompanyFinancialDataService do
   include ActiveSupport::Testing::TimeHelpers
-  
+
   let(:company) { create(:company, registration_number: '123456789') }
   let(:service) { described_class.new(company) }
-  
+
   before do
     ENV['BRREG_API_ENDPOINT'] = 'https://api.brreg.no'
   end
-  
+
   describe '#perform' do
     context 'when service configuration is active' do
       before do
@@ -44,10 +44,10 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'fetches and updates financial data' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.data[:financial_data]).to eq(financial_data)
-            
+
             company.reload
             expect(company.revenue).to eq(1_000_000)
             expect(company.profit).to eq(100_000)
@@ -58,7 +58,7 @@ RSpec.describe CompanyFinancialDataService do
             expect {
               service.perform
             }.to change(ServiceAuditLog, :count).by(1)
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('company_financial_data')
             expect(audit_log.status).to eq('success')
@@ -75,7 +75,7 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'tracks execution time in audit log' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.execution_time_ms).to be > 0
             expect(audit_log.started_at).to be_present
@@ -90,7 +90,7 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'handles rate limit gracefully' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('rate limit')
             expect(result.data[:retry_after]).to eq(60)
@@ -98,7 +98,7 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'creates audit log with failed status and rate_limited metadata' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('failed')
             expect(audit_log.error_message).to eq('API rate limit exceeded')
@@ -114,14 +114,14 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'handles API errors' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('API error')
           end
 
           it 'creates audit log with failed status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('failed')
             expect(audit_log.error_message).to be_present
@@ -135,7 +135,7 @@ RSpec.describe CompanyFinancialDataService do
 
           it 'validates financial data structure' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('Invalid financial data')
           end
@@ -152,7 +152,7 @@ RSpec.describe CompanyFinancialDataService do
             status: :success,
             table_name: 'companies',
             record_id: company.id.to_s,
-            columns_affected: ['revenue', 'profit'],
+            columns_affected: [ 'revenue', 'profit' ],
             metadata: { result: 'success' },
             started_at: 1.hour.ago,
             completed_at: 1.hour.ago
@@ -161,16 +161,16 @@ RSpec.describe CompanyFinancialDataService do
 
         it 'returns early without making API call' do
           expect_no_financial_api_calls
-          
+
           result = service.perform
-          
+
           expect(result).to be_success
           expect(result.message).to eq('Financial data is up to date')
         end
 
         it 'creates audit log with success status but skipped metadata' do
           service.perform
-          
+
           audit_log = ServiceAuditLog.last
           expect(audit_log.status).to eq('success')
           expect(audit_log.metadata['reason']).to eq('up_to_date')
@@ -187,7 +187,7 @@ RSpec.describe CompanyFinancialDataService do
 
       it 'does not perform service' do
         result = service.perform
-        
+
         expect(result).not_to be_success
         expect(result.error).to eq('Service is disabled')
       end
@@ -230,7 +230,7 @@ RSpec.describe CompanyFinancialDataService do
           financial_data_updated_at: 1.day.ago,
           revenue: 1000
         )
-        
+
         # Create a recent successful audit log
         ServiceAuditLog.create!(
           auditable: company,
@@ -239,7 +239,7 @@ RSpec.describe CompanyFinancialDataService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['revenue', 'profit'],
+          columns_affected: [ 'revenue', 'profit' ],
           metadata: { result: 'success' },
           started_at: 1.day.ago,
           completed_at: 1.day.ago
@@ -267,7 +267,7 @@ RSpec.describe CompanyFinancialDataService do
       .to_return(
         status: 429,
         body: { error: 'Rate limit exceeded' }.to_json,
-        headers: { 
+        headers: {
           'Content-Type' => 'application/json',
           'Retry-After' => '60'
         }

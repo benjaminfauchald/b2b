@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe 'Domain Individual Queue Testing', type: :request do
   include Devise::Test::IntegrationHelpers
-  
+
   let(:user) { create(:user) }
   let(:domain) { create(:domain) }
 
@@ -24,7 +24,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
         expect {
           post queue_single_dns_domain_path(domain)
         }.to change { DomainDnsTestingWorker.jobs.size }.by(1)
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
@@ -35,7 +35,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
       it 'includes job information in response' do
         post queue_single_dns_domain_path(domain)
-        
+
         json = JSON.parse(response.body)
         expect(json).to have_key("job_id")
         expect(json["worker"]).to eq("DomainDnsTestingWorker")
@@ -44,35 +44,35 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       it 'queues domain even if it was recently tested' do
         # Domain already has DNS result
         domain.update!(dns: true)
-        
+
         expect {
           post queue_single_dns_domain_path(domain)
         }.to change { DomainDnsTestingWorker.jobs.size }.by(1)
-        
+
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
       end
 
       it 'returns 404 for non-existent domain' do
         post queue_single_dns_domain_path(id: 99999)
-        
+
         expect(response).to have_http_status(:not_found)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
         expect(json["message"]).to eq("Domain not found")
       end
     end
-    
+
     context 'when service is inactive' do
       before do
         allow(ServiceConfiguration).to receive(:active?).with("domain_testing").and_return(false)
       end
-      
+
       it 'returns error when service is disabled' do
         expect {
           post queue_single_dns_domain_path(domain)
         }.not_to change { DomainDnsTestingWorker.jobs.size }
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
@@ -100,7 +100,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
         expect {
           post queue_single_mx_domain_path(domain)
         }.to change { DomainMxTestingWorker.jobs.size }.by(1)
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
@@ -111,7 +111,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
       it 'includes job information in response' do
         post queue_single_mx_domain_path(domain)
-        
+
         json = JSON.parse(response.body)
         expect(json).to have_key("job_id")
         expect(json["worker"]).to eq("DomainMxTestingWorker")
@@ -120,35 +120,35 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       it 'queues domain regardless of prerequisites' do
         # Even if DNS is not tested, still allow MX queueing
         domain.update!(dns: nil)
-        
+
         expect {
           post queue_single_mx_domain_path(domain)
         }.to change { DomainMxTestingWorker.jobs.size }.by(1)
-        
+
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
       end
 
       it 'returns 404 for non-existent domain' do
         post queue_single_mx_domain_path(id: 99999)
-        
+
         expect(response).to have_http_status(:not_found)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
         expect(json["message"]).to eq("Domain not found")
       end
     end
-    
+
     context 'when service is inactive' do
       before do
         allow(ServiceConfiguration).to receive(:active?).with("domain_mx_testing").and_return(false)
       end
-      
+
       it 'returns error when service is disabled' do
         expect {
           post queue_single_mx_domain_path(domain)
         }.not_to change { DomainMxTestingWorker.jobs.size }
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
@@ -167,7 +167,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
         expect {
           post queue_single_www_domain_path(domain)
         }.to change { DomainARecordTestingWorker.jobs.size }.by(1)
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
@@ -178,7 +178,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
       it 'includes job information in response' do
         post queue_single_www_domain_path(domain)
-        
+
         json = JSON.parse(response.body)
         expect(json).to have_key("job_id")
         expect(json["worker"]).to eq("DomainARecordTestingWorker")
@@ -187,35 +187,35 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       it 'queues domain regardless of DNS status' do
         # Even if DNS is false, still allow WWW queueing for testing
         domain.update!(dns: false)
-        
+
         expect {
           post queue_single_www_domain_path(domain)
         }.to change { DomainARecordTestingWorker.jobs.size }.by(1)
-        
+
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
       end
 
       it 'returns 404 for non-existent domain' do
         post queue_single_www_domain_path(id: 99999)
-        
+
         expect(response).to have_http_status(:not_found)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
         expect(json["message"]).to eq("Domain not found")
       end
     end
-    
+
     context 'when service is inactive' do
       before do
         allow(ServiceConfiguration).to receive(:active?).with("domain_a_record_testing").and_return(false)
       end
-      
+
       it 'returns error when service is disabled' do
         expect {
           post queue_single_www_domain_path(domain)
         }.not_to change { DomainARecordTestingWorker.jobs.size }
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json["success"]).to be false
@@ -233,7 +233,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       expect {
         post queue_single_dns_domain_path(domain)
       }.to change { ServiceAuditLog.count }.by(1)
-      
+
       audit_log = ServiceAuditLog.last
       expect(audit_log.auditable).to eq(domain)
       expect(audit_log.service_name).to eq("domain_testing")
@@ -245,7 +245,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       expect {
         post queue_single_mx_domain_path(domain)
       }.to change { ServiceAuditLog.count }.by(1)
-      
+
       audit_log = ServiceAuditLog.last
       expect(audit_log.auditable).to eq(domain)
       expect(audit_log.service_name).to eq("domain_mx_testing")
@@ -256,7 +256,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       expect {
         post queue_single_www_domain_path(domain)
       }.to change { ServiceAuditLog.count }.by(1)
-      
+
       audit_log = ServiceAuditLog.last
       expect(audit_log.auditable).to eq(domain)
       expect(audit_log.service_name).to eq("domain_a_record_testing")
@@ -273,11 +273,11 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
       # First request
       post queue_single_dns_domain_path(domain)
       expect(response).to have_http_status(:ok)
-      
+
       # Second request should also succeed
       post queue_single_dns_domain_path(domain)
       expect(response).to have_http_status(:ok)
-      
+
       expect(DomainDnsTestingWorker.jobs.size).to eq(2)
     end
   end
@@ -289,7 +289,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
     it 'returns consistent JSON format for successful DNS queue' do
       post queue_single_dns_domain_path(domain)
-      
+
       json = JSON.parse(response.body)
       expect(json).to include(
         "success" => true,
@@ -303,7 +303,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
     it 'returns consistent JSON format for successful MX queue' do
       post queue_single_mx_domain_path(domain)
-      
+
       json = JSON.parse(response.body)
       expect(json).to include(
         "success" => true,
@@ -317,7 +317,7 @@ RSpec.describe 'Domain Individual Queue Testing', type: :request do
 
     it 'returns consistent JSON format for successful WWW queue' do
       post queue_single_www_domain_path(domain)
-      
+
       json = JSON.parse(response.body)
       expect(json).to include(
         "success" => true,

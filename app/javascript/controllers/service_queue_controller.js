@@ -32,12 +32,14 @@ export default class extends Controller {
     }
     
     if (count > maxAvailable) {
-      this.showError(`Only ${maxAvailable} domains are available for testing`)
+      const entityType = window.location.pathname.includes('/companies') ? 'companies' : 'domains';
+      this.showError(`Only ${maxAvailable} ${entityType} are available for testing`)
       return
     }
     
     if (count > 1000) {
-      this.showError('Cannot queue more than 1000 domains at once')
+      const entityType = window.location.pathname.includes('/companies') ? 'companies' : 'domains';
+      this.showError(`Cannot queue more than 1000 ${entityType} at once`)
       return
     }
     
@@ -113,12 +115,13 @@ export default class extends Controller {
       submitButton.style.cursor = 'pointer'
       
       // Reset button text
-      submitButton.innerHTML = 'Queue Testing'
+      submitButton.innerHTML = 'Queue Processing'
     }
   }
   
   showSuccess(message, count) {
-    this.showToast(message + ` (${count} domains queued)`, 'success')
+    const entityType = window.location.pathname.includes('/companies') ? 'companies' : 'domains';
+    this.showToast(message + ` (${count} ${entityType} queued)`, 'success')
   }
   
   showError(message) {
@@ -165,7 +168,20 @@ export default class extends Controller {
   async updateQueueStats() {
     // Make the queue status request directly and wait for it to complete
     try {
-      const response = await fetch(window.location.origin + '/domains/queue_status')
+      // Determine the correct endpoint based on current page
+      const currentPath = window.location.pathname;
+      let statusEndpoint;
+      
+      if (currentPath.includes('/companies')) {
+        statusEndpoint = '/companies/enhancement_queue_status';
+      } else if (currentPath.includes('/domains')) {
+        statusEndpoint = '/domains/queue_status';
+      } else {
+        // Default fallback
+        statusEndpoint = '/domains/queue_status';
+      }
+      
+      const response = await fetch(window.location.origin + statusEndpoint)
       const data = await response.json()
       
       if (data.success) {
@@ -186,32 +202,38 @@ export default class extends Controller {
   }
   
   updateQueueElements(queueStats) {
-    // Update queue stats if elements exist
-    const dnsQueue = document.querySelector('[data-stat="domain_dns_testing"]');
-    const mxQueue = document.querySelector('[data-stat="domain_mx_testing"]');
-    const aRecordQueue = document.querySelector('[data-stat="DomainARecordTestingService"]');
-    const processed = document.querySelector('[data-stat="processed"]');
+    // Update all queue stat elements by finding all elements with data-queue-stat attribute
+    document.querySelectorAll('[data-queue-stat]').forEach(element => {
+      const queueName = element.getAttribute('data-queue-stat');
+      if (queueStats[queueName] !== undefined) {
+        // If it's in a button, add " in queue" text
+        if (element.classList.contains('queue-button-stat') || element.textContent.includes('in queue')) {
+          element.textContent = (queueStats[queueName] || 0) + ' in queue';
+        } else {
+          element.textContent = queueStats[queueName] || 0;
+        }
+      }
+    });
     
-    if (dnsQueue) dnsQueue.textContent = queueStats.domain_dns_testing || 0;
-    if (mxQueue) mxQueue.textContent = queueStats.domain_mx_testing || 0;
-    if (aRecordQueue) aRecordQueue.textContent = queueStats.DomainARecordTestingService || 0;
+    // Update total processed stat
+    const processed = document.querySelector('[data-stat="processed"]');
     if (processed) processed.textContent = queueStats.total_processed || 0;
     
-    // Also update queue counts in the service buttons
-    const dnsQueueInButton = document.querySelector('[data-queue-stat="domain_dns_testing"]');
-    const mxQueueInButton = document.querySelector('[data-queue-stat="domain_mx_testing"]');
-    const aRecordQueueInButton = document.querySelector('[data-queue-stat="DomainARecordTestingService"]');
-    
-    if (dnsQueueInButton) dnsQueueInButton.textContent = (queueStats.domain_dns_testing || 0) + ' in queue';
-    if (mxQueueInButton) mxQueueInButton.textContent = (queueStats.domain_mx_testing || 0) + ' in queue';
-    if (aRecordQueueInButton) aRecordQueueInButton.textContent = (queueStats.DomainARecordTestingService || 0) + ' in queue';
+    // Update generic stat elements
+    document.querySelectorAll('[data-stat]').forEach(element => {
+      const statName = element.getAttribute('data-stat');
+      if (queueStats[statName] !== undefined) {
+        element.textContent = queueStats[statName] || 0;
+      }
+    });
   }
   
   updateAvailableCount(availableCount) {
     // Update the available count display for this service
     const availableElement = document.querySelector(`[data-available-count="${this.serviceNameValue}"]`);
     if (availableElement) {
-      availableElement.textContent = `${availableCount} domains need testing`;
+      const entityType = window.location.pathname.includes('/companies') ? 'companies need processing' : 'domains need testing';
+      availableElement.textContent = `${availableCount} ${entityType}`;
     }
     
     // Update the input max attribute and data attribute

@@ -2,7 +2,7 @@
 
 class Company < ApplicationRecord
   include ServiceAuditable
-  
+
   # Associations
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
 
@@ -29,6 +29,25 @@ class Company < ApplicationRecord
       "companies.id NOT IN (?)",
       subquery
     )
+  }
+
+  # Scopes for web discovery
+  # Companies with revenue > 10M NOK and no website that need web discovery
+  scope :web_discovery_candidates, -> {
+    where("operating_revenue > ?", 10_000_000)
+    .where("website IS NULL OR website = ''")
+  }
+
+  # Companies that are web discovery candidates AND haven't been processed yet
+  scope :needing_web_discovery, -> {
+    web_discovery_candidates
+    .where("web_pages IS NULL OR web_pages = '{}' OR jsonb_array_length(web_pages) = 0")
+  }
+
+  # Companies that are web discovery candidates regardless of processing status
+  # Used for showing total potential in UI
+  scope :web_discovery_potential, -> {
+    web_discovery_candidates
   }
 
   # Instance Methods

@@ -3,12 +3,12 @@
 class CompaniesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_company, only: %i[show edit update destroy queue_single_financial_data queue_single_web_discovery queue_single_linkedin_discovery queue_single_employee_discovery]
-  skip_before_action :verify_authenticity_token, only: [:queue_financial_data, :queue_web_discovery, :queue_linkedin_discovery, :queue_employee_discovery, :queue_single_financial_data, :queue_single_web_discovery, :queue_single_linkedin_discovery, :queue_single_employee_discovery]
+  skip_before_action :verify_authenticity_token, only: [ :queue_financial_data, :queue_web_discovery, :queue_linkedin_discovery, :queue_employee_discovery, :queue_single_financial_data, :queue_single_web_discovery, :queue_single_linkedin_discovery, :queue_single_employee_discovery ]
 
   def index
     companies_scope = Company.includes(:service_audit_logs)
                             .order(created_at: :desc)
-    
+
     if params[:search].present?
       companies_scope = companies_scope.where(
         "company_name ILIKE :search OR registration_number ILIKE :search",
@@ -23,8 +23,9 @@ class CompaniesController < ApplicationController
     elsif params[:filter] == "needs_update"
       companies_scope = companies_scope.needs_financial_update
     end
-    
+
     @pagy, @companies = pagy(companies_scope)
+    @queue_stats = get_queue_stats
   end
 
   def show
@@ -72,13 +73,13 @@ class CompaniesController < ApplicationController
     end
 
     count = params[:count]&.to_i || 10
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
       return
@@ -87,20 +88,20 @@ class CompaniesController < ApplicationController
     # Get available companies that need processing
     available_companies = Company.needing_service("company_financial_data")
     available_count = available_companies.count
-    
+
     # Check if we have enough companies to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No companies need financial data processing at this time",
         available_count: 0
       }
       return
     end
-    
+
     if count > available_count
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "Only #{available_count} companies need financial data processing, but #{count} were requested",
         available_count: available_count
       }
@@ -132,13 +133,13 @@ class CompaniesController < ApplicationController
     end
 
     count = params[:count]&.to_i || 10
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
       return
@@ -147,20 +148,20 @@ class CompaniesController < ApplicationController
     # Get available companies that need processing
     available_companies = Company.needing_service("company_web_discovery")
     available_count = available_companies.count
-    
+
     # Check if we have enough companies to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No companies need web discovery processing at this time",
         available_count: 0
       }
       return
     end
-    
+
     if count > available_count
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "Only #{available_count} companies need web discovery processing, but #{count} were requested",
         available_count: available_count
       }
@@ -192,13 +193,13 @@ class CompaniesController < ApplicationController
     end
 
     count = params[:count]&.to_i || 10
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
       return
@@ -207,20 +208,20 @@ class CompaniesController < ApplicationController
     # Get available companies that need processing
     available_companies = Company.needing_service("company_linkedin_discovery")
     available_count = available_companies.count
-    
+
     # Check if we have enough companies to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No companies need LinkedIn discovery processing at this time",
         available_count: 0
       }
       return
     end
-    
+
     if count > available_count
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "Only #{available_count} companies need LinkedIn discovery processing, but #{count} were requested",
         available_count: available_count
       }
@@ -252,13 +253,13 @@ class CompaniesController < ApplicationController
     end
 
     count = params[:count]&.to_i || 10
-    
+
     # Validate count is positive and reasonable
     if count <= 0
       render json: { success: false, message: "Count must be greater than 0" }
       return
     end
-    
+
     if count > 1000
       render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
       return
@@ -267,20 +268,20 @@ class CompaniesController < ApplicationController
     # Get available companies that need processing
     available_companies = Company.needing_service("company_employee_discovery")
     available_count = available_companies.count
-    
+
     # Check if we have enough companies to queue
     if available_count == 0
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "No companies need employee discovery processing at this time",
         available_count: 0
       }
       return
     end
-    
+
     if count > available_count
-      render json: { 
-        success: false, 
+      render json: {
+        success: false,
         message: "Only #{available_count} companies need employee discovery processing, but #{count} were requested",
         available_count: available_count
       }
@@ -312,6 +313,46 @@ class CompaniesController < ApplicationController
     }
   end
 
+  # GET /companies/service_stats
+  def service_stats
+    respond_to do |format|
+      format.turbo_stream do
+        queue_stats = get_queue_stats
+        render turbo_stream: [
+          turbo_stream.replace("company_financial_data_stats",
+            partial: "companies/service_stats",
+            locals: {
+              service_name: "company_financial_data",
+              companies_needing: Company.needing_service("company_financial_data").count,
+              queue_depth: queue_stats["company_financial_data"] || 0
+            }
+          ),
+          turbo_stream.replace("company_web_discovery_stats",
+            partial: "companies/service_stats",
+            locals: {
+              service_name: "company_web_discovery",
+              companies_needing: Company.needing_service("company_web_discovery").count,
+              companies_potential: Company.web_discovery_potential.count,
+              queue_depth: queue_stats["company_web_discovery"] || 0
+            }
+          ),
+          turbo_stream.replace("company_linkedin_discovery_stats",
+            partial: "companies/service_stats",
+            locals: {
+              service_name: "company_linkedin_discovery",
+              companies_needing: Company.needing_service("company_linkedin_discovery").count,
+              queue_depth: queue_stats["company_linkedin_discovery"] || 0
+            }
+          ),
+          turbo_stream.replace("queue_statistics",
+            partial: "companies/queue_statistics",
+            locals: { queue_stats: queue_stats }
+          )
+        ]
+      end
+    end
+  end
+
   # POST /companies/:id/queue_single_financial_data
   def queue_single_financial_data
     unless ServiceConfiguration.active?("company_financial_data")
@@ -328,7 +369,7 @@ class CompaniesController < ApplicationController
         status: "pending",
         table_name: @company.class.table_name,
         record_id: @company.id.to_s,
-        columns_affected: ["revenue", "profit"],
+        columns_affected: [ "revenue", "profit" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -371,7 +412,7 @@ class CompaniesController < ApplicationController
         status: "pending",
         table_name: @company.class.table_name,
         record_id: @company.id.to_s,
-        columns_affected: ["web_pages"],
+        columns_affected: [ "web_pages" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -414,7 +455,7 @@ class CompaniesController < ApplicationController
         status: "pending",
         table_name: @company.class.table_name,
         record_id: @company.id.to_s,
-        columns_affected: ["linkedin_url"],
+        columns_affected: [ "linkedin_url" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -457,7 +498,7 @@ class CompaniesController < ApplicationController
         status: "pending",
         table_name: @company.class.table_name,
         record_id: @company.id.to_s,
-        columns_affected: ["employees_data"],
+        columns_affected: [ "employees_data" ],
         metadata: {
           action: "manual_queue",
           user_id: current_user.id,
@@ -511,7 +552,7 @@ class CompaniesController < ApplicationController
     require "sidekiq/api"
 
     stats = {}
-    queue_names = ["company_financial_data", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery", "default"]
+    queue_names = [ "company_financial_data", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery", "default" ]
 
     queue_names.each do |queue_name|
       begin

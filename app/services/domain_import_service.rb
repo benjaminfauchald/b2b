@@ -12,7 +12,7 @@ class DomainImportService < ApplicationService
   def initialize(file:, user:)
     # Call parent initializer to set up ActiveModel attributes
     super(service_name: "domain_import", action: "import")
-    
+
     @file = file
     @user = user
     @result = DomainImportResult.new
@@ -22,28 +22,28 @@ class DomainImportService < ApplicationService
     puts "\n=== DOMAIN IMPORT SERVICE CALLED ==="
     puts "File: #{@file.inspect}"
     puts "User: #{@user.inspect}"
-    
+
     begin
       puts "Calling validate_file!"
       validate_file!
       puts "validate_file! completed"
-      
+
       puts "Calling process_csv_file"
       process_csv_file
       puts "process_csv_file completed"
-      
+
       puts "Calling @result.finalize!"
       @result.finalize!
       puts "@result.finalize! completed"
-      
+
       puts "Final result: #{@result.to_h.inspect}"
-      
+
       @result
     rescue StandardError => e
       puts "ERROR in perform: #{e.class.name}: #{e.message}"
       puts "Backtrace:"
       puts e.backtrace.first(10).join("\n")
-      
+
       @result.set_error_message(e.message)
       @result.finalize!
       @result
@@ -73,7 +73,7 @@ class DomainImportService < ApplicationService
     puts "File path: #{file.path}"
     puts "File exists: #{File.exist?(file.path)}"
     puts "File size: #{File.size(file.path) rescue 'N/A'}"
-    
+
     # Read first few lines for debugging
     begin
       lines = File.readlines(file.path).first(5)
@@ -82,41 +82,41 @@ class DomainImportService < ApplicationService
     rescue => e
       puts "Error reading file: #{e.message}"
     end
-    
+
     # Check if file has headers or is headerless
     first_line = File.open(file.path, &:readline).strip rescue ""
     # File has headers if it contains "domain" in first line
     # Otherwise assume it's headerless (just domain names)
     has_headers = first_line.downcase.include?("domain")
-    
+
     puts "Processing CSV - First line: #{first_line}, Has headers: #{has_headers}"
-    
+
     # For single-column files (just domain names), process line by line
     if !has_headers && first_line && !first_line.include?(",")
       puts "Processing as single-column domain list"
-      
+
       row_count = 0
       File.foreach(file.path).with_index do |line, index|
         line = line.strip
         next if line.empty?
-        
+
         row_count += 1
         row_number = index + 1
-        
+
         # Create row data hash with just domain
         row_data = { domain: line }
-        
+
         puts "Processing row #{row_number}: #{row_data.inspect}"
         process_single_row(row_data, row_number)
       end
-      
+
       puts "Total rows processed: #{row_count}"
     else
       # Multi-column CSV with SmarterCSV
       csv_options = {
         chunk_size: 100,          # Process in chunks for memory efficiency
         headers_in_file: has_headers,
-        user_provided_headers: has_headers ? nil : [:domain],  # If no headers, assume single column is domain
+        user_provided_headers: has_headers ? nil : [ :domain ],  # If no headers, assume single column is domain
         key_mapping: {            # Normalize column names
           "Domain" => :domain,
           "DNS" => :dns,
@@ -134,14 +134,14 @@ class DomainImportService < ApplicationService
         validate_csv_structure! if has_headers
 
         Rails.logger.info "Starting SmarterCSV.process with options: #{csv_options.inspect}"
-        
+
         puts "About to process with SmarterCSV"
         puts "CSV options: #{csv_options.inspect}"
-        
+
         row_count = 0
         SmarterCSV.process(file.path, csv_options) do |chunk|
           puts "Processing chunk with #{chunk.size} rows"
-          
+
           chunk.each_with_index do |row_data, index|
             row_count += 1
             puts "Processing row #{index}: #{row_data.inspect}"
@@ -149,7 +149,7 @@ class DomainImportService < ApplicationService
             process_single_row(row_data, row_number)
           end
         end
-        
+
         puts "Total rows processed: #{row_count}"
       rescue CSV::MalformedCSVError => e
         result.add_csv_error("CSV parsing error: #{e.message}")
@@ -179,7 +179,7 @@ class DomainImportService < ApplicationService
     puts "=== PROCESSING SINGLE ROW ==="
     puts "Row data: #{row_data.inspect}"
     puts "Row number: #{row_number}"
-    
+
     domain_name = row_data[:domain].to_s.strip
     puts "Domain name extracted: '#{domain_name}'"
 
@@ -191,7 +191,7 @@ class DomainImportService < ApplicationService
     end
 
     # Clean domain name (remove trailing dot if present)
-    cleaned_domain = domain_name.chomp('.')
+    cleaned_domain = domain_name.chomp(".")
     puts "Cleaned domain name: '#{cleaned_domain}'"
 
     # Validate domain format
@@ -242,8 +242,8 @@ class DomainImportService < ApplicationService
 
   def valid_domain_format?(domain_name)
     # Remove trailing dot if present (valid in DNS but not needed in storage)
-    cleaned_domain = domain_name.chomp('.')
-    
+    cleaned_domain = domain_name.chomp(".")
+
     # Basic domain validation regex
     # Allows for subdomains, requires at least one dot, no consecutive dots
     domain_regex = /\A[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*\z/

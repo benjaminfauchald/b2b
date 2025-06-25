@@ -1,17 +1,17 @@
 class CompanyLinkedinDiscoveryWorker
   include Sidekiq::Worker
-  
-  sidekiq_options queue: 'company_linkedin_discovery', retry: 3
+
+  sidekiq_options queue: "company_linkedin_discovery", retry: 3
 
   def perform(company_id)
     company = Company.find_by(id: company_id)
     return unless company
-    
+
     Rails.logger.info "Starting LinkedIn discovery for company #{company.id} - #{company.company_name}"
-    
+
     service = CompanyLinkedinDiscoveryService.new(company)
     result = service.perform
-    
+
     if result.success?
       Rails.logger.info "Successfully discovered LinkedIn profile for company #{company.id}"
     else

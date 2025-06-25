@@ -78,7 +78,7 @@ class DomainImportResult
     parts << "#{@duplicate_count} skipped (duplicates)" if @duplicate_count > 0
 
     return "No domains processed" if parts.empty?
-    
+
     parts.join(", ")
   end
 

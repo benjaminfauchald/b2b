@@ -9,7 +9,10 @@
 :queues:
   - [financials, 5]
   - [brreg_migration, 5]
-  - [company_financials, 5]
+  - [company_financial_data, 5]
+  - [company_web_discovery, 5]
+  - [company_linkedin_discovery, 5]
+  - [company_employee_discovery, 5]
   - [DomainTestingService, 5]
   - [DomainARecordTestingService, 5]
   - [domain_dns_testing, 5]
@@ -22,7 +25,10 @@
 # Rate limiting for external API services
 :limits:
   financials: 1
-  company_financials: 1
+  company_financial_data: 1
+  company_web_discovery: 1
+  company_linkedin_discovery: 1
+  company_employee_discovery: 1
   DomainTestingService: 1
   DomainARecordTestingService: 1
   domain_dns_testing: 1

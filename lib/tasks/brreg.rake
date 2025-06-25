@@ -563,7 +563,7 @@ namespace :brreg do
       "navn" => "company_name",
       "organisasjonsform_kode" => "organization_form_code",
       "organisasjonsform_beskrivelse" => "organization_form_description",
-      
+
       # Industry codes
       "naeringskode1_kode" => "industry_code_1",
       "naeringskode1_beskrivelse" => "industry_code_1_description",
@@ -571,13 +571,13 @@ namespace :brreg do
       "naeringskode2_beskrivelse" => "industry_code_2_description",
       "naeringskode3_kode" => "industry_code_3",
       "naeringskode3_beskrivelse" => "industry_code_3_description",
-      
+
       # Contact information
       "hjemmeside" => "website",
       "telefon" => "phone",
       "mobiltelefon" => "mobile",
       "epostadresse" => "email",
-      
+
       # Address fields - Postal
       "postadresse_adresse" => "postal_address",
       "postadresse_postnummer" => "postal_code",
@@ -586,7 +586,7 @@ namespace :brreg do
       "postadresse_kommunenummer" => "postal_municipality_no",
       "postadresse_land" => "postal_country",
       "postadresse_landkode" => "postal_country_code",
-      
+
       # Address fields - Business
       "forretningsadresse_adresse" => "business_address",
       "forretningsadresse_postnummer" => "business_code",
@@ -595,10 +595,10 @@ namespace :brreg do
       "forretningsadresse_kommunenummer" => "business_municipality_no",
       "forretningsadresse_land" => "business_country",
       "forretningsadresse_landkode" => "business_country_code",
-      
+
       # Employee information
       "antallansatte" => "employee_count",
-      
+
       # Dates
       "stiftelsesdato" => "founding_date",
       "registreringsdatoenhetsregisteret" => "registration_date",
@@ -606,7 +606,7 @@ namespace :brreg do
       "konkursdato" => "bankruptcy_date",
       "avviklingsdato" => "liquidation_date",
       "slettetdato" => "deregistration_date",
-      
+
       # Status flags
       "konkurs" => "bankruptcy",
       "underavvikling" => "under_liquidation",

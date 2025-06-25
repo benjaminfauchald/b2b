@@ -22,7 +22,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
       },
       {
         name: "Web Discovery",
-        service_name: "company_web_discovery", 
+        service_name: "company_web_discovery",
         icon: "globe-alt",
         last_updated: company.web_discovery_updated_at,
         has_data: company.web_pages.present?,
@@ -52,7 +52,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
 
   def financial_data_summary
     return "No data" unless company.revenue.present?
-    
+
     parts = []
     parts << "Revenue: #{number_to_currency(company.revenue, unit: 'NOK', precision: 0)}" if company.revenue
     parts << "Year: #{company.year}" if company.year
@@ -61,27 +61,27 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
 
   def web_pages_summary
     return "No data" unless company.web_pages.present?
-    
+
     pages = company.web_pages["pages"] || []
     "#{pages.size} pages found"
   end
 
   def linkedin_summary
     return "No data" unless company.linkedin_url.present?
-    
+
     "Profile found"
   end
 
   def employees_summary
     return "No data" unless company.employees_data.present?
-    
+
     employees = company.employees_data["employees"] || []
     "#{employees.size} employees found"
   end
 
   def last_update_text(timestamp)
     return "Never" unless timestamp
-    
+
     time_ago = time_ago_in_words(timestamp)
     "#{time_ago} ago"
   end

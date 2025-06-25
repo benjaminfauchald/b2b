@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe CompanyEmployeeDiscoveryService do
   let(:company) { create(:company, registration_number: '123456789', company_name: 'Test Company AS') }
   let(:service) { described_class.new(company) }
-  
+
   describe '#perform' do
     context 'when service configuration is active' do
       before do
@@ -12,7 +12,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           active: true,
           refresh_interval_hours: 1080, # 45 days
           settings: {
-            sources: ['linkedin', 'company_websites', 'public_registries'],
+            sources: [ 'linkedin', 'company_websites', 'public_registries' ],
             max_employees_to_discover: 100
           }
         )
@@ -72,10 +72,10 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'discovers and stores employee information' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.data[:discovered_employees]).to eq(discovered_employees)
-            
+
             company.reload
             expect(company.discovered_employees_count).to eq(25)
             expect(company.employees_data).to be_present
@@ -85,13 +85,13 @@ RSpec.describe CompanyEmployeeDiscoveryService do
             expect {
               service.perform
             }.to change(ServiceAuditLog, :count).by(1)
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('company_employee_discovery')
             expect(audit_log.status).to eq('success')
             expect(audit_log.auditable).to eq(company)
             expect(audit_log.metadata['employees_found']).to eq(25)
-            expect(audit_log.metadata['sources_used']).to eq(['linkedin', 'company_websites', 'public_registries'])
+            expect(audit_log.metadata['sources_used']).to eq([ 'linkedin', 'company_websites', 'public_registries' ])
           end
 
           it 'updates employee_discovery_updated_at timestamp' do
@@ -103,7 +103,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'identifies key contacts' do
             service.perform
-            
+
             company.reload
             employees_data = JSON.parse(company.employees_data)
             expect(employees_data['key_contacts']['ceo']).to eq('John Doe')
@@ -112,7 +112,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'tracks discovery sources' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.metadata['by_source']).to eq({
               'linkedin' => 15,
@@ -144,17 +144,17 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'continues with available sources' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.message).to include('Partial success')
-            
+
             company.reload
             expect(company.discovered_employees_count).to eq(10)
           end
 
           it 'logs partial failures in audit' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.metadata['partial_failures']).to include('linkedin')
             expect(audit_log.metadata['errors']['linkedin']).to eq('API temporarily unavailable')
@@ -168,10 +168,10 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'handles empty results gracefully' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.message).to include('No employees found')
-            
+
             company.reload
             expect(company.discovered_employees_count).to eq(0)
           end
@@ -184,7 +184,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'handles rate limits across sources' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('rate limit')
             expect(result.retry_after).to be_present
@@ -192,7 +192,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'creates audit log with rate_limited status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('rate_limited')
           end
@@ -216,7 +216,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'validates and filters email addresses' do
             service.perform
-            
+
             company.reload
             employees_data = JSON.parse(company.employees_data)
             valid_employees = employees_data['employees'].select { |e| e['email_valid'] }
@@ -242,7 +242,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
           it 'deduplicates employees across sources' do
             service.perform
-            
+
             company.reload
             employees_data = JSON.parse(company.employees_data)
             unique_names = employees_data['employees'].map { |e| e['name'] }.uniq
@@ -258,16 +258,16 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
         it 'returns early without making API calls' do
           expect_no_employee_discovery_api_calls
-          
+
           result = service.perform
-          
+
           expect(result).to be_success
           expect(result.message).to eq('Employee discovery data is up to date')
         end
 
         it 'creates audit log with skipped status' do
           service.perform
-          
+
           audit_log = ServiceAuditLog.last
           expect(audit_log.status).to eq('skipped')
           expect(audit_log.metadata['reason']).to eq('up_to_date')
@@ -280,7 +280,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           config.update!(
             active: true,
             settings: {
-              sources: ['linkedin'], # Only use LinkedIn
+              sources: [ 'linkedin' ], # Only use LinkedIn
               max_employees_to_discover: 10
             }
           )
@@ -288,12 +288,12 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
         it 'respects configured sources' do
           stub_employee_discovery_apis(company, { total_found: 5, by_source: { linkedin: 5 } })
-          
+
           result = service.perform
-          
+
           expect(result).to be_success
           audit_log = ServiceAuditLog.last
-          expect(audit_log.metadata['sources_used']).to eq(['linkedin'])
+          expect(audit_log.metadata['sources_used']).to eq([ 'linkedin' ])
         end
       end
     end
@@ -307,7 +307,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
       it 'does not perform service' do
         result = service.perform
-        
+
         expect(result).not_to be_success
         expect(result.error).to eq('Service is disabled')
       end
@@ -383,7 +383,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
         body: { employees: response_data[:employees] || [] }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
-    
+
     # Company website scraping (simulated)
     if company.website.present?
       stub_request(:get, "#{ENV['WEB_SCRAPER_API']}/scrape")
@@ -394,7 +394,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           headers: { 'Content-Type' => 'application/json' }
         )
     end
-    
+
     # Public registry API
     stub_request(:get, "#{ENV['BRREG_API_ENDPOINT']}/roller/#{company.registration_number}")
       .to_return(
@@ -408,14 +408,14 @@ RSpec.describe CompanyEmployeeDiscoveryService do
     # LinkedIn fails
     stub_request(:get, "#{ENV['LINKEDIN_API_ENDPOINT']}/company/#{company.registration_number}/employees")
       .to_return(status: 503)
-    
+
     # Other sources succeed
     stub_request(:get, "#{ENV['WEB_SCRAPER_API']}/scrape")
       .to_return(
         status: 200,
         body: { employees: [] }.to_json
       )
-    
+
     stub_request(:get, "#{ENV['BRREG_API_ENDPOINT']}/roller/#{company.registration_number}")
       .to_return(
         status: 200,

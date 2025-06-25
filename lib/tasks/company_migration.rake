@@ -1,8 +1,8 @@
 namespace :companies do
   desc "Migrate Company data from app.connectica.no to localhost"
   task migrate_from_production: :environment do
-    require 'pg'
-    
+    require "pg"
+
     puts "Starting Company migration from app.connectica.no to localhost..."
 
     # Progress tracking
@@ -50,9 +50,9 @@ namespace :companies do
 
         # Fetch batch from remote database
         query = <<-SQL
-          SELECT * FROM companies 
+          SELECT * FROM companies#{' '}
           WHERE id > #{start_from}
-          ORDER BY id 
+          ORDER BY id#{' '}
           LIMIT #{batch_size}
         SQL
 
@@ -78,7 +78,7 @@ namespace :companies do
 
               # Create new company with all attributes from remote
               company_attrs = {}
-              
+
               # Copy all fields that exist in both remote and local Company model
               remote_record.each do |key, value|
                 if Company.column_names.include?(key) && key != "id"
@@ -86,7 +86,7 @@ namespace :companies do
                   case key
                   when "created_at", "updated_at"
                     company_attrs[key] = Time.parse(value) if value.present?
-                  when "registration_date", "bankruptcy_date", "liquidation_date", "deregistration_date", 
+                  when "registration_date", "bankruptcy_date", "liquidation_date", "deregistration_date",
                        "vat_registration_date", "employee_registration_date_registry", "employee_registration_date_nav"
                     begin
                       company_attrs[key] = Date.parse(value) if value.present?
@@ -140,7 +140,7 @@ namespace :companies do
     end
 
     local_count_after = Company.count
-    
+
     puts "\n" + "="*50
     puts "Company migration completed!"
     puts "Total migrated: #{total_migrated}"

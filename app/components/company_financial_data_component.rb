@@ -46,7 +46,7 @@ class CompanyFinancialDataComponent < ViewComponent::Base
 
   def asset_breakdown
     return [] unless company.current_assets.present? || company.fixed_assets.present?
-    
+
     [
       { label: "Current Assets", value: company.current_assets, percentage: current_assets_percentage },
       { label: "Fixed Assets", value: company.fixed_assets, percentage: fixed_assets_percentage }
@@ -55,7 +55,7 @@ class CompanyFinancialDataComponent < ViewComponent::Base
 
   def liability_breakdown
     return [] unless company.current_liabilities.present? || company.long_term_liabilities.present?
-    
+
     [
       { label: "Current Liabilities", value: company.current_liabilities, percentage: current_liabilities_percentage },
       { label: "Long-term Liabilities", value: company.long_term_liabilities, percentage: long_term_liabilities_percentage }
@@ -64,7 +64,7 @@ class CompanyFinancialDataComponent < ViewComponent::Base
 
   def format_value(value, format)
     return "—" unless value.present?
-    
+
     case format
     when :currency
       number_to_currency(value, unit: "NOK ", precision: 0)

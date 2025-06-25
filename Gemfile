@@ -99,7 +99,7 @@ group :test do
 
   # Shoulda matchers for RSpec
   gem "shoulda-matchers", "~> 5.0"
-  
+
   # HTTP request stubbing
   gem "webmock"
 end

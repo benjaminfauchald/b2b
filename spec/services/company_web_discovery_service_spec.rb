@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe CompanyWebDiscoveryService do
   let(:company) { create(:company, registration_number: '123456789', company_name: 'Test Company AS') }
   let(:service) { described_class.new(company) }
-  
+
   describe '#perform' do
     context 'when service configuration is active' do
       before do
@@ -41,10 +41,10 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'discovers and updates web presence' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.data[:discovered_pages]).to eq(discovered_pages)
-            
+
             company.reload
             expect(company.website).to eq('https://testcompany.no')
             expect(company.web_pages).to eq(discovered_pages.to_json)
@@ -54,7 +54,7 @@ RSpec.describe CompanyWebDiscoveryService do
             expect {
               service.perform
             }.to change(ServiceAuditLog, :count).by(1)
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('company_web_discovery')
             expect(audit_log.status).to eq('success')
@@ -71,7 +71,7 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'handles multiple domain variations' do
             service.perform
-            
+
             company.reload
             web_data = JSON.parse(company.web_pages)
             expect(web_data['alternate_domains']).to include('https://testcompany.com')
@@ -86,10 +86,10 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'handles empty results gracefully' do
             result = service.perform
-            
+
             expect(result).to be_success
             expect(result.message).to include('No websites found')
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('success')
             expect(audit_log.metadata['pages_found']).to eq(0)
@@ -103,14 +103,14 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'handles API errors' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('Search API error')
           end
 
           it 'creates audit log with error status' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('error')
             expect(audit_log.error_message).to be_present
@@ -124,7 +124,7 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'handles rate limits gracefully' do
             result = service.perform
-            
+
             expect(result).not_to be_success
             expect(result.error).to include('rate limit')
             expect(result.retry_after).to eq(3600)
@@ -135,7 +135,7 @@ RSpec.describe CompanyWebDiscoveryService do
           let(:discovered_pages) do
             {
               main_website: 'not-a-valid-url',
-              alternate_domains: ['https://valid-domain.com', 'invalid domain']
+              alternate_domains: [ 'https://valid-domain.com', 'invalid domain' ]
             }
           end
 
@@ -145,9 +145,9 @@ RSpec.describe CompanyWebDiscoveryService do
 
           it 'validates and filters invalid URLs' do
             result = service.perform
-            
+
             expect(result).to be_success
-            
+
             company.reload
             web_data = JSON.parse(company.web_pages)
             expect(web_data['alternate_domains']).to include('https://valid-domain.com')
@@ -164,16 +164,16 @@ RSpec.describe CompanyWebDiscoveryService do
 
         it 'returns early without making API call' do
           expect_no_web_search_api_calls
-          
+
           result = service.perform
-          
+
           expect(result).to be_success
           expect(result.message).to eq('Web discovery data is up to date')
         end
 
         it 'creates audit log with skipped status' do
           service.perform
-          
+
           audit_log = ServiceAuditLog.last
           expect(audit_log.status).to eq('skipped')
           expect(audit_log.metadata['reason']).to eq('up_to_date')
@@ -190,7 +190,7 @@ RSpec.describe CompanyWebDiscoveryService do
 
       it 'does not perform service' do
         result = service.perform
-        
+
         expect(result).not_to be_success
         expect(result.error).to eq('Service is disabled')
       end
@@ -269,7 +269,7 @@ RSpec.describe CompanyWebDiscoveryService do
       .to_return(
         status: 429,
         body: { error: 'Rate limit exceeded' }.to_json,
-        headers: { 
+        headers: {
           'Content-Type' => 'application/json',
           'Retry-After' => '3600'
         }

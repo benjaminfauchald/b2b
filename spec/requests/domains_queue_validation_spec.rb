@@ -2,28 +2,28 @@ require 'rails_helper'
 
 RSpec.describe 'Domain Queue Validation', type: :request do
   let(:user) { FactoryBot.create(:user, role: 'admin') }
-  
+
   before do
     # Skip authentication for these API tests
     allow_any_instance_of(DomainsController).to receive(:authenticate_user!).and_return(true)
     allow_any_instance_of(DomainsController).to receive(:current_user).and_return(user)
-    
+
     # Enable service configurations
     ServiceConfiguration.create!(
       service_name: 'domain_testing',
       active: true,
       refresh_interval_hours: 24
     )
-    
+
     ServiceConfiguration.create!(
-      service_name: 'domain_mx_testing', 
+      service_name: 'domain_mx_testing',
       active: true,
       refresh_interval_hours: 24
     )
-    
+
     ServiceConfiguration.create!(
       service_name: 'domain_a_record_testing',
-      active: true, 
+      active: true,
       refresh_interval_hours: 24
     )
   end
@@ -37,7 +37,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'prevents queueing more domains than available' do
         post '/domains/queue_dns_testing', params: { count: 10 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -47,7 +47,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'allows queueing exact number of available domains' do
         post '/domains/queue_dns_testing', params: { count: 5 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_truthy
@@ -57,7 +57,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'allows queueing fewer domains than available' do
         post '/domains/queue_dns_testing', params: { count: 3 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_truthy
@@ -69,7 +69,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
     context 'when no domains need testing' do
       it 'returns appropriate error message' do
         post '/domains/queue_dns_testing', params: { count: 1 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -85,7 +85,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'rejects zero count' do
         post '/domains/queue_dns_testing', params: { count: 0 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -94,7 +94,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'rejects negative count' do
         post '/domains/queue_dns_testing', params: { count: -5 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -103,7 +103,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'rejects count over 1000' do
         post '/domains/queue_dns_testing', params: { count: 1001 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -121,7 +121,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'prevents queueing more domains than available' do
         post '/domains/queue_mx_testing', params: { count: 5 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey
@@ -140,7 +140,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
       it 'prevents queueing more domains than available' do
         post '/domains/queue_a_record_testing', params: { count: 5 }, as: :json
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be_falsey

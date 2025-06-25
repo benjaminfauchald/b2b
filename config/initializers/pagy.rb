@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'pagy'
+require "pagy"
 
 # Pagy initializer file (6.0.0)
 # Customize only what you really need and notice that the core Pagy works also without any of the following lines.

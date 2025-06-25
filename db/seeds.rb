@@ -103,7 +103,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'company_employee_discovery
   config.batch_size = 25
   config.retry_attempts = 2
   config.active = true
-  config.depends_on_services = ['company_linkedin_discovery']
+  config.depends_on_services = [ 'company_linkedin_discovery' ]
   config.settings = {
     search_timeout_seconds: 45,
     max_employees_per_company: 50,

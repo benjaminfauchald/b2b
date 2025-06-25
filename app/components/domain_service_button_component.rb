@@ -74,12 +74,12 @@ class DomainServiceButtonComponent < ViewComponent::Base
                              .where("created_at > ?", 10.minutes.ago)
                              .order(created_at: :desc)
                              .first
-    
+
     # If we have a recent audit log, check if it's still pending
     if most_recent_audit
       return most_recent_audit.status == "pending"
     end
-    
+
     # Otherwise check if job is queued
     job_queued?
   end

@@ -22,7 +22,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'company_web_discovery') do
   config.batch_size = 50
   config.retry_attempts = 3
   config.settings = {
-    search_engines: ['google', 'bing'],
+    search_engines: [ 'google', 'bing' ],
     rate_limit: 50,
     timeout: 45,
     max_results_per_engine: 10
@@ -50,7 +50,7 @@ ServiceConfiguration.find_or_create_by(service_name: 'company_employee_discovery
   config.batch_size = 20
   config.retry_attempts = 3
   config.settings = {
-    sources: ['linkedin', 'company_websites', 'public_registries'],
+    sources: [ 'linkedin', 'company_websites', 'public_registries' ],
     rate_limit: 20,
     timeout: 60,
     max_employees_to_discover: 100
