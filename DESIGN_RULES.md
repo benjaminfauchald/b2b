@@ -306,6 +306,47 @@ When implementing new components or pages:
 - [ ] Follow ViewComponent architecture patterns
 - [ ] Document any new patterns or exceptions
 
+## Development Best Practices
+
+### Rails Runner Commands
+When using `rails runner` for debugging or data manipulation, avoid syntax issues:
+
+```bash
+# ❌ WRONG - Backslashes cause syntax errors
+bundle exec rails runner '
+  company.update\!(website: nil)
+'
+
+# ✅ CORRECT - Use proper Ruby syntax without escaping
+bundle exec rails runner "
+  company = Company.find(123)
+  company.update!(website: nil, web_pages: nil)
+  puts 'Updated successfully'
+"
+
+# ✅ CORRECT - Use external script files for complex operations
+bundle exec rails runner scripts/fix_company_data.rb
+```
+
+**Key Points:**
+- Never use backslashes to escape characters in Rails runner
+- Use double quotes for multi-line commands with variables
+- Create separate script files for complex operations
+- Always test runner commands in development first
+- Use proper Ruby syntax without shell escaping
+
+### Database Operations
+```ruby
+# ✅ Safe update patterns
+company.update!(website: nil)
+Company.where(id: [1,2,3]).update_all(website: nil)
+
+# ✅ Safe bulk operations
+Company.transaction do
+  companies.each { |c| c.update!(website: nil) }
+end
+```
+
 ---
 
 *Last updated: 2024-12-25*

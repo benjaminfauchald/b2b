@@ -106,27 +106,47 @@ class CompanyWebDiscoveryService < ApplicationService
   def generate_search_queries
     queries = []
 
-    # Base company name without legal suffixes
-    base_name = @company.company_name
-      .gsub(/\s+(AS|ASA|SA|DA|ANS|BA|NUF|ENK|KS|AL|BBL)$/i, "")
-      .strip
+    # Clean company name by removing legal and geographical suffixes
+    clean_name = clean_company_name(@company.company_name)
 
-    # Primary search queries
+    # Primary search queries using cleaned name
+    queries << "#{clean_name} official website"
+    queries << "#{clean_name} Norway"
+    queries << "#{clean_name} Norge"
+    queries << "#{clean_name} company"
+
+    # Also try with original name as fallback
     queries << "#{@company.company_name} official website"
-    queries << "#{base_name} Norge"
-    queries << "#{base_name} Norway"
 
     # Industry-specific search if available
     if @company.primary_industry_description.present?
-      queries << "#{base_name} #{@company.primary_industry_description} company"
+      queries << "#{clean_name} #{@company.primary_industry_description}"
     end
 
     # Location-specific search if available
     if @company.business_city.present?
-      queries << "#{base_name} #{@company.business_city}"
+      queries << "#{clean_name} #{@company.business_city}"
     end
 
     queries.uniq
+  end
+
+  def clean_company_name(company_name)
+    # Remove legal entity suffixes (Norwegian)
+    name = company_name
+      .gsub(/\s+(AS|ASA|SA|DA|ANS|BA|NUF|ENK|KS|AL|BBL)$/i, "")
+
+    # Remove geographical suffixes that are commonly added for clarity
+    name = name
+      .gsub(/\s+(NORWAY|NORGE|NORDIC|SCANDINAVIA|SCANDINAVIAN)$/i, "")
+      .gsub(/\s+(EUROPE|EUROPEAN|INTERNATIONAL|GLOBAL)$/i, "")
+
+    # Remove common business descriptors that might not be part of brand name
+    name = name
+      .gsub(/\s+(GROUP|GRUPPEN|HOLDING|INVEST|INVESTMENT)$/i, "")
+
+    # Clean up multiple spaces and trim
+    name.gsub(/\s+/, " ").strip
   end
 
   def google_search(query)
@@ -347,20 +367,23 @@ class CompanyWebDiscoveryService < ApplicationService
   def basic_confidence_score(data)
     score = 50
     company_name = @company.company_name.downcase
-    base_name = company_name.gsub(/\s+(as|asa|sa|da)$/i, "").strip.downcase
-
-    # Check URL
-    if data[:url].downcase.include?(base_name.gsub(/\s+/, ""))
+    clean_name = clean_company_name(@company.company_name).downcase
+    
+    # Check URL with both original and cleaned names
+    url_lower = data[:url].downcase
+    if url_lower.include?(clean_name.gsub(/\s+/, "")) || url_lower.include?(company_name.gsub(/\s+/, ""))
       score += 20
     end
 
-    # Check title
-    if data[:title].downcase.include?(base_name)
+    # Check title with both names
+    title_lower = data[:title].downcase
+    if title_lower.include?(clean_name) || title_lower.include?(company_name)
       score += 15
     end
 
-    # Check description
-    if data[:description].downcase.include?(base_name)
+    # Check description with both names
+    desc_lower = data[:description].downcase
+    if desc_lower.include?(clean_name) || desc_lower.include?(company_name)
       score += 10
     end
 

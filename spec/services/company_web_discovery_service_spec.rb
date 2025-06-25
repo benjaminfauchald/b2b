@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe CompanyWebDiscoveryService do
   let(:company) { create(:company, company_name: 'Test Company AS', business_city: 'Oslo') }
-  let(:service) { described_class.new(company.id) }
+  let(:service) { described_class.new(company_id: company.id) }
 
   describe '#perform' do
     context 'when service configuration is active' do
@@ -232,6 +232,85 @@ RSpec.describe CompanyWebDiscoveryService do
         expect(result).not_to be_success
         expect(result.error).to eq('Service is disabled')
       end
+    end
+  end
+
+  describe '#clean_company_name' do
+    it 'removes Norwegian legal entity suffixes' do
+      expect(service.send(:clean_company_name, 'TEST COMPANY AS')).to eq('TEST COMPANY')
+      expect(service.send(:clean_company_name, 'EXAMPLE BUSINESS ASA')).to eq('EXAMPLE BUSINESS')
+      expect(service.send(:clean_company_name, 'SAMPLE DA')).to eq('SAMPLE')
+    end
+
+    it 'removes geographical suffixes' do
+      expect(service.send(:clean_company_name, 'ELKJØP NORDIC AS')).to eq('ELKJØP')
+      expect(service.send(:clean_company_name, 'MICROSOFT NORGE AS')).to eq('MICROSOFT')
+      expect(service.send(:clean_company_name, 'IBM SCANDINAVIA AS')).to eq('IBM')
+      expect(service.send(:clean_company_name, 'COCA COLA NORWAY AS')).to eq('COCA COLA')
+    end
+
+    it 'removes business descriptors' do
+      expect(service.send(:clean_company_name, 'TEST GROUP AS')).to eq('TEST')
+      expect(service.send(:clean_company_name, 'EXAMPLE HOLDING AS')).to eq('EXAMPLE')
+      expect(service.send(:clean_company_name, 'SAMPLE INVEST AS')).to eq('SAMPLE')
+    end
+
+    it 'handles multiple suffixes correctly' do
+      expect(service.send(:clean_company_name, 'REMA DISTRIBUSJON NORGE AS')).to eq('REMA DISTRIBUSJON')
+      expect(service.send(:clean_company_name, 'UNO-X MOBILITY NORGE AS')).to eq('UNO-X MOBILITY')
+      expect(service.send(:clean_company_name, 'ST1 NORGE AS')).to eq('ST1')
+    end
+
+    it 'preserves company names without suffixes' do
+      expect(service.send(:clean_company_name, 'APPLE')).to eq('APPLE')
+      expect(service.send(:clean_company_name, 'GOOGLE')).to eq('GOOGLE')
+    end
+
+    it 'handles case insensitivity' do
+      expect(service.send(:clean_company_name, 'test company as')).to eq('test company')
+      expect(service.send(:clean_company_name, 'Example Norge AS')).to eq('Example')
+    end
+
+    it 'cleans up multiple spaces' do
+      expect(service.send(:clean_company_name, 'TEST   COMPANY   AS')).to eq('TEST COMPANY')
+    end
+  end
+
+  describe '#generate_search_queries' do
+    let(:company) { create(:company, company_name: 'ELKJØP NORDIC AS', business_city: 'Oslo', primary_industry_description: 'Electronics retail') }
+    let(:service) { described_class.new(company_id: company.id) }
+
+    it 'generates queries with cleaned company name' do
+      queries = service.send(:generate_search_queries)
+      
+      expect(queries).to include('ELKJØP official website')
+      expect(queries).to include('ELKJØP Norway')
+      expect(queries).to include('ELKJØP Norge')
+      expect(queries).to include('ELKJØP company')
+    end
+
+    it 'includes original company name as fallback' do
+      queries = service.send(:generate_search_queries)
+      
+      expect(queries).to include('ELKJØP NORDIC AS official website')
+    end
+
+    it 'includes industry-specific queries' do
+      queries = service.send(:generate_search_queries)
+      
+      expect(queries).to include('ELKJØP Electronics retail')
+    end
+
+    it 'includes location-specific queries' do
+      queries = service.send(:generate_search_queries)
+      
+      expect(queries).to include('ELKJØP Oslo')
+    end
+
+    it 'removes duplicate queries' do
+      queries = service.send(:generate_search_queries)
+      
+      expect(queries.uniq).to eq(queries)
     end
   end
 

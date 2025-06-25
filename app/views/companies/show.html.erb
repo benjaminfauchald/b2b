@@ -159,38 +159,40 @@
   </div>
 
   <!-- Service Audit Logs -->
-  <div class="mt-8">
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Recent Service Activity</h3>
-      </div>
+  <div class="mt-6">
+    <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Recent Service Activity</h3>
       
-      <div class="overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+              <th scope="col" class="px-6 py-3 font-medium">Service</th>
+              <th scope="col" class="px-6 py-3 font-medium">Status</th>
+              <th scope="col" class="px-6 py-3 font-medium">Duration</th>
+              <th scope="col" class="px-6 py-3 font-medium">Time</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
             <% @service_audit_logs.each do |log| %>
-              <tr>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
                   <%= log.service_name.humanize %>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-6 py-4">
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    <%= log.success? ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+                    <%= if log.success?
+                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                        else
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                        end %>">
                     <%= log.status.capitalize %>
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
                   <%= log.execution_time_ms ? "#{log.execution_time_ms}ms" : "—" %>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
                   <%= time_ago_in_words(log.created_at) %> ago
                 </td>
               </tr>
