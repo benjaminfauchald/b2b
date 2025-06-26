@@ -89,6 +89,38 @@ class Company < ApplicationRecord
     linkedin_discovery_candidates
   }
 
+  # Scopes for Profile Extraction
+  # Companies that are ready for LinkedIn profile extraction
+  # Includes companies with either linkedin_url OR linkedin_ai_url with high confidence (>= 80%)
+  scope :profile_extraction_candidates, -> {
+    where(
+      "(linkedin_url IS NOT NULL AND linkedin_url != '') OR " \
+      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 80)"
+    ).order(operating_revenue: :desc)
+  }
+
+  # Companies that need profile extraction (candidates that haven't been processed successfully recently)
+  scope :needing_profile_extraction, -> {
+    service_config = ServiceConfiguration.find_by(service_name: "person_profile_extraction")
+    refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
+    
+    subquery = ServiceAuditLog
+      .where(service_name: "person_profile_extraction", status: ServiceAuditLog.statuses[:success])
+      .where("completed_at > ?", refresh_threshold)
+      .select(:auditable_id)
+      .distinct
+
+    profile_extraction_candidates.where(
+      "companies.id NOT IN (?)",
+      subquery
+    )
+  }
+
+  # Total potential companies for profile extraction (for progress tracking)
+  scope :profile_extraction_potential, -> {
+    profile_extraction_candidates
+  }
+
   # Instance Methods
 
   # Update financial data asynchronously
@@ -134,6 +166,23 @@ class Company < ApplicationRecord
       last_updated: last_financial_audit&.completed_at || updated_at,
       status: financial_data_status
     }
+  end
+
+  # Get the best LinkedIn URL for profile extraction
+  # Prefers manual linkedin_url over AI-discovered linkedin_ai_url
+  def best_linkedin_url
+    if linkedin_url.present?
+      linkedin_url
+    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 80
+      linkedin_ai_url
+    else
+      nil
+    end
+  end
+
+  # Check if company is ready for profile extraction
+  def ready_for_profile_extraction?
+    best_linkedin_url.present?
   end
 
   # Returns the status of the most recent financial data update via SCT

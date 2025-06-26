@@ -22,60 +22,13 @@
   <div class="mb-8">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Profile Extraction Service -->
-      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
-           data-controller="service-queue"
-           data-service-queue-service-name-value="person_profile_extraction">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Profile Extraction</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Extract LinkedIn profiles via PhantomBuster</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <span data-available-count="person_profile_extraction">0 companies need processing</span>
-          </p>
-          <p class="text-xs text-gray-500 dark:text-gray-500">
-            <span data-queue-stat="person_profile_extraction" class="queue-button-stat">0 in queue</span>
-          </p>
-        </div>
-        
-        <%= form_with url: queue_profile_extraction_people_path, method: :post, 
-            data: { 
-              service_queue_target: "form",
-              turbo: false 
-            }, 
-            class: "space-y-3" do |f| %>
-          <div>
-            <%= f.number_field :count, 
-                value: 1, 
-                min: 1, 
-                max: 1000,
-                data: { 
-                  service_queue_target: "countInput",
-                  max_available: 0
-                },
-                class: "shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" %>
-          </div>
-          <div>
-            <%= f.submit "Queue Processing", 
-                data: { 
-                  service_queue_target: "submitButton",
-                  action: "click->service-queue#submit"
-                },
-                class: "w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" %>
-          </div>
-        <% end %>
-      </div>
+      <%= render PersonServiceQueueButtonComponent.new(
+        service_name: "person_profile_extraction",
+        title: "Profile Extraction",
+        icon: "user-group",
+        action_path: queue_profile_extraction_people_path,
+        queue_name: "person_profile_extraction"
+      ) %>
       
       <!-- Email Extraction Service -->
       <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
@@ -190,7 +143,7 @@
   </div>
 
   <!-- Queue Statistics -->
-  <turbo-frame id="person_queue_statistics">
+  <turbo-frame id="queue_statistics">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
         <div class="text-center">

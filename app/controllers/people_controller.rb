@@ -87,16 +87,14 @@ class PeopleController < ApplicationController
     end
 
     # Get companies that need processing for profile extraction
-    available_companies = Company.joins(:service_audit_logs)
-                                .where(service_audit_logs: { service_name: "company_linkedin_discovery", status: "success" })
-                                .where.not(linkedin_url: nil)
+    available_companies = Company.needing_service("person_profile_extraction")
     available_count = available_companies.count
 
     # Check if we have enough companies to process
     if available_count == 0
       render json: {
         success: false,
-        message: "No companies with LinkedIn URLs available for profile extraction",
+        message: "No companies with valid LinkedIn URLs available for profile extraction",
         available_count: 0
       }
       return
@@ -120,7 +118,7 @@ class PeopleController < ApplicationController
     end
 
     # Invalidate cache immediately when queue changes
-    Rails.cache.delete("service_stats_data")
+    Rails.cache.delete("person_service_stats_data")
 
     render json: {
       success: true,
@@ -440,6 +438,36 @@ class PeopleController < ApplicationController
     end
   end
 
+  # GET /people/service_stats
+  def service_stats
+    respond_to do |format|
+      format.turbo_stream do
+        # Cache the stats for 1 second to ensure real-time updates
+        stats_data = Rails.cache.fetch("person_service_stats_data", expires_in: 1.second) do
+          calculate_service_stats
+        end
+        
+        queue_stats = get_queue_stats
+        
+        render turbo_stream: [
+          turbo_stream.replace("person_profile_extraction_stats",
+            partial: "people/service_stats",
+            locals: {
+              service_name: "person_profile_extraction",
+              companies_needing: stats_data[:profile_needing],
+              companies_potential: stats_data[:profile_potential],
+              queue_depth: queue_stats["person_profile_extraction"] || 0
+            }
+          ),
+          turbo_stream.replace("queue_statistics",
+            partial: "people/queue_statistics",
+            locals: { queue_stats: queue_stats }
+          )
+        ]
+      end
+    end
+  end
+
   private
 
   def set_person
@@ -448,7 +476,8 @@ class PeopleController < ApplicationController
 
   def calculate_service_stats
     {
-      profile_needing: Person.needing_service("person_profile_extraction").count,
+      profile_needing: Company.needing_service("person_profile_extraction").count,
+      profile_potential: Company.profile_extraction_potential.count,
       email_needing: Person.needing_service("person_email_extraction").count,
       social_media_needing: Person.needing_service("person_social_media_extraction").count
     }

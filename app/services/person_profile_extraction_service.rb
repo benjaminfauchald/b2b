@@ -18,17 +18,29 @@ class PersonProfileExtractionService < ApplicationService
   def perform
     return error_result("Service is disabled") unless service_active?
     return error_result("Missing PhantomBuster configuration") unless phantombuster_configured?
-    return error_result("Company has no LinkedIn URL") unless @company.linkedin_url.present?
+    
+    linkedin_url = @company.best_linkedin_url
+    return error_result("Company has no valid LinkedIn URL") unless linkedin_url.present?
 
     audit_service_operation(@company) do |audit_log|
-      Rails.logger.info "🚀 Starting LinkedIn Profile Extraction for #{@company.company_name}"
+      url_source = @company.linkedin_url.present? ? "manual" : "AI-discovered"
+      confidence_info = @company.linkedin_ai_confidence.present? ? " (#{@company.linkedin_ai_confidence}% confidence)" : ""
       
-      # Update phantom configuration with company LinkedIn URL
-      update_phantom_configuration(@company.company_name, @company.linkedin_url)
+      Rails.logger.info "🚀 Starting LinkedIn Profile Extraction for #{@company.company_name}"
+      Rails.logger.info "📎 Using #{url_source} LinkedIn URL: #{linkedin_url}#{confidence_info}"
+      
+      # Update phantom configuration with best available LinkedIn URL
+      update_phantom_configuration(@company.company_name, linkedin_url)
       
       # Launch phantom and monitor execution
       container_id = launch_phantom
-      audit_log.add_metadata(container_id: container_id, phantom_id: @phantom_id)
+      audit_log.add_metadata(
+        container_id: container_id, 
+        phantom_id: @phantom_id,
+        linkedin_url: linkedin_url,
+        url_source: url_source,
+        linkedin_ai_confidence: @company.linkedin_ai_confidence
+      )
       
       # Monitor execution until completion
       execution_result = monitor_phantom_execution(container_id)
