@@ -18,7 +18,7 @@
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
       %>
       <div class="flex items-center justify-between mb-1">
-        <span class="text-sm font-medium text-blue-700 dark:text-white">Profile Extraction Completion</span>
+        <span class="text-sm font-medium text-blue-700 dark:text-white"><%= service_title %> Completion</span>
         <span class="text-sm font-medium text-blue-700 dark:text-white"><%= completion_percentage %>%</span>
       </div>
       <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
@@ -30,7 +30,17 @@
     </div>
   <% else %>
     <div class="text-sm text-gray-600 dark:text-gray-400">
-      <p data-available-count="<%= service_name %>" data-raw-count="<%= companies_needing %>"><%= number_with_delimiter(companies_needing) %> companies need processing</p>
+      <% 
+        # Use appropriate variable and text based on service type
+        if service_name == "person_profile_extraction"
+          needing_count = companies_needing
+          item_type = "companies"
+        else
+          needing_count = persons_needing
+          item_type = "persons"
+        end
+      %>
+      <p data-available-count="<%= service_name %>" data-raw-count="<%= needing_count %>"><%= number_with_delimiter(needing_count) %> <%= item_type %> need processing</p>
       <p data-queue-stat="<%= service_name %>" data-raw-queue="<%= queue_depth %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
     </div>
   <% end %>

@@ -271,7 +271,9 @@ class PeopleController < ApplicationController
             partial: "people/service_stats",
             locals: {
               service_name: "person_profile_extraction",
-              persons_needing: stats_data[:profile_needing],
+              service_title: "Profile Extraction",
+              companies_needing: stats_data[:profile_needing],
+              companies_potential: stats_data[:profile_potential],
               queue_depth: queue_stats["person_profile_extraction"] || 0
             }
           ),
@@ -279,6 +281,7 @@ class PeopleController < ApplicationController
             partial: "people/service_stats",
             locals: {
               service_name: "person_email_extraction",
+              service_title: "Email Extraction", 
               persons_needing: stats_data[:email_needing],
               queue_depth: queue_stats["person_email_extraction"] || 0
             }
@@ -287,6 +290,7 @@ class PeopleController < ApplicationController
             partial: "people/service_stats",
             locals: {
               service_name: "person_social_media_extraction",
+              service_title: "Social Media Extraction",
               persons_needing: stats_data[:social_media_needing],
               queue_depth: queue_stats["person_social_media_extraction"] || 0
             }
