@@ -120,8 +120,8 @@
   <!-- Companies List -->
   <div class="bg-white dark:bg-gray-800 shadow-sm overflow-hidden sm:rounded-lg border border-gray-200 dark:border-gray-700">
     <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-      <% @companies.each do |company| %>
-        <%= render CompanyRowComponent.new(company: company) %>
+      <% @companies.each_with_index do |company, index| %>
+        <%= render CompanyRowComponent.new(company: company, index: index) %>
       <% end %>
     </ul>
   </div>
