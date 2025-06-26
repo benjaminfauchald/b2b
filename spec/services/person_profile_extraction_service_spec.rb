@@ -147,7 +147,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
           result = service.perform
 
           expect(result.success?).to be false
-          expect(result.error).to eq('Company has no LinkedIn URL')
+          expect(result.error).to eq('Company has no valid LinkedIn URL')
         end
 
         it 'does not create audit log for early return' do

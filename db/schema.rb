@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_25_174318) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_26_112517) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -399,6 +399,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_25_174318) do
     t.datetime "social_media_extracted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "profile_data"
+    t.jsonb "email_data"
   end
 
   create_table "service_audit_logs", force: :cascade do |t|
