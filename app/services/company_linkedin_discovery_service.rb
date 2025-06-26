@@ -43,7 +43,10 @@ class CompanyLinkedinDiscoveryService < ApplicationService
         # Add metadata for successful discovery
         audit_log.add_metadata(
           profiles_found: discovered_profiles.size,
-          confidence_scores: discovered_profiles.map { |p| p[:confidence] }
+          confidence_scores: discovered_profiles.map { |p| p[:confidence] },
+          discovered_profiles: discovered_profiles,
+          best_match: discovered_profiles.first,
+          discovery_timestamp: Time.current.iso8601
         )
 
         success_result("LinkedIn profiles discovered", linkedin_profiles: discovered_profiles)
@@ -360,9 +363,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
       end
     end
 
-    # Store all discovered profiles as array (not JSON string)
-    @company.linkedin_data = discovered_profiles
-    @company.linkedin_discovery_updated_at = Time.current
+    # Save the company updates (only existing columns)
     @company.save!
   end
 
