@@ -1,0 +1,324 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white"><%= @person.name %></h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <% if @person.title.present? %>
+            <%= @person.title %>
+            <% if @person.company_name.present? %>
+              • <%= @person.company_name %>
+            <% end %>
+          <% elsif @person.company_name.present? %>
+            <%= @person.company_name %>
+          <% end %>
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <%= link_to "Edit", edit_person_path(@person), 
+            class: "text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700" %>
+        <%= link_to "Back to List", people_path, 
+            class: "text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Person Info Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Basic Information -->
+    <div class="lg:col-span-2">
+      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Person Information</h3>
+        
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-900 dark:text-gray-100">
+          <% if @person.profile_url.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">LinkedIn Profile</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= link_to @person.profile_url, @person.profile_url, target: "_blank", 
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @person.email.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= mail_to @person.email, @person.email, 
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @person.phone.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @person.phone %></dd>
+            </div>
+          <% end %>
+          
+          <% if @person.location.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Location</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @person.location %></dd>
+            </div>
+          <% end %>
+          
+          <% if @person.connection_degree.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Connection Degree</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= case @person.connection_degree
+                    when 1 then "1st degree connection"
+                    when 2 then "2nd degree connection"
+                    when 3 then "3rd degree connection"
+                    else "#{@person.connection_degree}th degree connection"
+                    end %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @person.company.present? %>
+            <div class="sm:col-span-2">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Associated Company</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= link_to @person.company.company_name, company_path(@person.company), 
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="lg:col-span-1">
+      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Profile Status</h3>
+        
+        <dl class="space-y-4 text-gray-900 dark:text-gray-100">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Profile Data</dt>
+            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+              <% if @person.profile_data.present? %>
+                <span class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  Available
+                </span>
+              <% else %>
+                <span class="bg-gray-100 text-gray-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">
+                  Not Available
+                </span>
+              <% end %>
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email Status</dt>
+            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+              <% if @person.email.present? %>
+                <span class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  Found
+                </span>
+              <% else %>
+                <span class="bg-gray-100 text-gray-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">
+                  Not Found
+                </span>
+              <% end %>
+            </dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Social Media</dt>
+            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+              <% if @person.social_media_data.present? %>
+                <span class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  Available
+                </span>
+              <% else %>
+                <span class="bg-gray-100 text-gray-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">
+                  Not Available
+                </span>
+              <% end %>
+            </dd>
+          </div>
+          
+          <% if @person.phantom_run_id.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">PhantomBuster Run</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <code class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">#<%= @person.phantom_run_id %></code>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Testing Buttons -->
+  <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Person Services</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Profile Extraction</h4>
+        <button onclick="queuePersonService('<%= @person.id %>', 'profile_extraction')"
+                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Extract Profile Data
+        </button>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Email Extraction</h4>
+        <button onclick="queuePersonService('<%= @person.id %>', 'email_extraction')"
+                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          Extract Email
+        </button>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Social Media Extraction</h4>
+        <button onclick="queuePersonService('<%= @person.id %>', 'social_media_extraction')"
+                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+          Extract Social Media
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Data Display -->
+  <% if @person.profile_data.present? %>
+    <div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Profile Data</h3>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap"><%= JSON.pretty_generate(@person.profile_data) %></pre>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Email Data Display -->
+  <% if @person.email_data.present? %>
+    <div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Email Data</h3>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap"><%= JSON.pretty_generate(@person.email_data) %></pre>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Social Media Data Display -->
+  <% if @person.social_media_data.present? %>
+    <div class="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Social Media Data</h3>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap"><%= JSON.pretty_generate(@person.social_media_data) %></pre>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Service Audit Logs -->
+  <div class="mt-6">
+    <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Recent Service Activity</h3>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-3 font-medium">Service</th>
+              <th scope="col" class="px-6 py-3 font-medium">Status</th>
+              <th scope="col" class="px-6 py-3 font-medium">Duration</th>
+              <th scope="col" class="px-6 py-3 font-medium">Time</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+            <% @service_audit_logs.each do |log| %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                  <%= log.service_name.humanize %>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    <%= if log.success?
+                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                        else
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                        end %>">
+                    <%= log.status.capitalize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                  <%= log.execution_time_ms ? "#{log.execution_time_ms}ms" : "—" %>
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                  <%= time_ago_in_words(log.created_at) %> ago
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function queuePersonService(personId, serviceType) {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    button.disabled = true;
+    button.textContent = 'Processing...';
+    
+    fetch(`/people/${personId}/queue_single_${serviceType}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        button.textContent = 'Queued!';
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-green-600', 'hover:bg-green-700', 'bg-purple-600', 'hover:bg-purple-700');
+        button.classList.add('bg-gray-600', 'hover:bg-gray-700');
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+          button.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+          
+          if (serviceType === 'profile_extraction') {
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+          } else if (serviceType === 'email_extraction') {
+            button.classList.add('bg-green-600', 'hover:bg-green-700');
+          } else if (serviceType === 'social_media_extraction') {
+            button.classList.add('bg-purple-600', 'hover:bg-purple-700');
+          }
+        }, 2000);
+      } else {
+        button.textContent = 'Error';
+        button.classList.add('bg-red-600');
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+          button.classList.remove('bg-red-600');
+          
+          if (serviceType === 'profile_extraction') {
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+          } else if (serviceType === 'email_extraction') {
+            button.classList.add('bg-green-600', 'hover:bg-green-700');
+          } else if (serviceType === 'social_media_extraction') {
+            button.classList.add('bg-purple-600', 'hover:bg-purple-700');
+          }
+        }, 2000);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      button.textContent = 'Error';
+      button.disabled = false;
+    });
+  }
+</script>

@@ -2,6 +2,7 @@
 
 require "csv"
 require "smarter_csv"
+require "ostruct"
 
 class DomainImportService < ApplicationService
   REQUIRED_COLUMNS = %w[domain].freeze
@@ -9,50 +10,68 @@ class DomainImportService < ApplicationService
   MAX_FILE_SIZE = 10.megabytes
   VALID_MIME_TYPES = %w[text/csv application/csv text/plain].freeze
 
-  def initialize(file:, user:)
-    # Call parent initializer to set up ActiveModel attributes
-    super(service_name: "domain_import", action: "import")
-
+  def initialize(file:, user:, **options)
     @file = file
     @user = user
     @result = DomainImportResult.new
+    super(service_name: "domain_import", action: "import", **options)
   end
 
   def perform
-    puts "\n=== DOMAIN IMPORT SERVICE CALLED ==="
-    puts "File: #{@file.inspect}"
-    puts "User: #{@user.inspect}"
+    return error_result("Service is disabled") unless service_active?
+    return error_result("No file provided") unless @file.present?
+    return error_result("No user provided") unless @user.present?
 
-    begin
-      puts "Calling validate_file!"
-      validate_file!
-      puts "validate_file! completed"
-
-      puts "Calling process_csv_file"
-      process_csv_file
-      puts "process_csv_file completed"
-
-      puts "Calling @result.finalize!"
-      @result.finalize!
-      puts "@result.finalize! completed"
-
-      puts "Final result: #{@result.to_h.inspect}"
-
-      @result
-    rescue StandardError => e
-      puts "ERROR in perform: #{e.class.name}: #{e.message}"
-      puts "Backtrace:"
-      puts e.backtrace.first(10).join("\n")
-
-      @result.set_error_message(e.message)
-      @result.finalize!
-      @result
+    audit_service_operation(nil) do |audit_log|
+      Rails.logger.info "🚀 Starting domain import for user #{@user.id}"
+      
+      begin
+        validate_file!
+        process_csv_file
+        @result.finalize!
+        
+        audit_log.add_metadata(
+          user_id: @user.id,
+          filename: @file.original_filename,
+          file_size: @file.size,
+          domains_imported: @result.imported_domains.count,
+          domains_failed: @result.failed_domains.count,
+          domains_duplicated: @result.duplicate_domains.count
+        )
+        
+        success_result("Domain import completed", 
+                      imported: @result.imported_domains.count,
+                      failed: @result.failed_domains.count,
+                      duplicates: @result.duplicate_domains.count,
+                      result: @result)
+                      
+      rescue StandardError => e
+        Rails.logger.error "❌ Domain import failed: #{e.message}"
+        @result.set_error_message(e.message)
+        @result.finalize!
+        
+        audit_log.add_metadata(
+          user_id: @user.id,
+          filename: @file.original_filename,
+          error: e.message
+        )
+        
+        error_result("Domain import failed: #{e.message}", result: @result)
+      end
     end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   private
 
   attr_reader :file, :user, :result
+
+  def service_active?
+    config = ServiceConfiguration.find_by(service_name: "domain_import")
+    return false unless config
+    config.active?
+  end
 
   def validate_file!
     raise ArgumentError, "No file provided" if file.blank?
@@ -261,5 +280,23 @@ class DomainImportService < ApplicationService
     SmarterCSV.process(file.path, { chunk_size: 1, headers_in_file: true }) do |first_chunk|
       return index + 2  # +1 for zero-based index, +1 for header row
     end
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 end

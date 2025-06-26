@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_25_123502) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_25_174318) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -375,6 +375,30 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_25_123502) do
 
   create_table "domains_se_raw", id: false, force: :cascade do |t|
     t.text "c1"
+  end
+
+  create_table "people", force: :cascade do |t|
+    t.string "name"
+    t.string "title"
+    t.string "company_name"
+    t.string "location"
+    t.string "profile_url"
+    t.string "email"
+    t.string "phone"
+    t.string "connection_degree"
+    t.jsonb "linkedin_data"
+    t.jsonb "social_media_data"
+    t.boolean "email_verified"
+    t.boolean "phone_verified"
+    t.text "bio"
+    t.string "profile_picture_url"
+    t.integer "company_id"
+    t.string "phantom_run_id"
+    t.datetime "profile_extracted_at"
+    t.datetime "email_extracted_at"
+    t.datetime "social_media_extracted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "service_audit_logs", force: :cascade do |t|

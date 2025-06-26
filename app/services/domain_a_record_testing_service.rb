@@ -1,22 +1,29 @@
 require "resolv"
 require "timeout"
+require "ostruct"
 
 class DomainARecordTestingService < ApplicationService
   attr_reader :domain, :batch_size, :max_retries
 
   DNS_TIMEOUT = 5 # seconds
 
-  def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    super(service_name: "domain_a_record_testing", action: "test_a_record")
+  def initialize(domain: nil, batch_size: 100, max_retries: 3, **options)
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
+    super(service_name: "domain_a_record_testing", action: "test_a_record", **options)
   end
 
-  def call
-    return test_single_domain if domain
-    return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
-    test_domains_in_batches(Domain.dns_active.where(www: nil))
+  def perform
+    return error_result("Service is disabled") unless service_active?
+    
+    if domain
+      test_single_domain
+    else
+      test_domains_in_batches(Domain.dns_active.where(www: nil))
+    end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   # Legacy class methods for backward compatibility
@@ -87,54 +94,28 @@ class DomainARecordTestingService < ApplicationService
   private
 
   def test_single_domain
-    audit_log = nil
-    begin
-      audit_log = ServiceAuditLog.create!(
-        auditable: domain,
-        service_name: service_name,
-        operation_type: action,
-        status: :pending,
-        columns_affected: [ "www" ],
-        metadata: { domain_name: domain.domain },
-        table_name: domain.class.table_name,
-        record_id: domain.id.to_s,
-        started_at: Time.current
-      )
-
+    audit_service_operation(domain) do |audit_log|
       result = perform_a_record_test
       update_domain_status(domain, result)
-
-      audit_log.update!(
-        status: :success,
-        completed_at: Time.current,
-        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
-        metadata: audit_log.metadata.merge({
-          www_status: domain.www,
-          test_result: result[:status]
-        })
+      
+      audit_log.add_metadata(
+        domain_name: domain.domain,
+        www_status: domain.www,
+        test_result: result[:status]
       )
-
-      result
-    rescue StandardError => e
-      if audit_log
-        audit_log.update!(
-          status: :failed,
-          completed_at: Time.current,
-          execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
-          metadata: audit_log.metadata.merge({
-            error: e.message,
-            www_status: domain.www
-          })
-        )
-      end
-      raise e
+      
+      success_result("A record test completed", result: result)
     end
   end
 
   def perform_a_record_test
+    perform_a_record_test_for_domain(domain)
+  end
+  
+  def perform_a_record_test_for_domain(test_domain)
     begin
       Timeout.timeout(DNS_TIMEOUT) do
-        a_record = Resolv.getaddress("www.#{domain.domain}")
+        a_record = Resolv.getaddress("www.#{test_domain.domain}")
         {
           status: :success,
           a_record: a_record
@@ -165,21 +146,40 @@ class DomainARecordTestingService < ApplicationService
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
 
-    domains.find_each do |domain|
-      result = self.class.test_a_record(domain)
-      results[:processed] += 1
-      case result
-      when true
-        results[:successful] += 1
-      when false
-        results[:failed] += 1
-      else
+    domains.find_each(batch_size: batch_size) do |domain|
+      begin
+        audit_service_operation(domain) do |audit_log|
+          result = perform_a_record_test_for_domain(domain)
+          update_domain_status(domain, result)
+          
+          audit_log.add_metadata(
+            domain_name: domain.domain,
+            www_status: domain.www,
+            test_result: result[:status]
+          )
+          
+          case result[:status]
+          when :success
+            results[:successful] += 1
+            success_result("A record test completed", result: result)
+          else
+            results[:failed] += 1
+            error_result(result[:error] || "A record test failed")
+          end
+        end
+        results[:processed] += 1
+        produce_message_with_retry(domain.domain, result)
+      rescue StandardError => e
         results[:errors] += 1
+        Rails.logger.error "Error testing A record for domain #{domain.domain}: #{e.message}"
       end
-      produce_message_with_retry(domain.domain, result)
     end
 
-    results
+    success_result("Batch A record testing completed", 
+                  processed: results[:processed],
+                  successful: results[:successful], 
+                  failed: results[:failed],
+                  errors: results[:errors])
   end
 
   def produce_message_with_retry(domain_name, result)
@@ -215,7 +215,27 @@ class DomainARecordTestingService < ApplicationService
   end
 
   def service_active?
-    ServiceConfiguration.active?(service_name)
+    config = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless config
+    config.active?
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 
   def needs_www_testing?(domain)

@@ -1,10 +1,11 @@
-class CompanyFinancialsService
+require "ostruct"
+
+class CompanyFinancialsService < ApplicationService
   include HttpartyResponseHelper
 
   BASE_URL = "https://data.brreg.no/regnskapsregisteret/regnskap".freeze
   MAX_ATTEMPTS = 3
   INITIAL_RETRY_DELAY = 2 # seconds
-  SERVICE_NAME = "company_financials"
 
   class ApiError < StandardError; end
   class RateLimitError < StandardError
@@ -17,78 +18,63 @@ class CompanyFinancialsService
   end
   class InvalidResponseError < StandardError; end
 
-  def initialize(company)
+  def initialize(company:, **options)
     @company = company
     @org_number = company.registration_number
-    @logger = Rails.logger
     @attempts = 0
-    puts " Service Name: #{SERVICE_NAME}"
+    super(service_name: "company_financials", action: "update", **options)
   end
 
-  def call
-    return { changed_fields: [], success: false } unless @org_number.present?
+  def perform
+    return error_result("Service is disabled") unless service_active?
+    return error_result("No organization number") unless @org_number.present?
 
-    @start_time = Time.current
-    @audit_log = ServiceAuditLog.create!(
-      auditable: @company,
-      service_name: "company_financials",
-      operation_type: "update",
-      status: :pending,
-      started_at: Time.current,
-      table_name: "companies",
-      record_id: @company.id,
-      columns_affected: [ "none" ],
-      metadata: { error: "no metadata" }
-    )
-
-    begin
-      result = fetch_and_update_financials
-      @audit_log.mark_success!(
-        {
-          company_id: @company.id,
-          registration_number: @org_number,
-          changed_fields: result[:changed_fields] || []
-        },
-        result[:changed_fields] || []
-      )
-      result
-    rescue RateLimitError => e
-      @audit_log.mark_failed!(
-        e.message,
-        {
-          error: e.message,
-          company_id: @company.id,
-          registration_number: @org_number
-        },
-        []
-      )
-      raise
-    rescue ApiError => e
-      @audit_log.mark_failed!(
-        e.message,
-        {
-          error: e.message,
-          company_id: @company.id,
-          registration_number: @org_number
-        },
-        []
-      )
-      raise
-    rescue StandardError => e
-      @audit_log.mark_failed!(
-        e.message,
-        {
-          error: e.message,
-          company_id: @company.id,
-          registration_number: @org_number
-        },
-        []
-      )
-      raise
+    # Check if update is needed before starting audit
+    unless needs_update?
+      return success_result("Financial data is up to date")
     end
+
+    audit_service_operation(@company) do |audit_log|
+      Rails.logger.info "🚀 Starting financial data update for #{@company.company_name} (#{@org_number})"
+      
+      result = fetch_and_update_financials
+      
+      if result[:success]
+        audit_log.add_metadata(
+          changed_fields: result[:changed_fields],
+          financials: result[:financials],
+          organization_number: @org_number
+        )
+        
+        success_result("Financial data updated successfully", 
+                      changed_fields: result[:changed_fields],
+                      financials: result[:financials])
+      else
+        error_result("Failed to update financial data")
+      end
+    end
+  rescue RateLimitError => e
+    # For rate limit errors, include retry_after in the result data
+    if e.message.include?("rate limit") && e.respond_to?(:retry_after)
+      error_result(e.message, retry_after: e.retry_after)
+    else
+      error_result("Service error: #{e.message}")
+    end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   private
+
+  def service_active?
+    config = ServiceConfiguration.find_by(service_name: "company_financials")
+    return false unless config
+    config.active?
+  end
+
+  def needs_update?
+    @company.needs_service?("company_financials")
+  end
 
   def fetch_and_update_financials
     @attempts ||= 0
@@ -98,28 +84,28 @@ class CompanyFinancialsService
 
       # If we got financial data, process it
       if financial_data.present?
-        @logger.info "[#{SERVICE_NAME}] Successfully fetched financial data for #{@org_number}"
+        Rails.logger.info "✅ Successfully fetched financial data for #{@org_number}"
         process_financial_data(financial_data)
       else
-        @logger.warn "[#{SERVICE_NAME}] No financial data available for #{@org_number}"
+        Rails.logger.warn "⚠️ No financial data available for #{@org_number}"
         { success: true, changed_fields: [], financials: {} }
       end
 
     rescue RateLimitError => e
-      @logger.warn "[#{SERVICE_NAME}] Rate limited. Waiting #{e.retry_after} seconds..."
+      Rails.logger.warn "⏰ Rate limited. Waiting #{e.retry_after} seconds..."
       sleep(e.retry_after)
       retry
     rescue ApiError, InvalidResponseError => e
-      @logger.error "[#{SERVICE_NAME}] Error fetching financial data: #{e.message}"
+      Rails.logger.error "❌ Error fetching financial data: #{e.message}"
       @attempts += 1
 
       if @attempts < MAX_ATTEMPTS
         retry_delay = INITIAL_RETRY_DELAY * (2 ** (@attempts - 1))
-        @logger.info "[#{SERVICE_NAME}] Retrying in #{retry_delay} seconds... (Attempt #{@attempts + 1}/#{MAX_ATTEMPTS})"
+        Rails.logger.info "🔄 Retrying in #{retry_delay} seconds... (Attempt #{@attempts + 1}/#{MAX_ATTEMPTS})"
         sleep(retry_delay)
         retry
       else
-        @logger.error "[#{SERVICE_NAME}] Max retries reached for #{@org_number}"
+        Rails.logger.error "❌ Max retries reached for #{@org_number}"
         raise
       end
     end
@@ -146,7 +132,7 @@ class CompanyFinancialsService
         financials: financials
       }
     else
-      @logger.info "No financial data to process for #{@org_number}"
+      Rails.logger.info "ℹ️ No financial data to process for #{@org_number}"
       { success: true, changed_fields: [], financials: {} }
     end
   end
@@ -158,8 +144,8 @@ class CompanyFinancialsService
     # Construct the full URL with the organization number
     url = "#{BASE_URL}/#{@org_number}"
 
-    @logger.info "[#{SERVICE_NAME}] Fetching financial data for #{@org_number} - Attempt #{@attempts}/#{MAX_ATTEMPTS}"
-    @logger.debug "[#{SERVICE_NAME}] Request URL: #{url}"
+    Rails.logger.info "📡 Fetching financial data for #{@org_number} - Attempt #{@attempts}/#{MAX_ATTEMPTS}"
+    Rails.logger.debug "🔗 Request URL: #{url}"
 
     begin
       # Add headers for the BRREG API
@@ -169,7 +155,7 @@ class CompanyFinancialsService
         "Accept-Encoding" => "gzip, deflate, br"
       }
 
-      @logger.debug "[#{SERVICE_NAME}] Request headers: #{headers.inspect}"
+      Rails.logger.debug "📋 Request headers: #{headers.inspect}"
 
       # Make the request with a reasonable timeout
       response = handle_httparty_request(url, {
@@ -180,23 +166,23 @@ class CompanyFinancialsService
 
       # Check if response is nil (returned by handle_httparty_request for invalid responses)
       if response.nil?
-        @logger.warn "[#{SERVICE_NAME}] No valid response received for #{@org_number} (likely 404 or network error)"
+        Rails.logger.warn "⚠️ No valid response received for #{@org_number} (likely 404 or network error)"
         return nil
       end
 
       # Explicitly check response body for nil or empty (HTTParty deprecation fix)
       if response.body.nil? || response.body.empty?
-        @logger.warn "[#{SERVICE_NAME}] No valid response body received for #{@org_number}"
+        Rails.logger.warn "⚠️ No valid response body received for #{@org_number}"
         return nil
       end
 
-      @logger.debug "[#{SERVICE_NAME}] Response code: #{response.code}"
-      @logger.debug "[#{SERVICE_NAME}] Response headers: #{response.headers.inspect}"
+      Rails.logger.debug "📊 Response code: #{response.code}"
+      Rails.logger.debug "📋 Response headers: #{response.headers.inspect}"
 
       # Check for rate limiting
       if response.code == 429
         retry_after = response.headers["Retry-After"]&.to_i || 60
-        @logger.warn "[#{SERVICE_NAME}] Rate limited. Waiting #{retry_after} seconds..."
+        Rails.logger.warn "⏰ Rate limited. Waiting #{retry_after} seconds..."
         raise RateLimitError.new("Rate limited", retry_after)
       end
 
@@ -206,45 +192,45 @@ class CompanyFinancialsService
         begin
           parsed_body = JSON.parse(response.body)
         rescue JSON::ParserError => e
-          @logger.error "[#{SERVICE_NAME}] Failed to parse response for #{@org_number}: #{e.message}"
+          Rails.logger.error "❌ Failed to parse response for #{@org_number}: #{e.message}"
           raise InvalidResponseError, "Invalid JSON response"
         end
 
-        @logger.debug "[#{SERVICE_NAME}] Parsed response: #{parsed_body.inspect}"
+        Rails.logger.debug "📄 Parsed response: #{parsed_body.inspect}"
 
         # Parse the financial data from the response
         parsed_response = parse_response(parsed_body)
 
         if parsed_response.nil? || parsed_response.empty?
-          @logger.info "[#{SERVICE_NAME}] No financial data found for #{@org_number}"
+          Rails.logger.info "ℹ️ No financial data found for #{@org_number}"
           return nil
         end
 
         # Return both parsed data and raw response
         { parsed_data: parsed_response, raw_response: response.body }
       else
-        @logger.error "[#{SERVICE_NAME}] API request failed with status #{response.code}: #{response.message}"
+        Rails.logger.error "❌ API request failed with status #{response.code}: #{response.message}"
         raise ApiError, "API request failed with status #{response.code}: #{response.message}"
       end
 
     rescue HTTParty::Error => e
-      @logger.error "[#{SERVICE_NAME}] HTTP error for #{@org_number}: #{e.class} - #{e.message}"
+      Rails.logger.error "❌ HTTP error for #{@org_number}: #{e.class} - #{e.message}"
       raise ApiError, "HTTP error: #{e.message}"
     rescue SocketError => e
-      @logger.error "[#{SERVICE_NAME}] Network error for #{@org_number}: #{e.class} - #{e.message}"
+      Rails.logger.error "❌ Network error for #{@org_number}: #{e.class} - #{e.message}"
       raise ApiError, "Network error: #{e.message}"
     rescue Net::ProtocolError => e
-      @logger.error "[#{SERVICE_NAME}] Protocol error for #{@org_number}: #{e.class} - #{e.message}"
+      Rails.logger.error "❌ Protocol error for #{@org_number}: #{e.class} - #{e.message}"
       raise ApiError, "Protocol error: #{e.message}"
     rescue RateLimitError => e
-      @logger.warn "[#{SERVICE_NAME}] Rate limited for #{@org_number}, retrying in #{e.retry_after}s..."
+      Rails.logger.warn "⏰ Rate limited for #{@org_number}, retrying in #{e.retry_after}s..."
       raise # Re-raise rate limit errors for retry logic
     rescue JSON::ParserError => e
-      @logger.error "[#{SERVICE_NAME}] Failed to parse response for #{@org_number}: #{e.message}"
+      Rails.logger.error "❌ Failed to parse response for #{@org_number}: #{e.message}"
       raise InvalidResponseError, "Invalid JSON response"
     rescue => e
-      @logger.error "[#{SERVICE_NAME}] Unexpected error for #{@org_number}: #{e.class} - #{e.message}"
-      @logger.error e.backtrace.join("\n") if Rails.env.development?
+      Rails.logger.error "❌ Unexpected error for #{@org_number}: #{e.class} - #{e.message}"
+      Rails.logger.error e.backtrace.join("\n") if Rails.env.development?
       raise ApiError, "Unexpected error: #{e.message}"
     end
   end
@@ -259,24 +245,24 @@ class CompanyFinancialsService
       begin
         response_data = JSON.parse(response_data.body)
       rescue JSON::ParserError => e
-        @logger.error "[#{SERVICE_NAME}] Failed to parse response body: #{e.message}"
+        Rails.logger.error "❌ Failed to parse response body: #{e.message}"
         raise InvalidResponseError, "Invalid JSON response"
       end
     end
-    @logger.debug "[#{SERVICE_NAME}] Starting to parse response data: #{response_data.inspect}"
+    Rails.logger.debug "📊 Starting to parse response data: #{response_data.inspect}"
 
     begin
-      @logger.debug "[#{SERVICE_NAME}] Extracting financial data from response"
+      Rails.logger.debug "📊 Extracting financial data from response"
 
       # The API returns an array of financial records, get the first (most recent) one
       financial_record = if response_data.is_a?(Array) && response_data.any?
-        @logger.info "[#{SERVICE_NAME}] Found #{response_data.length} financial record(s), using the first one"
+        Rails.logger.info "📄 Found #{response_data.length} financial record(s), using the first one"
         response_data.first
       elsif response_data.is_a?(Hash)
-        @logger.info "[#{SERVICE_NAME}] Response is a single financial record"
+        Rails.logger.info "📄 Response is a single financial record"
         response_data
       else
-        @logger.info "[#{SERVICE_NAME}] No financial data found in response"
+        Rails.logger.info "ℹ️ No financial data found in response"
         return {}
       end
 
@@ -291,7 +277,7 @@ class CompanyFinancialsService
           operating_costs: safe_dig(financial_record, "resultatregnskapResultat", "driftsresultat", "driftskostnad", "sumDriftskostnad")
         }.compact
 
-        @logger.debug "[#{SERVICE_NAME}] Extracted financials: #{financials.inspect}"
+        Rails.logger.debug "💰 Extracted financials: #{financials.inspect}"
 
         # Convert all numeric values to BigDecimal
         result = financials.transform_values do |v|
@@ -304,13 +290,13 @@ class CompanyFinancialsService
           end
         end
 
-        @logger.info "[#{SERVICE_NAME}] Successfully parsed financial data for #{@org_number}: #{result.keys.join(', ')}"
-        @logger.debug "[#{SERVICE_NAME}] After numeric conversion: #{result.inspect}"
+        Rails.logger.info "✅ Successfully parsed financial data for #{@org_number}: #{result.keys.join(', ')}"
+        Rails.logger.debug "💰 After numeric conversion: #{result.inspect}"
         result
 
       rescue => e
-        @logger.error "[#{SERVICE_NAME}] Error extracting financial data: #{e.class} - #{e.message}"
-        @logger.error "[#{SERVICE_NAME}] Backtrace: #{e.backtrace.first(5).join("\n")}"
+        Rails.logger.error "❌ Error extracting financial data: #{e.class} - #{e.message}"
+        Rails.logger.error "📍 Backtrace: #{e.backtrace.first(5).join("\n")}"
         raise InvalidResponseError, "Error extracting financial data: #{e.message}"
       end
 
@@ -318,13 +304,11 @@ class CompanyFinancialsService
       # Re-raise our custom error
       raise
     rescue => e
-      @logger.error "[#{SERVICE_NAME}] Unexpected error parsing response: #{e.class} - #{e.message}"
-      @logger.error "[#{SERVICE_NAME}] Backtrace: #{e.backtrace.first(5).join("\n")}"
+      Rails.logger.error "❌ Unexpected error parsing response: #{e.class} - #{e.message}"
+      Rails.logger.error "📍 Backtrace: #{e.backtrace.first(5).join("\n")}"
       raise InvalidResponseError, "Unexpected error parsing response: #{e.message}"
     end
   end
-
-  private
 
   # Global rate limiting using Redis - ensures only 1 API call per second across ALL threads
   def enforce_rate_limit!
@@ -365,7 +349,7 @@ class CompanyFinancialsService
       end
 
       # We now have the exclusive right to make an API call
-      @logger.info "[#{SERVICE_NAME}] Acquired rate limit slot for API call"
+      Rails.logger.info "🔓 Acquired rate limit slot for API call"
     end
   end
 
@@ -387,21 +371,9 @@ class CompanyFinancialsService
       end
     end
   rescue => e
-    @logger.error "[#{SERVICE_NAME}] Error in safe_dig: #{e.class} - #{e.message}"
-    @logger.error "[#{SERVICE_NAME}] Path: #{keys.inspect}"
-    @logger.error "[#{SERVICE_NAME}] Current value: #{memo.inspect}" if defined?(memo)
-    nil
-  end
-
-  # Parse year from date string (YYYY-MM-DD)
-  def parse_year(date_str)
-    return nil unless date_str.is_a?(String)
-
-    if (match = date_str.match(/^(\d{4})/))
-      match[1].to_i
-    end
-  rescue => e
-    @logger.warn "[#{SERVICE_NAME}] Failed to parse year from date: #{date_str} - #{e.message}"
+    Rails.logger.error "❌ Error in safe_dig: #{e.class} - #{e.message}"
+    Rails.logger.error "📍 Path: #{keys.inspect}"
+    Rails.logger.error "📄 Current value: #{memo.inspect}" if defined?(memo)
     nil
   end
 
@@ -425,46 +397,19 @@ class CompanyFinancialsService
 
       if changed_fields.any?
         @company.update!(update_attrs)
-        @logger.info "Updated financial data for #{@org_number}. Changed fields: #{changed_fields.join(', ')}"
+        Rails.logger.info "✅ Updated financial data for #{@org_number}. Changed fields: #{changed_fields.join(', ')}"
         
         # Broadcast the update via ActionCable
         broadcast_financial_update(changed_fields, financials)
       else
-        @logger.info "No changes in financial data for #{@org_number}"
+        Rails.logger.info "ℹ️ No changes in financial data for #{@org_number}"
       end
     else
-      @logger.warn "No financial data to update for #{@org_number}"
+      Rails.logger.warn "⚠️ No financial data to update for #{@org_number}"
     end
 
     # Return the list of changed fields
     changed_fields
-  end
-
-  def parse_error_message(response)
-    # Try to parse error message from XML if response is XML
-    if response.body.to_s.include?("<?xml")
-      doc = Nokogiri::XML(response.body)
-      doc.at_xpath("//message")&.text || "Unknown error"
-    else
-      response.message
-    end
-  rescue => e
-    log_to_sct("ERROR_PARSING", [], "WARNING", 0, e.message, {
-      response_code: response.code,
-      response_body: response.body.to_s.truncate(500)
-    })
-    response.message
-  end
-
-  def log_to_sct(action, fields, status, duration_ms, error_message = nil, metadata = {})
-    begin
-      # Replace with your actual SCT logging implementation
-      # Example: SCT.log(SERVICE_NAME, 'companies', 'companies', @company&.id, action, fields, status, duration_ms, error_message, metadata)
-      Rails.logger.info("[SCT] #{action} - #{status} - #{error_message}")
-      Rails.logger.debug("[SCT] Metadata: #{metadata.to_json}")
-    rescue => e
-      Rails.logger.error("Failed to log to SCT: #{e.message}")
-    end
   end
 
   def publish_to_kafka(financials)
@@ -484,63 +429,17 @@ class CompanyFinancialsService
 
       # Replace with your actual Kafka producer implementation
       # Example: KAFKA_PRODUCER.produce(message.to_json, topic: 'company_financials', key: @org_number)
-      Rails.logger.info("[KAFKA] Would publish to company_financials: #{message.to_json}")
+      Rails.logger.info "📨 Would publish to company_financials: #{message.to_json}"
     rescue => e
-      Rails.logger.error("Failed to publish to Kafka: #{e.message}")
-      @audit_log&.add_context(
-        kafka_error: e.message,
-        kafka_backtrace: e.backtrace.first(3)
-      )
+      Rails.logger.error "❌ Failed to publish to Kafka: #{e.message}"
     end
-  end
-
-  def handle_rate_limit_retry(error)
-    retry_after = error.retry_after || INITIAL_RETRY_DELAY
-    @logger.warn "Rate limited. Retrying in #{retry_after} seconds..."
-    sleep(retry_after)
-  end
-
-  def handle_rate_limit_error(error)
-    error_msg = "Rate limit exceeded for #{@org_number} after #{@attempts} attempts"
-    @logger.error error_msg
-
-    @audit_log&.mark_failed!(
-      "#{error.class.name}: #{error.message}",
-      http_error: 429,
-      http_error_message: "Rate limit exceeded. #{error.message}",
-      attempt: @attempts
-    )
-  end
-
-  def handle_api_error(error)
-    @logger.error "API error for #{@org_number}: #{error.message}"
-
-    @audit_log&.mark_failed!(
-      "#{error.class.name}: #{error.message}",
-      http_error: 500,
-      http_error_message: error.message,
-      attempt: @attempts
-    )
-  end
-
-  def handle_unexpected_error(error)
-    error_msg = "Unexpected error processing #{@org_number}: #{error.message}"
-    @logger.error "#{error_msg}\n#{error.backtrace.first(5).join("\n")}"
-
-    @audit_log&.mark_failed!(
-      "#{error.class.name}: #{error.message}",
-      http_error: 500,
-      http_error_message: "Unexpected error: #{error.message}",
-      backtrace: error.backtrace.first(5),
-      attempt: @attempts
-    )
   end
 
   def broadcast_financial_update(changed_fields, financials)
     return unless defined?(CompanyFinancialsChannel)
     
     begin
-      @logger.info "[#{SERVICE_NAME}] Broadcasting financial update for company #{@company.id}"
+      Rails.logger.info "📺 Broadcasting financial update for company #{@company.id}"
       
       CompanyFinancialsChannel.broadcast_financial_update(@company, {
         status: 'success',
@@ -550,7 +449,25 @@ class CompanyFinancialsService
         registration_number: @org_number
       })
     rescue => e
-      @logger.error "[#{SERVICE_NAME}] Failed to broadcast financial update: #{e.message}"
+      Rails.logger.error "❌ Failed to broadcast financial update: #{e.message}"
     end
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 end

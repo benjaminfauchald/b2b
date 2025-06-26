@@ -46,6 +46,23 @@ Rails.application.routes.draw do
       get :financial_data
     end
   end
+
+  resources :people do
+    collection do
+      # Person enhancement service queue actions
+      post :queue_profile_extraction
+      post :queue_email_extraction
+      post :queue_social_media_extraction
+      get :service_stats
+    end
+
+    member do
+      # Individual person service triggers
+      post :queue_single_profile_extraction
+      post :queue_single_email_extraction
+      post :queue_single_social_media_extraction
+    end
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

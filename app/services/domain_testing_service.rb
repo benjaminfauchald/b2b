@@ -1,22 +1,29 @@
 require "resolv"
 require "timeout"
+require "ostruct"
 
 class DomainTestingService < ApplicationService
   attr_reader :domain, :batch_size, :max_retries
 
   DNS_TIMEOUT = 5 # seconds
 
-  def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    super(service_name: "domain_testing", action: "test_dns")
+  def initialize(domain: nil, batch_size: 100, max_retries: 3, **options)
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
+    super(service_name: "domain_testing", action: "test_dns", **options)
   end
 
-  def call
-    return test_single_domain if domain
-    return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
-    test_domains_in_batches(Domain.needing_service(service_name))
+  def perform
+    return error_result("Service is disabled") unless service_active?
+    
+    if domain
+      test_single_domain
+    else
+      test_domains_in_batches(Domain.needing_service(service_name))
+    end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   # Legacy class methods for backward compatibility
@@ -141,78 +148,60 @@ class DomainTestingService < ApplicationService
 
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
+    
     domains.find_each(batch_size: batch_size) do |domain|
-      audit_log = ServiceAuditLog.create!(
-        auditable: domain,
-        service_name: service_name,
-        operation_type: action,
-        status: :pending,
-        columns_affected: [ "dns" ],
-        metadata: { domain_name: domain.domain }
-      )
-      result = test_domain_dns(domain, audit_log)
-      if result[:status] == :success
-        results[:successful] += 1
-      else
-        results[:failed] += 1
+      begin
+        audit_service_operation(domain) do |audit_log|
+          result = perform_dns_test_for_domain(domain)
+          update_domain_status(domain, result)
+          
+          audit_log.add_metadata(
+            domain_name: domain.domain,
+            dns_status: domain.dns,
+            test_result: result[:status]
+          )
+          
+          if result[:status] == "success"
+            results[:successful] += 1
+            success_result("DNS test completed", result: result)
+          else
+            results[:failed] += 1
+            error_result(result[:error] || "DNS test failed")
+          end
+        end
+        results[:processed] += 1
+      rescue StandardError => e
+        results[:errors] += 1
+        Rails.logger.error "Error testing DNS for domain #{domain.domain}: #{e.message}"
       end
-      results[:processed] += 1
-    rescue StandardError => e
-      audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, [])
-      results[:errors] += 1
     end
-    results
+    
+    success_result("Batch DNS testing completed", 
+                  processed: results[:processed],
+                  successful: results[:successful], 
+                  failed: results[:failed],
+                  errors: results[:errors])
   end
 
   private
 
   def test_single_domain
-    audit_log = nil
-    begin
-      audit_log = ServiceAuditLog.create!(
-        auditable: domain,
-        service_name: service_name,
-        operation_type: action,
-        status: :pending,
-        columns_affected: [ "dns" ],
-        metadata: { domain_name: domain.domain },
-        table_name: domain.class.table_name,
-        record_id: domain.id.to_s,
-        started_at: Time.current
-      )
-
+    audit_service_operation(domain) do |audit_log|
       result = perform_dns_test
       update_domain_status(domain, result)
-
+      
       # If DNS test was successful, automatically queue MX and A Record tests
-      if result[:dns_active]
+      if result[:status] == "success"
         queue_follow_up_tests
       end
-
-      audit_log.update!(
-        status: :success,
-        completed_at: Time.current,
-        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
-        metadata: audit_log.metadata.merge({
-          dns_status: domain.dns,
-          test_result: result[:status]
-        })
+      
+      audit_log.add_metadata(
+        domain_name: domain.domain,
+        dns_status: domain.dns,
+        test_result: result[:status]
       )
-
-      result
-    rescue StandardError => e
-      if audit_log
-        audit_log.update!(
-          status: :failed,
-          completed_at: Time.current,
-          execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
-          metadata: audit_log.metadata.merge({
-            error: e.message,
-            dns_status: domain.dns
-          })
-        )
-      end
-      raise e
+      
+      success_result("DNS test completed", result: result)
     end
   end
 
@@ -244,20 +233,34 @@ class DomainTestingService < ApplicationService
     end
   end
 
-  def perform_dns_test_for_domain(domain)
+  def perform_dns_test_for_domain(test_domain)
     resolver = Resolv::DNS.new
     resolver.timeouts = DNS_TIMEOUT
 
-    Timeout.timeout(DNS_TIMEOUT) do
-      records = {
-        a: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::A).map(&:address),
-        mx: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::MX).map(&:exchange),
-        txt: resolver.getresources(domain.domain, Resolv::DNS::Resource::IN::TXT).map(&:strings).flatten
-      }
+    begin
+      Timeout.timeout(DNS_TIMEOUT) do
+        records = {
+          a: resolver.getresources(test_domain.domain, Resolv::DNS::Resource::IN::A).map(&:address),
+          mx: resolver.getresources(test_domain.domain, Resolv::DNS::Resource::IN::MX).map(&:exchange),
+          txt: resolver.getresources(test_domain.domain, Resolv::DNS::Resource::IN::TXT).map(&:strings).flatten
+        }
 
+        {
+          status: records.values.any?(&:any?) ? "success" : "no_records",
+          records: records
+        }
+      end
+    rescue Resolv::ResolvError => e
       {
-        status: records.values.any?(&:any?) ? "success" : "no_records",
-        records: records
+        status: "error",
+        error: "DNS resolution failed: #{e.message}",
+        records: {}
+      }
+    rescue Timeout::Error => e
+      {
+        status: "error",
+        error: "DNS resolution timed out after #{DNS_TIMEOUT} seconds",
+        records: {}
       }
     end
   end
@@ -274,7 +277,27 @@ class DomainTestingService < ApplicationService
   end
 
   def service_active?
-    ServiceConfiguration.active?(service_name)
+    config = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless config
+    config.active?
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 
   def process_domain(domain)
