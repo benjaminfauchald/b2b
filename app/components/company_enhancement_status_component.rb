@@ -15,8 +15,8 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
         name: "Financial Data",
         service_name: "company_financial_data",
         icon: "currency-dollar",
-        last_updated: company.financial_data_updated_at,
-        has_data: company.revenue.present?,
+        last_updated: company.last_financial_update_at,
+        has_data: company.operating_revenue.present? || company.annual_result.present?,
         data_summary: financial_data_summary,
         color: "blue"
       },
@@ -51,19 +51,40 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
   end
 
   def financial_data_summary
-    return "No data" unless company.revenue.present?
+    return "No data" unless company.operating_revenue.present? || company.annual_result.present?
 
     parts = []
-    parts << "Revenue: #{number_to_currency(company.revenue, unit: 'NOK', precision: 0)}" if company.revenue
-    parts << "Year: #{company.year}" if company.year
-    parts.join(" • ")
+    if company.operating_revenue.present?
+      parts << "Revenue: #{number_to_currency(company.operating_revenue, unit: 'NOK', precision: 0)}"
+    end
+    if company.annual_result.present?
+      parts << "Result: #{number_to_currency(company.annual_result, unit: 'NOK', precision: 0)}"
+    end
+    parts.any? ? parts.join(" • ") : "Financial data available"
   end
 
   def web_pages_summary
     return "No data" unless company.web_pages.present?
 
-    pages = company.web_pages["pages"] || []
-    "#{pages.size} pages found"
+    begin
+      # Parse JSON if it's a string, or use directly if it's already parsed
+      parsed_pages = company.web_pages.is_a?(String) ? JSON.parse(company.web_pages) : company.web_pages
+      
+      # Handle different possible structures
+      if parsed_pages.is_a?(Array)
+        "#{parsed_pages.size} pages found"
+      elsif parsed_pages.is_a?(Hash) && parsed_pages["pages"]
+        pages = parsed_pages["pages"]
+        "#{pages.size} pages found"
+      elsif parsed_pages.is_a?(Hash)
+        # If it's a hash but no "pages" key, count the hash entries
+        "#{parsed_pages.keys.size} items found"
+      else
+        "Web pages data available"
+      end
+    rescue JSON::ParserError
+      "Web pages data available (format error)"
+    end
   end
 
   def linkedin_summary
@@ -75,8 +96,25 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
   def employees_summary
     return "No data" unless company.employees_data.present?
 
-    employees = company.employees_data["employees"] || []
-    "#{employees.size} employees found"
+    begin
+      # Parse JSON if it's a string, or use directly if it's already parsed
+      parsed_employees = company.employees_data.is_a?(String) ? JSON.parse(company.employees_data) : company.employees_data
+      
+      # Handle different possible structures
+      if parsed_employees.is_a?(Array)
+        "#{parsed_employees.size} employees found"
+      elsif parsed_employees.is_a?(Hash) && parsed_employees["employees"]
+        employees = parsed_employees["employees"]
+        "#{employees.size} employees found"
+      elsif parsed_employees.is_a?(Hash)
+        # If it's a hash but no "employees" key, count the hash entries
+        "#{parsed_employees.keys.size} items found"
+      else
+        "Employee data available"
+      end
+    rescue JSON::ParserError
+      "Employee data available (format error)"
+    end
   end
 
   def last_update_text(timestamp)
