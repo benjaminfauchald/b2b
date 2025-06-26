@@ -21,6 +21,7 @@
     </div>
   </div>
 
+
   <!-- Testing Queue Management -->
   <div class="mb-8">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
@@ -108,10 +109,29 @@
   </div>
 
   <!-- Domains Table Section -->
-  <%= render CardComponent.new(title: "Domain List") do %>
+  <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Domain List</h3>
+      <%= form_with url: domains_path, method: :get, local: true, class: "flex items-center gap-2" do |form| %>
+        <%= form.select :successful_services,
+            options_for_select([
+              ["All Domains", ""],
+              ["DNS Active", "with_dns"],
+              ["MX Active", "with_mx"], 
+              ["WWW Active", "with_www"],
+              ["Content Extracted", "with_web_content"],
+              ["Fully Tested", "fully_tested"]
+            ], params[:successful_services]),
+            {},
+            {
+              class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md",
+              onchange: "this.form.submit();"
+            } %>
+      <% end %>
+    </div>
     <% if @domains.any? %>
       <% 
-        headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "Actions"]
+        headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "WWW Status", "Web Content", "Actions"]
         rows = @domains.map do |domain|
           [
             domain.domain,
@@ -119,6 +139,16 @@
             domain.updated_at&.strftime("%Y-%m-%d %H:%M") || "Never",
             domain.dns.nil? ? "Not tested" : (domain.dns ? "Active" : "Inactive"),
             domain.mx.nil? ? "Not tested" : (domain.mx ? "Active" : "Inactive"),
+            domain.www.nil? ? "Not tested" : (domain.www ? "Active" : "Inactive"),
+            case
+            when domain.web_content_data.present?
+              "Extracted"
+            when domain.www == true && domain.a_record_ip.present?
+              failed_extraction = domain.service_audit_logs.where(service_name: "domain_web_content_extraction", status: "failed").exists?
+              failed_extraction ? "Failed" : "Ready"
+            else
+              "Not available"
+            end,
             link_to("View", domain_path(domain), class: "text-blue-600 hover:text-blue-800 font-medium")
           ]
         end
@@ -147,7 +177,7 @@
         </div>
       </div>
     <% end %>
-  <% end %>
+  </div>
 </div>
 
 <script>

@@ -98,29 +98,33 @@ class DomainWebContentExtractionService < ApplicationService
   end
 
   def perform_web_content_extraction
-    client = Firecrawl::Client.new(firecrawl_api_key)
     url = build_url
     
-    response = client.scrape(url)
+    # Configure API key for this request
+    Firecrawl.api_key firecrawl_api_key
     
-    if response.is_a?(Hash) && response["success"]
-      validate_and_normalize_content(response["data"])
-    elsif response.is_a?(Hash) && response["error"]
-      { success: false, error: response["error"] }
+    response = Firecrawl.scrape(url)
+    
+    if response.success?
+      validate_and_normalize_content(response.result)
     else
-      { success: false, error: "Invalid response from Firecrawl API" }
+      { success: false, error: response.result.error_description }
     end
   rescue StandardError => e
     { success: false, error: "Firecrawl extraction failed: #{e.message}" }
   end
 
-  def validate_and_normalize_content(data)
-    return { success: false, error: "Invalid content data" } unless data.is_a?(Hash)
-    return { success: false, error: "No content found" } unless data["content"].present?
+  def validate_and_normalize_content(result)
+    return { success: false, error: "Invalid content data" } unless result.respond_to?(:markdown)
+    return { success: false, error: "No content found" } unless result.markdown.present?
 
-    normalized_data = data.merge(
+    normalized_data = {
+      "content" => result.markdown,
+      "title" => result.metadata&.[]("title"),
+      "url" => result.metadata&.[]("url"),
+      "screenshot_url" => result.screenshot_url,
       "extracted_at" => Time.current.iso8601
-    )
+    }
 
     { success: true, data: normalized_data }
   end
@@ -181,17 +185,17 @@ class DomainWebContentExtractionService < ApplicationService
   end
 
   def perform_web_content_extraction_for_domain(domain)
-    client = Firecrawl::Client.new(firecrawl_api_key)
     url = build_url_for_domain(domain)
     
-    response = client.scrape(url)
+    # Configure API key for this request
+    Firecrawl.api_key firecrawl_api_key
     
-    if response.is_a?(Hash) && response["success"]
-      validate_and_normalize_content(response["data"])
-    elsif response.is_a?(Hash) && response["error"]
-      { success: false, error: response["error"] }
+    response = Firecrawl.scrape(url)
+    
+    if response.success?
+      validate_and_normalize_content(response.result)
     else
-      { success: false, error: "Invalid response from Firecrawl API" }
+      { success: false, error: response.result.error_description }
     end
   rescue StandardError => e
     { success: false, error: "Firecrawl extraction failed: #{e.message}" }

@@ -412,11 +412,11 @@ namespace :brreg do
 
     # Progress tracking
     progress_file = Rails.root.join("tmp", "company_migration_progress.txt")
-    start_from = 0
+    start_from = "0"
 
     # Resume from last processed record if progress file exists
     if File.exist?(progress_file)
-      start_from = File.read(progress_file).strip.to_i
+      start_from = File.read(progress_file).strip
       puts "Resuming from company ID: #{start_from}"
     end
 
@@ -441,7 +441,7 @@ namespace :brreg do
       Rails.logger.info "Connected to remote BRREG database"
 
       # Get total count for progress tracking
-      total_count_result = remote_conn.exec("SELECT COUNT(*) FROM brreg WHERE organisasjonsnummer > #{start_from}")
+      total_count_result = remote_conn.exec("SELECT COUNT(*) FROM brreg WHERE organisasjonsnummer > '#{start_from}'")
       total_count = total_count_result[0]["count"].to_i
       puts "Total records to process: #{total_count}"
 
@@ -452,7 +452,7 @@ namespace :brreg do
         # Fetch batch from remote database
         query = <<-SQL
           SELECT * FROM brreg#{' '}
-          WHERE organisasjonsnummer > #{start_from}
+          WHERE organisasjonsnummer > '#{start_from}'
           ORDER BY organisasjonsnummer#{' '}
           LIMIT #{batch_size}
         SQL
@@ -526,7 +526,7 @@ namespace :brreg do
 
         # Update start_from for next batch
         last_record = result[result.ntuples - 1]
-        start_from = last_record["organisasjonsnummer"].to_i
+        start_from = last_record["organisasjonsnummer"]
 
         puts "Batch complete. Migrated: #{total_migrated}, Skipped: #{total_skipped}, Errors: #{total_errors}"
 

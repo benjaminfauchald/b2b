@@ -18,18 +18,29 @@ class DomainImportService < ApplicationService
   end
 
   def perform
+    Rails.logger.info "🔍 IMPORT DEBUG: Starting perform method"
+    
     return error_result("Service is disabled") unless service_active?
     return error_result("No file provided") unless @file.present?
     return error_result("No user provided") unless @user.present?
 
+    Rails.logger.info "🔍 IMPORT DEBUG: About to start audit_service_operation"
+
     audit_service_operation(nil) do |audit_log|
       Rails.logger.info "🚀 Starting domain import for user #{@user.id}"
+      Rails.logger.info "🔍 IMPORT DEBUG: File details - name: #{@file.original_filename}, size: #{@file.size}"
       
       begin
+        Rails.logger.info "🔍 IMPORT DEBUG: About to validate file"
         validate_file!
+        
+        Rails.logger.info "🔍 IMPORT DEBUG: About to process CSV file"
         process_csv_file
+        
+        Rails.logger.info "🔍 IMPORT DEBUG: About to finalize result"
         @result.finalize!
         
+        Rails.logger.info "🔍 IMPORT DEBUG: About to add audit metadata"
         audit_log.add_metadata(
           user_id: @user.id,
           filename: @file.original_filename,
@@ -39,6 +50,7 @@ class DomainImportService < ApplicationService
           domains_duplicated: @result.duplicate_domains.count
         )
         
+        Rails.logger.info "🔍 IMPORT DEBUG: About to return success result"
         success_result("Domain import completed", 
                       imported: @result.imported_domains.count,
                       failed: @result.failed_domains.count,
@@ -47,6 +59,7 @@ class DomainImportService < ApplicationService
                       
       rescue StandardError => e
         Rails.logger.error "❌ Domain import failed: #{e.message}"
+        Rails.logger.error "❌ Backtrace: #{e.backtrace.join("\n")}"
         @result.set_error_message(e.message)
         @result.finalize!
         
@@ -60,6 +73,8 @@ class DomainImportService < ApplicationService
       end
     end
   rescue StandardError => e
+    Rails.logger.error "❌ Service error: #{e.message}"
+    Rails.logger.error "❌ Service error backtrace: #{e.backtrace.join("\n")}"
     error_result("Service error: #{e.message}")
   end
 
@@ -87,110 +102,96 @@ class DomainImportService < ApplicationService
   end
 
   def process_csv_file
+    Rails.logger.info "🔍 IMPORT DEBUG: Entering process_csv_file method"
+    
     # Debug: Check file contents
-    puts "\n=== CSV IMPORT DEBUG ==="
-    puts "File path: #{file.path}"
-    puts "File exists: #{File.exist?(file.path)}"
-    puts "File size: #{File.size(file.path) rescue 'N/A'}"
+    Rails.logger.info "\n=== CSV IMPORT DEBUG ==="
+    Rails.logger.info "🔍 File path: #{file.path}"
+    Rails.logger.info "🔍 File exists: #{File.exist?(file.path)}"
+    Rails.logger.info "🔍 File size: #{File.size(file.path) rescue 'N/A'}"
 
     # Read first few lines for debugging
     begin
+      Rails.logger.info "🔍 IMPORT DEBUG: About to read first 5 lines"
       lines = File.readlines(file.path).first(5)
-      puts "First 5 lines of file:"
-      lines.each_with_index { |line, i| puts "  Line #{i}: #{line.strip}" }
+      Rails.logger.info "🔍 First 5 lines of file:"
+      lines.each_with_index { |line, i| Rails.logger.info "  Line #{i}: #{line.strip}" }
     rescue => e
-      puts "Error reading file: #{e.message}"
+      Rails.logger.error "🔍 Error reading file: #{e.message}"
+      Rails.logger.error "🔍 Error backtrace: #{e.backtrace.join("\n")}"
     end
 
+    Rails.logger.info "🔍 IMPORT DEBUG: About to read first line"
     # Check if file has headers or is headerless
     first_line = File.open(file.path, &:readline).strip rescue ""
+    Rails.logger.info "🔍 IMPORT DEBUG: First line read: '#{first_line}'"
+    
     # File has headers if it contains "domain" in first line
     # Otherwise assume it's headerless (just domain names)
     has_headers = first_line.downcase.include?("domain")
+    Rails.logger.info "🔍 IMPORT DEBUG: Has headers: #{has_headers}"
 
-    puts "Processing CSV - First line: #{first_line}, Has headers: #{has_headers}"
+    Rails.logger.info "🔍 Processing CSV - First line: #{first_line}, Has headers: #{has_headers}"
 
     # For single-column files (just domain names), process line by line
     if !has_headers && first_line && !first_line.include?(",")
-      puts "Processing as single-column domain list"
-
-      row_count = 0
-      File.foreach(file.path).with_index do |line, index|
-        line = line.strip
-        next if line.empty?
-
-        row_count += 1
-        row_number = index + 1
-
-        # Create row data hash with just domain
-        row_data = { domain: line }
-
-        puts "Processing row #{row_number}: #{row_data.inspect}"
-        process_single_row(row_data, row_number)
-      end
-
-      puts "Total rows processed: #{row_count}"
+      Rails.logger.info "🔍 Processing as single-column domain list"
+      process_simple_domain_list
+    elsif !has_headers && first_line && first_line.include?(",")
+      Rails.logger.info "🔍 Processing as headerless CSV"
+      process_headerless_csv
     else
+      Rails.logger.info "🔍 Processing as standard CSV with headers: #{has_headers}"
       # Multi-column CSV with SmarterCSV
-      csv_options = {
-        chunk_size: 100,          # Process in chunks for memory efficiency
-        headers_in_file: has_headers,
-        user_provided_headers: has_headers ? nil : [ :domain ],  # If no headers, assume single column is domain
-        key_mapping: {            # Normalize column names
-          "Domain" => :domain,
-          "DNS" => :dns,
-          "WWW" => :www,
-          "MX" => :mx
-        },
-        remove_empty_values: false,
-        convert_values_to_numeric: false,
-        remove_zero_values: false,
-        remove_values_matching: nil,
-        remove_empty_hashes: false
-      }
-
-      begin
-        validate_csv_structure! if has_headers
-
-        Rails.logger.info "Starting SmarterCSV.process with options: #{csv_options.inspect}"
-
-        puts "About to process with SmarterCSV"
-        puts "CSV options: #{csv_options.inspect}"
-
-        row_count = 0
-        SmarterCSV.process(file.path, csv_options) do |chunk|
-          puts "Processing chunk with #{chunk.size} rows"
-
-          chunk.each_with_index do |row_data, index|
-            row_count += 1
-            puts "Processing row #{index}: #{row_data.inspect}"
-            row_number = calculate_row_number(chunk, index)
-            process_single_row(row_data, row_number)
-          end
-        end
-
-        puts "Total rows processed: #{row_count}"
-      rescue CSV::MalformedCSVError => e
-        result.add_csv_error("CSV parsing error: #{e.message}")
-      rescue SmarterCSV::SmarterCSVException => e
-        result.add_csv_error("CSV processing error: #{e.message}")
-      end
+      process_standard_csv(has_headers)
     end
+    
+    Rails.logger.info "🔍 IMPORT DEBUG: Finished process_csv_file method"
   end
 
   def validate_csv_structure!
+    Rails.logger.info "🔍 IMPORT DEBUG: Entering validate_csv_structure! method"
+    
     # Read just the header to validate structure
-    first_chunk = SmarterCSV.process(file.path, { chunk_size: 1 })
+    begin
+      Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process for validation"
+      first_chunk = SmarterCSV.process(file.path, { chunk_size: 1 })
+      Rails.logger.info "🔍 IMPORT DEBUG: SmarterCSV.process returned: #{first_chunk.inspect}"
+      
+      if first_chunk.nil? || first_chunk.empty?
+        Rails.logger.error "🔍 IMPORT DEBUG: first_chunk is nil or empty"
+        raise ArgumentError, "CSV file is empty or contains no data rows"
+      end
 
-    if first_chunk.empty?
-      raise ArgumentError, "CSV file is empty or contains no data rows"
-    end
+      Rails.logger.info "🔍 IMPORT DEBUG: About to call first_chunk.first"
+      first_row = first_chunk.first
+      Rails.logger.info "🔍 IMPORT DEBUG: first_row: #{first_row.inspect}"
+      
+      if first_row.nil?
+        Rails.logger.error "🔍 IMPORT DEBUG: first_row is nil!"
+        raise ArgumentError, "CSV file first row is nil"
+      end
+      
+      Rails.logger.info "🔍 IMPORT DEBUG: About to get keys from first_row"
+      keys = first_row.keys
+      Rails.logger.info "🔍 IMPORT DEBUG: keys: #{keys.inspect}"
+      
+      headers = keys&.map(&:to_s) || []
+      Rails.logger.info "🔍 IMPORT DEBUG: headers: #{headers.inspect}"
+      
+      missing_columns = REQUIRED_COLUMNS - headers
+      Rails.logger.info "🔍 IMPORT DEBUG: missing_columns: #{missing_columns.inspect}"
 
-    headers = first_chunk.first.keys.map(&:to_s)
-    missing_columns = REQUIRED_COLUMNS - headers
-
-    if missing_columns.any?
-      raise ArgumentError, "Missing required column#{missing_columns.size > 1 ? 's' : ''}: #{missing_columns.join(', ')}"
+      if missing_columns.any?
+        Rails.logger.error "🔍 IMPORT DEBUG: Missing required columns: #{missing_columns.join(', ')}"
+        raise ArgumentError, "Missing required column#{missing_columns.size > 1 ? 's' : ''}: #{missing_columns.join(', ')}"
+      end
+      
+      Rails.logger.info "🔍 IMPORT DEBUG: validate_csv_structure! completed successfully"
+    rescue => e
+      Rails.logger.error "🔍 IMPORT DEBUG: Exception in validate_csv_structure!: #{e.message}"
+      Rails.logger.error "🔍 IMPORT DEBUG: Exception backtrace: #{e.backtrace.join("\n")}"
+      raise ArgumentError, "Could not parse CSV structure: #{e.message}"
     end
   end
 
@@ -274,12 +275,133 @@ class DomainImportService < ApplicationService
     domain_regex.match?(cleaned_domain)
   end
 
-  def calculate_row_number(chunk, index)
-    # Account for header row and previous chunks
-    # This is an approximation since we don't track exact position
-    SmarterCSV.process(file.path, { chunk_size: 1, headers_in_file: true }) do |first_chunk|
-      return index + 2  # +1 for zero-based index, +1 for header row
+  def process_simple_domain_list
+    Rails.logger.info "🔍 IMPORT DEBUG: Entering process_simple_domain_list method"
+    
+    row_count = 0
+    File.foreach(file.path).with_index do |line, index|
+      Rails.logger.info "🔍 IMPORT DEBUG: Processing line #{index}: '#{line.strip}'"
+      
+      line = line.strip
+      next if line.empty?
+      
+      # Skip lines that look like headers
+      next if line.downcase == "domain" || line.downcase == "domains"
+
+      row_count += 1
+      row_number = index + 1
+
+      # Create row data hash with just domain
+      row_data = { domain: line }
+
+      Rails.logger.info "🔍 Processing row #{row_number}: #{row_data.inspect}"
+      
+      begin
+        process_single_row(row_data, row_number)
+        Rails.logger.info "🔍 IMPORT DEBUG: Successfully processed row #{row_number}"
+      rescue => e
+        Rails.logger.error "🔍 IMPORT DEBUG: Error processing row #{row_number}: #{e.message}"
+        Rails.logger.error "🔍 IMPORT DEBUG: Row processing backtrace: #{e.backtrace.join("\n")}"
+        raise e
+      end
     end
+
+    Rails.logger.info "🔍 Total rows processed: #{row_count}"
+  end
+
+  def process_headerless_csv
+    csv_options = {
+      chunk_size: 100,
+      headers_in_file: false,
+      user_provided_headers: [ :domain, :dns, :www, :mx ],
+      remove_empty_values: false,
+      convert_values_to_numeric: false,
+      remove_zero_values: false,
+      remove_values_matching: nil,
+      remove_empty_hashes: false
+    }
+
+    row_count = 0
+    SmarterCSV.process(file.path, csv_options) do |chunk|
+      puts "Processing headerless chunk with #{chunk.size} rows"
+
+      chunk.each_with_index do |row_data, index|
+        row_count += 1
+        puts "Processing row #{row_count}: #{row_data.inspect}"
+        process_single_row(row_data, row_count)
+      end
+    end
+
+    puts "Total rows processed: #{row_count}"
+  end
+
+  def process_standard_csv(has_headers)
+    Rails.logger.info "🔍 IMPORT DEBUG: Entering process_standard_csv method with has_headers: #{has_headers}"
+    
+    csv_options = {
+      chunk_size: 100,
+      headers_in_file: has_headers,
+      user_provided_headers: has_headers ? nil : [ :domain ],
+      key_mapping: {
+        "Domain" => :domain,
+        "DNS" => :dns,
+        "WWW" => :www,
+        "MX" => :mx
+      },
+      remove_empty_values: false,
+      convert_values_to_numeric: false,
+      remove_zero_values: false,
+      remove_values_matching: nil,
+      remove_empty_hashes: false
+    }
+
+    begin
+      Rails.logger.info "🔍 IMPORT DEBUG: About to validate CSV structure" if has_headers
+      validate_csv_structure! if has_headers
+
+      Rails.logger.info "🔍 Starting SmarterCSV.process with options: #{csv_options.inspect}"
+
+      Rails.logger.info "🔍 About to process with SmarterCSV"
+      Rails.logger.info "🔍 CSV options: #{csv_options.inspect}"
+
+      row_count = 0
+      Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process"
+      
+      SmarterCSV.process(file.path, csv_options) do |chunk|
+        Rails.logger.info "🔍 Processing chunk with #{chunk.size} rows"
+
+        chunk.each_with_index do |row_data, index|
+          row_count += 1
+          Rails.logger.info "🔍 Processing row #{index}: #{row_data.inspect}"
+          row_number = calculate_row_number(chunk, index)
+          
+          begin
+            process_single_row(row_data, row_number)
+          rescue => e
+            Rails.logger.error "🔍 IMPORT DEBUG: Error in process_single_row: #{e.message}"
+            Rails.logger.error "🔍 IMPORT DEBUG: process_single_row backtrace: #{e.backtrace.join("\n")}"
+            raise e
+          end
+        end
+      end
+
+      Rails.logger.info "🔍 Total rows processed: #{row_count}"
+    rescue CSV::MalformedCSVError => e
+      Rails.logger.error "🔍 IMPORT DEBUG: CSV::MalformedCSVError: #{e.message}"
+      result.add_csv_error("CSV parsing error: #{e.message}")
+    rescue SmarterCSV::SmarterCSVException => e
+      Rails.logger.error "🔍 IMPORT DEBUG: SmarterCSV::SmarterCSVException: #{e.message}"
+      result.add_csv_error("CSV processing error: #{e.message}")
+    rescue => e
+      Rails.logger.error "🔍 IMPORT DEBUG: Other error in process_standard_csv: #{e.message}"
+      Rails.logger.error "🔍 IMPORT DEBUG: process_standard_csv backtrace: #{e.backtrace.join("\n")}"
+      raise e
+    end
+  end
+
+  def calculate_row_number(chunk, index)
+    # Simple calculation - just use the index + 2 for header row
+    index + 2
   end
 
   def success_result(message, data = {})

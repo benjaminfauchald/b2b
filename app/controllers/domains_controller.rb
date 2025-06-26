@@ -7,7 +7,8 @@ class DomainsController < ApplicationController
 
   # GET /domains or /domains.json
   def index
-    @pagy, @domains = pagy(Domain.all.order(created_at: :desc))
+    domains = apply_successful_services_filter(Domain.all)
+    @pagy, @domains = pagy(domains.order(created_at: :desc))
     @queue_stats = get_queue_stats
   end
 
@@ -558,21 +559,42 @@ class DomainsController < ApplicationController
 
       result = import_service.perform
 
-      puts "Import result: #{result.to_h.inspect}"
+      puts "Import result: #{result.inspect}"
+      puts "Import result success?: #{result.success?}"
+      puts "Import result class: #{result.class}"
 
-      # Store only summary in session (not full details to avoid cookie overflow)
-      session[:import_results] = {
-        success: result.success?,
-        imported_count: result.imported_count,
-        failed_count: result.failed_count,
-        duplicate_count: result.duplicate_count,
-        total_count: result.total_count,
-        processing_time: result.processing_time,
-        summary_message: result.summary_message,
-        csv_errors: result.csv_errors.first(3), # Limit errors stored
-        failed_domains: result.failed_domains.first(10), # Limit failed domains
-        duplicate_domains: result.duplicate_domains.first(10) # Limit duplicate domains
-      }.to_json
+      # Handle both DomainImportResult and OpenStruct (error) results
+      if result.success?
+        # Successful import with DomainImportResult
+        import_data = result.data[:result] || result
+        session[:import_results] = {
+          success: true,
+          imported_count: import_data.imported_count || 0,
+          failed_count: import_data.failed_count || 0,
+          duplicate_count: import_data.duplicate_count || 0,
+          total_count: import_data.total_count || 0,
+          processing_time: import_data.processing_time,
+          summary_message: import_data.summary_message || "Import completed",
+          csv_errors: (import_data.csv_errors || []).first(3),
+          failed_domains: (import_data.failed_domains || []).first(10),
+          duplicate_domains: (import_data.duplicate_domains || []).first(10)
+        }.to_json
+      else
+        # Failed import with error result
+        error_message = result.error || "Import failed"
+        session[:import_results] = {
+          success: false,
+          imported_count: 0,
+          failed_count: 0,
+          duplicate_count: 0,
+          total_count: 0,
+          processing_time: nil,
+          summary_message: error_message,
+          csv_errors: [error_message],
+          failed_domains: [],
+          duplicate_domains: []
+        }.to_json
+      end
       session[:last_import_at] = Time.current
 
       redirect_to import_results_domains_path
@@ -729,5 +751,29 @@ class DomainsController < ApplicationController
         sample.org,false,false,true
         test-domain.net,,true,
       CSV
+    end
+
+
+    def apply_successful_services_filter(domains)
+      return domains unless params[:successful_services].present?
+      
+      case params[:successful_services]
+      when 'with_dns'
+        domains.dns_active
+      when 'with_mx'
+        domains.mx_active
+      when 'with_www'
+        domains.www_active
+      when 'with_web_content'
+        domains.web_content_extracted
+      when 'fully_tested'
+        domains.dns_active.mx_tested.www_tested.where.not(web_content_data: nil)
+      else
+        domains
+      end
+    end
+
+    def filter_params
+      params.permit(:successful_services)
     end
 end

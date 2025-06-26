@@ -9,11 +9,17 @@ class Domain < ApplicationRecord
   scope :untested, -> { where(dns: nil) }
   scope :dns_active, -> { where(dns: true) }
   scope :dns_inactive, -> { where(dns: false) }
+  scope :dns_tested, -> { where.not(dns: nil) }
   scope :with_www, -> { where(www: true) }
   scope :with_mx, -> { where(mx: true) }
   scope :www_active, -> { where(www: true) }
   scope :www_inactive, -> { where(www: false) }
   scope :www_untested, -> { where(www: nil) }
+  scope :www_tested, -> { where.not(www: nil) }
+  scope :mx_active, -> { where(mx: true) }
+  scope :mx_inactive, -> { where(mx: false) }
+  scope :mx_untested, -> { where(mx: nil) }
+  scope :mx_tested, -> { where.not(mx: nil) }
   
   # Scopes for web content extraction
   scope :with_a_record, -> { where(www: true).where.not(a_record_ip: nil) }
@@ -21,6 +27,15 @@ class Domain < ApplicationRecord
   scope :with_web_content, -> { where.not(web_content_data: nil) }
   scope :needing_web_content, -> { with_a_record.where(web_content_data: nil) }
   scope :needing_web_content_extraction, -> { needing_web_content }
+  scope :web_content_extracted, -> { where.not(web_content_data: nil) }
+  scope :web_content_failed, -> { 
+    with_a_record.where(web_content_data: nil)
+                 .joins(:service_audit_logs)
+                 .where(service_audit_logs: { service_name: "domain_web_content_extraction", status: "failed" })
+                 .distinct
+  }
+  scope :web_content_not_extracted, -> { where(web_content_data: nil) }
+  scope :web_content_ready_for_extraction, -> { with_a_record.where(web_content_data: nil) }
 
   # Instance methods
   def needs_testing?(service_name = "domain_testing")

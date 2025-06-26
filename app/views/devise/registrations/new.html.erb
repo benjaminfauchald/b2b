@@ -1,75 +1,102 @@
-<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-md w-full space-y-8">
-    <!-- Header -->
-    <div class="text-center">
-      <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full">
+    <!-- Logo/Brand -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
         Create your account
-      </h2>
+      </h1>
       <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-        Join Connectica today
+        Already have an account?
+        <%= link_to "Sign in", new_session_path(resource_name), 
+            class: "font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300" %>
       </p>
     </div>
 
     <!-- Form Card -->
-    <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
-      <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-6" }) do |f| %>
-        <!-- Error Messages -->
-        <% if resource.errors.any? %>
-          <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-            <div class="font-medium">
-              <%= pluralize(resource.errors.count, "error") %> prohibited this from being saved:
+    <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="p-6">
+        <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-5" }) do |f| %>
+          <!-- Error Messages -->
+          <%= render "devise/shared/error_messages", resource: resource %>
+
+          <!-- Email Field -->
+          <div>
+            <%= f.label :email, "Email address", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" %>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                </svg>
+              </div>
+              <%= f.email_field :email, 
+                  autofocus: true, 
+                  autocomplete: "email",
+                  class: "block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+                  placeholder: "Enter your email address" %>
             </div>
-            <ul class="mt-1.5 ml-4 list-disc list-inside">
-              <% resource.errors.full_messages.each do |message| %>
-                <li><%= message %></li>
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            <%= f.label :password, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" do %>
+              Password
+              <% if @minimum_password_length %>
+                <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                  (<%= @minimum_password_length %> characters minimum)
+                </span>
               <% end %>
-            </ul>
+            <% end %>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+              </div>
+              <%= f.password_field :password, 
+                  autocomplete: "new-password",
+                  class: "block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+                  placeholder: "Enter your password" %>
+            </div>
+          </div>
+
+          <!-- Password Confirmation Field -->
+          <div>
+            <%= f.label :password_confirmation, "Confirm password", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" %>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <%= f.password_field :password_confirmation, 
+                  autocomplete: "new-password",
+                  class: "block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors",
+                  placeholder: "Confirm your password" %>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div>
+            <%= f.submit "Create account", 
+                class: "w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-200" %>
           </div>
         <% end %>
 
-        <!-- Email Field -->
-        <div>
-          <%= f.label :email, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-          <%= f.email_field :email, 
-              autofocus: true, 
-              autocomplete: "email",
-              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-              placeholder: "Enter your email" %>
+        <!-- Additional Links -->
+        <div class="mt-6">
+          <div class="text-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              Already have an account?
+              <%= link_to "Sign in", new_session_path(resource_name), 
+                  class: "font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300" %>
+            </span>
+          </div>
         </div>
-
-        <!-- Password Field -->
-        <div>
-          <%= f.label :password, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" do %>
-            Password
-            <% if @minimum_password_length %>
-              <span class="text-xs text-gray-500 dark:text-gray-400 font-normal">(<%= @minimum_password_length %> characters minimum)</span>
-            <% end %>
-          <% end %>
-          <%= f.password_field :password, 
-              autocomplete: "new-password",
-              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-              placeholder: "Enter your password" %>
-        </div>
-
-        <!-- Password Confirmation Field -->
-        <div>
-          <%= f.label :password_confirmation, "Confirm password", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-          <%= f.password_field :password_confirmation, 
-              autocomplete: "new-password",
-              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-              placeholder: "Confirm your password" %>
-        </div>
-
-        <!-- Submit Button -->
-        <div>
-          <%= f.submit "Create account", 
-              class: "w-full text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-blue-800 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5" %>
-        </div>
-      <% end %>
-
-      <!-- Links -->
-      <div class="mt-6 text-center space-y-2">
-        <%= render "devise/shared/links" %>
       </div>
     </div>
   </div>
