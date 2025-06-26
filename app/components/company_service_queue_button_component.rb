@@ -25,6 +25,29 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     Company.web_discovery_potential.count
   end
 
+  # Calculate companies that have been successfully processed for this service
+  def companies_completed
+    return 0 unless web_discovery_service?
+    
+    total_scope = Company.web_discovery_potential
+    total_count = total_scope.count
+    return 0 if total_count == 0
+    
+    # Companies completed = total potential - companies needing service
+    total_count - companies_needing_service
+  end
+
+  # Calculate completion percentage
+  def completion_percentage
+    return 0 unless web_discovery_service?
+    
+    total = web_discovery_potential
+    return 0 if total == 0
+    
+    completed = companies_completed
+    ((completed.to_f / total.to_f) * 100).round
+  end
+
   # Check if this is the web discovery service
   def web_discovery_service?
     service_name == "company_web_discovery"

@@ -20,16 +20,36 @@
     </h3>
   </div>
   
-  <div class="mb-4 <%= text_muted_classes %>">
+  <div class="mb-4">
     <turbo-frame id="<%= service_name %>_stats">
       <% if web_discovery_service? %>
-        <p data-available-count="<%= service_name %>">
-          <%= number_with_delimiter(companies_needing_service) %> of <%= number_with_delimiter(web_discovery_potential) %> companies need processing
-        </p>
+        <!-- Completion percentage display -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-medium text-blue-700 dark:text-white">Web Discovery Completion</span>
+            <span class="text-sm font-medium text-blue-700 dark:text-white"><%= completion_percentage %>%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
+          </div>
+          <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(web_discovery_potential) %> companies processed
+          </p>
+        </div>
+        
+        <!-- Queue information -->
+        <div class="<%= text_muted_classes %>">
+          <p data-available-count="<%= service_name %>">
+            <%= number_with_delimiter(companies_needing_service) %> companies need processing
+          </p>
+          <p data-queue-stat="<%= queue_name %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
+        </div>
       <% else %>
-        <p data-available-count="<%= service_name %>"><%= number_with_delimiter(companies_needing_service) %> companies need processing</p>
+        <div class="<%= text_muted_classes %>">
+          <p data-available-count="<%= service_name %>"><%= number_with_delimiter(companies_needing_service) %> companies need processing</p>
+          <p data-queue-stat="<%= queue_name %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
+        </div>
       <% end %>
-      <p data-queue-stat="<%= queue_name %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
     </turbo-frame>
   </div>
   
