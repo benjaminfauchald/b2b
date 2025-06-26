@@ -57,6 +57,8 @@
                   class: "#{request.path.start_with?('/domains') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
               <%= link_to "Companies", companies_path, 
                   class: "#{request.path.start_with?('/companies') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <%= link_to "People", people_path, 
+                  class: "#{request.path.start_with?('/people') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
               <% if user_signed_in? && current_user.admin? %>
                 <%= link_to "Quality", quality_dashboard_index_path, 
                     class: "#{request.path.start_with?('/quality') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>

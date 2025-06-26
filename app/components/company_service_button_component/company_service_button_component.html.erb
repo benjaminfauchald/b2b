@@ -1,8 +1,46 @@
-<div class="relative">
+<div class="relative" data-controller="service-button">
+  <!-- Financial Data Summary (for financial_data service only) -->
+  <% if service == :financial_data && test_status == :has_data %>
+    <div class="mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg" data-service-button-target="financialData">
+      <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Financial Metrics</h5>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <% if company.operating_revenue.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Revenue:</span>
+            <span class="font-medium text-gray-900 dark:text-white"><%= format_currency(company.operating_revenue) %></span>
+          </div>
+        <% end %>
+        <% if company.operating_costs.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Costs:</span>
+            <span class="font-medium text-gray-900 dark:text-white"><%= format_currency(company.operating_costs) %></span>
+          </div>
+        <% end %>
+        <% if company.ordinary_result.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Ordinary:</span>
+            <span class="font-medium text-gray-900 dark:text-white <%= company.ordinary_result >= 0 ? 'text-green-600' : 'text-red-600' %>">
+              <%= format_currency(company.ordinary_result) %>
+            </span>
+          </div>
+        <% end %>
+        <% if company.annual_result.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Annual:</span>
+            <span class="font-medium text-gray-900 dark:text-white <%= company.annual_result >= 0 ? 'text-green-600' : 'text-red-600' %>">
+              <%= format_currency(company.annual_result) %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Status Badge -->
   <div class="flex items-center justify-between mb-2">
-    <span class="<%= status_badge_classes %> inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-      <%= status_text %>
+    <span class="<%= status_badge_classes %> inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+          data-service-button-target="statusBadge">
+      <%= service == :financial_data && test_status == :has_data ? "Has Data" : status_text %>
     </span>
     <% if last_tested_time %>
       <span class="text-xs text-gray-500">
@@ -14,15 +52,14 @@
   <!-- Service Button -->
   <%= form_with url: action_path, method: :post, 
                 data: { 
-                  turbo_frame: "_top",
-                  controller: "service-button",
-                  action: "ajax:beforeSend->service-button#disableButton ajax:complete->service-button#handleResponse"
+                  turbo_frame: "_top"
                 },
                 html: { id: form_id } do |form| %>
     <button type="submit" 
             class="<%= button_classes %> w-full"
             <%= 'disabled' if button_disabled? %>
-            data-service-button-target="button">
+            data-service-button-target="button"
+            data-action="click->service-button#handleSubmit">
       <span data-service-button-target="spinner" class="hidden">
         <%= spinner_icon %>
       </span>

@@ -16,11 +16,11 @@ class CompanyServiceButtonComponent < ViewComponent::Base
       financial_data: {
         name: "Financial Data",
         service_name: "company_financial_data",
-        column: :revenue,
+        column: :operating_revenue,
         action_path: ->(company) { queue_single_financial_data_company_path(company) },
         worker: "CompanyFinancialDataWorker",
         icon: financial_data_icon,
-        last_updated_column: :financial_data_updated_at
+        last_updated_column: :last_financial_update_at
       },
       web_discovery: {
         name: "Web Discovery",
@@ -152,8 +152,36 @@ class CompanyServiceButtonComponent < ViewComponent::Base
       when :never_tested
         "No Data"
       when :has_data
-        "Has Data"
+        if service == :financial_data
+          financial_summary
+        else
+          "Has Data"
+        end
       end
+    end
+  end
+
+  def financial_summary
+    return "No Data" unless company.operating_revenue.present?
+    
+    parts = []
+    parts << "Revenue: #{format_currency(company.operating_revenue)}" if company.operating_revenue.present?
+    parts << "Costs: #{format_currency(company.operating_costs)}" if company.operating_costs.present?
+    parts << "Ordinary: #{format_currency(company.ordinary_result)}" if company.ordinary_result.present?
+    parts << "Annual: #{format_currency(company.annual_result)}" if company.annual_result.present?
+    
+    parts.any? ? parts.join(" • ") : "Financial data available"
+  end
+
+  def format_currency(amount)
+    return "N/A" unless amount
+    
+    if amount.abs >= 1_000_000
+      "#{(amount / 1_000_000.0).round(1)}M NOK"
+    elsif amount.abs >= 1_000
+      "#{(amount / 1_000.0).round(0)}K NOK"
+    else
+      "#{amount} NOK"
     end
   end
 

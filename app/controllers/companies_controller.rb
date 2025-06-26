@@ -18,16 +18,10 @@ class CompaniesController < ApplicationController
 
     if params[:filter] == "with_financials"
       companies_scope = companies_scope.with_financial_data
-    elsif params[:filter] == "without_financials"
-      companies_scope = companies_scope.without_financial_data
-    elsif params[:filter] == "needs_update"
-      companies_scope = companies_scope.needs_financial_update
-    elsif params[:filter] == "with_web_discovery"
-      companies_scope = companies_scope.with_web_discovery
-    elsif params[:filter] == "without_web_discovery"
-      companies_scope = companies_scope.without_web_discovery
-    elsif params[:filter] == "needs_web_discovery"
-      companies_scope = companies_scope.needing_web_discovery
+    elsif params[:filter] == "with_website"
+      companies_scope = companies_scope.where.not(website: [nil, ""])
+    elsif params[:filter] == "with_linkedin"
+      companies_scope = companies_scope.where.not(linkedin_url: [nil, ""]).or(companies_scope.where.not(linkedin_ai_url: [nil, ""]))
     end
 
     @pagy, @companies = pagy(companies_scope)
@@ -374,6 +368,7 @@ class CompaniesController < ApplicationController
             locals: {
               service_name: "company_linkedin_discovery",
               companies_needing: stats_data[:linkedin_needing],
+              companies_potential: stats_data[:linkedin_potential],
               queue_depth: queue_stats["company_linkedin_discovery"] || 0
             }
           ),
@@ -581,7 +576,8 @@ class CompaniesController < ApplicationController
       financial_needing: Company.needing_service("company_financial_data").count,
       web_discovery_needing: Company.needing_service("company_web_discovery").count,
       web_discovery_potential: Company.web_discovery_potential.count,
-      linkedin_needing: Company.needing_service("company_linkedin_discovery").count
+      linkedin_needing: Company.needing_service("company_linkedin_discovery").count,
+      linkedin_potential: Company.linkedin_discovery_potential.count
     }
   end
 

@@ -25,32 +25,89 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     Company.web_discovery_potential.count
   end
 
+  # For LinkedIn discovery, show total potential companies that could be processed
+  def linkedin_discovery_potential
+    return 0 unless service_name == "company_linkedin_discovery"
+    Company.linkedin_discovery_potential.count
+  end
+
   # Calculate companies that have been successfully processed for this service
   def companies_completed
-    return 0 unless web_discovery_service?
-    
-    total_scope = Company.web_discovery_potential
-    total_count = total_scope.count
-    return 0 if total_count == 0
-    
-    # Companies completed = total potential - companies needing service
-    total_count - companies_needing_service
+    case service_name
+    when "company_web_discovery"
+      # Count companies that have actually been successfully processed by web discovery service
+      ServiceAuditLog
+        .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
+        .where(service_name: "company_web_discovery", status: "success")
+        .where("companies.operating_revenue > ?", 10_000_000)
+        .where("companies.website IS NULL OR companies.website = ''")
+        .count
+    when "company_financial_data"
+      # Count companies that have actually been successfully processed by financial data service
+      ServiceAuditLog
+        .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
+        .where(service_name: "company_financial_data", status: "success")
+        .where("companies.source_country = 'NO'")
+        .where("companies.source_registry = 'brreg'") 
+        .where("companies.ordinary_result IS NULL")
+        .where("companies.organization_form_code IN ('AS', 'ASA', 'DA', 'ANS')")
+        .count
+    when "company_linkedin_discovery"
+      # Count companies that have actually been successfully processed by LinkedIn discovery service
+      ServiceAuditLog
+        .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
+        .where(service_name: "company_linkedin_discovery", status: "success")
+        .where("companies.operating_revenue > ?", 10_000_000)
+        .count
+    else
+      0
+    end
   end
 
   # Calculate completion percentage
   def completion_percentage
-    return 0 unless web_discovery_service?
+    total = case service_name
+    when "company_web_discovery"
+      web_discovery_potential
+    when "company_financial_data"
+      Company.needs_financial_update.count
+    when "company_linkedin_discovery"
+      linkedin_discovery_potential
+    else
+      return 0
+    end
     
-    total = web_discovery_potential
     return 0 if total == 0
     
     completed = companies_completed
-    ((completed.to_f / total.to_f) * 100).round
+    percentage = (completed.to_f / total.to_f) * 100
+    
+    # Round to 1 decimal place for small percentages, 0 decimals for large ones
+    if percentage < 1
+      percentage.round(1)
+    else
+      percentage.round
+    end
   end
 
   # Check if this is the web discovery service
   def web_discovery_service?
     service_name == "company_web_discovery"
+  end
+
+  # Check if this is the financial data service
+  def financial_data_service?
+    service_name == "company_financial_data"
+  end
+
+  # Check if this is the LinkedIn discovery service
+  def linkedin_discovery_service?
+    service_name == "company_linkedin_discovery"
+  end
+
+  # Check if this service should show completion percentage
+  def show_completion_percentage?
+    web_discovery_service? || financial_data_service? || linkedin_discovery_service?
   end
 
   def queue_depth
