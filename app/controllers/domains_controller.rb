@@ -536,6 +536,14 @@ class DomainsController < ApplicationController
 
   # POST /domains/import
   def process_import
+    Rails.logger.info "=== CSV UPLOAD DEBUG ==="
+    Rails.logger.info "Params present: #{params.keys}"
+    Rails.logger.info "CSV file present: #{params[:csv_file].present?}"
+    Rails.logger.info "CSV file class: #{params[:csv_file].class}" if params[:csv_file]
+    Rails.logger.info "CSV file size: #{params[:csv_file].size}" if params[:csv_file]
+    Rails.logger.info "CSV file name: #{params[:csv_file].original_filename}" if params[:csv_file]
+    Rails.logger.info "========================="
+    
     unless params[:csv_file].present?
       redirect_to import_domains_path, alert: "Please select a CSV file to upload."
       return

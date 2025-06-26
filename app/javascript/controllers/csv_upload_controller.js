@@ -8,7 +8,7 @@ export default class extends Controller {
 
   connect() {
     console.log('CSV Upload Controller connected')
-    this.maxFileSize = 10 * 1024 * 1024 // 10MB in bytes
+    this.maxFileSize = 50 * 1024 * 1024 // 50MB in bytes
     this.allowedTypes = ['text/csv', 'application/csv', 'text/plain']
     
     // Disable submit button initially - use setTimeout to ensure DOM is ready
@@ -88,7 +88,7 @@ export default class extends Controller {
 
     // Validate file size
     if (file.size > this.maxFileSize) {
-      this.showError(`File size (${this.formatFileSize(file.size)}) exceeds the maximum allowed size (10MB).`)
+      this.showError(`File size (${this.formatFileSize(file.size)}) exceeds the maximum allowed size (50MB).`)
       this.clearFileInput()
       return
     }

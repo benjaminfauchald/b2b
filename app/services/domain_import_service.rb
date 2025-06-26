@@ -7,7 +7,7 @@ require "ostruct"
 class DomainImportService < ApplicationService
   REQUIRED_COLUMNS = %w[domain].freeze
   OPTIONAL_COLUMNS = %w[dns www mx].freeze
-  MAX_FILE_SIZE = 10.megabytes
+  MAX_FILE_SIZE = 50.megabytes
   VALID_MIME_TYPES = %w[text/csv application/csv text/plain].freeze
 
   def initialize(file:, user:, **options)
@@ -26,7 +26,7 @@ class DomainImportService < ApplicationService
 
     Rails.logger.info "🔍 IMPORT DEBUG: About to start audit_service_operation"
 
-    audit_service_operation(nil) do |audit_log|
+    audit_service_operation(@user) do |audit_log|
       Rails.logger.info "🚀 Starting domain import for user #{@user.id}"
       Rails.logger.info "🔍 IMPORT DEBUG: File details - name: #{@file.original_filename}, size: #{@file.size}"
       
@@ -91,7 +91,7 @@ class DomainImportService < ApplicationService
   def validate_file!
     raise ArgumentError, "No file provided" if file.blank?
     raise ArgumentError, "Please upload a CSV file" unless valid_file_type?
-    raise ArgumentError, "File size exceeds maximum allowed (10MB)" if file.size > MAX_FILE_SIZE
+    raise ArgumentError, "File size exceeds maximum allowed (20MB)" if file.size > MAX_FILE_SIZE
   end
 
   def valid_file_type?
@@ -210,12 +210,12 @@ class DomainImportService < ApplicationService
       return
     end
 
-    # Clean domain name (remove trailing dot if present)
-    cleaned_domain = domain_name.chomp(".")
+    # Clean domain name (remove trailing/leading dots and whitespace)
+    cleaned_domain = domain_name.strip.chomp(".").strip
     puts "Cleaned domain name: '#{cleaned_domain}'"
 
-    # Validate domain format
-    unless valid_domain_format?(domain_name)
+    # Validate domain format using the cleaned domain
+    unless valid_domain_format?(cleaned_domain)
       result.add_failed_domain(domain_name, row_number, [ "Domain format is invalid" ])
       return
     end
@@ -261,18 +261,32 @@ class DomainImportService < ApplicationService
   end
 
   def valid_domain_format?(domain_name)
-    # Remove trailing dot if present (valid in DNS but not needed in storage)
-    cleaned_domain = domain_name.chomp(".")
+    # Clean the domain name (remove trailing/leading dots and whitespace)
+    cleaned_domain = domain_name.to_s.strip.chomp(".").strip
 
-    # Basic domain validation regex
-    # Allows for subdomains, requires at least one dot, no consecutive dots
-    domain_regex = /\A[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*\z/
-
+    # Basic validations
+    return false if cleaned_domain.blank?
     return false if cleaned_domain.length > 253  # Maximum domain length
     return false if cleaned_domain.include?("..")  # No consecutive dots
     return false unless cleaned_domain.include?(".")  # Must have at least one dot
-
-    domain_regex.match?(cleaned_domain)
+    return false if cleaned_domain.start_with?(".") || cleaned_domain.end_with?(".")  # No leading/trailing dots
+    
+    # Split into parts and validate each
+    parts = cleaned_domain.split(".")
+    return false if parts.any?(&:blank?)  # No empty parts
+    return false if parts.length < 2  # Must have at least domain + TLD
+    
+    # Validate each part
+    parts.each do |part|
+      return false if part.length > 63  # Max label length
+      return false unless part.match?(/\A[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\z/) || part.match?(/\A[a-zA-Z0-9]\z/)
+    end
+    
+    # TLD validation - must be at least 2 characters and alphabetic
+    tld = parts.last
+    return false unless tld.match?(/\A[a-zA-Z]{2,}\z/)
+    
+    true
   end
 
   def process_simple_domain_list

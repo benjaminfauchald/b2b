@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CsvUploadComponent < ViewComponent::Base
-  def initialize(max_size: "10MB", help_text: nil, **options)
+  def initialize(max_size: "50MB", help_text: nil, **options)
     @max_size = max_size
     @help_text = help_text
     @options = options

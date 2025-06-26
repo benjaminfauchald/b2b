@@ -406,9 +406,9 @@ namespace :brreg do
     File.delete("tmp/domain_migration_progress.txt") if File.exist?("tmp/domain_migration_progress.txt") && error_count == 0
   end
 
-  desc "Migrate Company data from app.connectica.no to localhost"
+  desc "Migrate Company data with financial data from app.connectica.no to localhost"
   task migrate_companies_from_production: :environment do
-    puts "Starting Company migration from app.connectica.no to localhost..."
+    puts "Starting Company migration with financial data from app.connectica.no to localhost..."
 
     # Progress tracking
     progress_file = Rails.root.join("tmp", "company_migration_progress.txt")
@@ -429,31 +429,32 @@ namespace :brreg do
       password: "Charcoal2020!"
     }
 
-
     batch_size = ENV["BATCH_SIZE"]&.to_i || 1000
     total_migrated = 0
+    total_updated = 0
     total_skipped = 0
     total_errors = 0
+    financial_data_copied = 0
 
     begin
       # Connect to remote database
       remote_conn = PG.connect(remote_db_config)
-      Rails.logger.info "Connected to remote BRREG database"
+      Rails.logger.info "Connected to remote production database"
 
-      # Get total count for progress tracking
-      total_count_result = remote_conn.exec("SELECT COUNT(*) FROM brreg WHERE organisasjonsnummer > '#{start_from}'")
+      # Get total count for progress tracking - now from companies table
+      total_count_result = remote_conn.exec("SELECT COUNT(*) FROM companies WHERE registration_number > '#{start_from}'")
       total_count = total_count_result[0]["count"].to_i
-      puts "Total records to process: #{total_count}"
+      puts "Total companies to process: #{total_count}"
 
       # Process in batches
       loop do
-        puts "\nProcessing batch starting from organisasjonsnummer: #{start_from}"
+        puts "\nProcessing batch starting from registration_number: #{start_from}"
 
-        # Fetch batch from remote database
+        # Fetch batch from remote companies table (not brreg)
         query = <<-SQL
-          SELECT * FROM brreg#{' '}
-          WHERE organisasjonsnummer > '#{start_from}'
-          ORDER BY organisasjonsnummer#{' '}
+          SELECT * FROM companies#{' '}
+          WHERE registration_number > '#{start_from}'
+          ORDER BY registration_number#{' '}
           LIMIT #{batch_size}
         SQL
 
@@ -464,60 +465,42 @@ namespace :brreg do
         ActiveRecord::Base.transaction do
           result.each do |remote_record|
             begin
-              organisasjonsnummer = remote_record["organisasjonsnummer"]
+              registration_number = remote_record["registration_number"]
 
               # Check if company already exists
-              existing_company = Company.find_by(registration_number: organisasjonsnummer)
+              existing_company = Company.find_by(registration_number: registration_number)
+              
+              # Build company attributes including financial data
+              company_attrs = build_company_attributes(remote_record)
+
               if existing_company
-                Rails.logger.debug "Skipping existing company: #{organisasjonsnummer}"
-                total_skipped += 1
-                next
-              end
-
-              # Build company attributes
-              company_attrs = {
-                source_registry: "brreg",
-                source_country: "NO",
-                registration_country: "NO",
-                source_id: organisasjonsnummer,
-                brreg_id: organisasjonsnummer
-              }
-
-              # Map fields from remote to local
-              field_mapping.each do |remote_field, local_field|
-                next unless remote_record.key?(remote_field)
-                next unless Company.column_names.include?(local_field)
-
-                value = remote_record[remote_field]
-                next if value.nil? || value.to_s.strip.empty?
-
-                # Handle data type conversions
-                case local_field
-                when "registration_date", "bankruptcy_date", "liquidation_date", "deregistration_date", "vat_registration_date"
-                  begin
-                    company_attrs[local_field] = Date.parse(value.to_s) if value.present?
-                  rescue Date::Error
-                    Rails.logger.warn "Invalid date format for #{local_field}: #{value}"
-                  end
-                when "bankruptcy", "under_liquidation", "vat_registered"
-                  company_attrs[local_field] = [ "true", "t", "1", 1, true ].include?(value)
-                when "employee_count"
-                  company_attrs[local_field] = value.to_i if value.to_s.match?(/^\d+$/)
-                else
-                  company_attrs[local_field] = value.to_s.strip
+                # Update existing company with all data including financial
+                existing_company.update!(company_attrs)
+                Rails.logger.debug "✓ Updated company: #{registration_number}"
+                total_updated += 1
+                
+                # Check if financial data was updated
+                if has_financial_data?(remote_record)
+                  financial_data_copied += 1
+                end
+              else
+                # Create new company record
+                company = Company.create!(company_attrs)
+                Rails.logger.debug "✓ Created company: #{registration_number}"
+                total_migrated += 1
+                
+                # Check if financial data was included
+                if has_financial_data?(remote_record)
+                  financial_data_copied += 1
                 end
               end
 
-              # Create company record
-              company = Company.create!(company_attrs)
-              Rails.logger.debug "✓ Created company: #{organisasjonsnummer}"
-              total_migrated += 1
-
               # Update progress
-              File.write(progress_file, organisasjonsnummer)
+              File.write(progress_file, registration_number)
 
             rescue => e
-              Rails.logger.error "Error processing company #{organisasjonsnummer}: #{e.message}"
+              Rails.logger.error "Error processing company #{registration_number}: #{e.message}"
+              Rails.logger.error "Error details: #{e.backtrace.first(3).join("\n")}" if ENV["DEBUG"]
               total_errors += 1
               next
             end
@@ -526,9 +509,9 @@ namespace :brreg do
 
         # Update start_from for next batch
         last_record = result[result.ntuples - 1]
-        start_from = last_record["organisasjonsnummer"]
+        start_from = last_record["registration_number"]
 
-        puts "Batch complete. Migrated: #{total_migrated}, Skipped: #{total_skipped}, Errors: #{total_errors}"
+        puts "Batch complete. Migrated: #{total_migrated}, Updated: #{total_updated}, Financial data: #{financial_data_copied}, Errors: #{total_errors}"
 
         # Small delay to prevent overwhelming the database
         sleep(0.1)
@@ -543,18 +526,87 @@ namespace :brreg do
       Rails.logger.info "Remote database connection closed"
     end
 
-    puts "\n" + "="*50
-    puts "BRREG to Company migration completed!"
+    puts "\n" + "="*60
+    puts "Company migration with financial data completed!"
     puts "Total migrated: #{total_migrated}"
+    puts "Total updated: #{total_updated}"
+    puts "Companies with financial data: #{financial_data_copied}"
     puts "Total skipped: #{total_skipped}"
     puts "Total errors: #{total_errors}"
-    puts "="*50
+    puts "="*60
 
     # Clean up progress file on successful completion
     File.delete(progress_file) if File.exist?(progress_file) && total_errors == 0
   end
 
   private
+
+  def build_company_attributes(remote_record)
+    # Start with base attributes
+    attrs = {
+      source_registry: "companies_production",
+      source_country: "NO",
+      registration_country: "NO"
+    }
+
+    # Copy all available fields from remote record
+    Company.column_names.each do |column_name|
+      next if %w[id created_at updated_at].include?(column_name)
+      
+      # Get value from remote record
+      value = remote_record[column_name]
+      next if value.nil? || (value.is_a?(String) && value.strip.empty?)
+
+      # Handle data type conversions
+      case column_name
+      when /date$/
+        # Handle date fields
+        begin
+          attrs[column_name] = Date.parse(value.to_s) if value.present?
+        rescue Date::Error
+          Rails.logger.warn "Invalid date format for #{column_name}: #{value}"
+        end
+      when /updated_at$/, /created_at$/
+        # Handle datetime fields
+        begin
+          attrs[column_name] = DateTime.parse(value.to_s) if value.present?
+        rescue DateTime::Error
+          Rails.logger.warn "Invalid datetime format for #{column_name}: #{value}"
+        end
+      when "bankruptcy", "under_liquidation", "vat_registered", "under_deletion"
+        # Handle boolean fields
+        attrs[column_name] = ["true", "t", "1", 1, true].include?(value)
+      when /count$/, /employees$/, "year", "http_error", "employee_count"
+        # Handle integer fields
+        attrs[column_name] = value.to_i if value.to_s.match?(/^\d+$/)
+      when "ordinary_result", "annual_result", "operating_revenue", "operating_costs"
+        # Handle bigint financial fields
+        attrs[column_name] = value.to_i if value.to_s.match?(/^-?\d+$/)
+      when "revenue", "profit", "equity", "total_assets", "current_assets", "fixed_assets", "current_liabilities", "long_term_liabilities"
+        # Handle decimal financial fields
+        attrs[column_name] = BigDecimal(value.to_s) if value.to_s.match?(/^-?\d+\.?\d*$/)
+      else
+        # Handle string fields
+        attrs[column_name] = value.to_s.strip
+      end
+    end
+
+    attrs
+  end
+
+  def has_financial_data?(remote_record)
+    # Check if the record has any financial data
+    financial_fields = %w[
+      ordinary_result annual_result operating_revenue operating_costs
+      revenue profit equity total_assets current_assets fixed_assets
+      current_liabilities long_term_liabilities financial_data
+    ]
+    
+    financial_fields.any? do |field|
+      value = remote_record[field]
+      value.present? && value.to_s.strip != "" && value.to_s != "0"
+    end
+  end
 
   def field_mapping
     {

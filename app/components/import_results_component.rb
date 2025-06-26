@@ -16,7 +16,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "#{base_classes} bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700"
     when :partial
-      "#{base_classes} bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700"
+      "#{base_classes} bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700"
     else
       "#{base_classes} bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700"
     end
@@ -27,11 +27,11 @@ class ImportResultsComponent < ViewComponent::Base
 
     case result_type
     when :success
-      "#{base_classes} text-green-400 dark:text-green-300"
+      "#{base_classes} text-green-500 dark:text-green-400"
     when :partial
-      "#{base_classes} text-yellow-400 dark:text-yellow-300"
+      "#{base_classes} text-blue-500 dark:text-blue-400"
     else
-      "#{base_classes} text-red-400 dark:text-red-300"
+      "#{base_classes} text-red-500 dark:text-red-400"
     end
   end
 
@@ -40,7 +40,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "text-green-700 dark:text-green-200"
     when :partial
-      "text-yellow-700 dark:text-yellow-200"
+      "text-blue-700 dark:text-blue-200"
     else
       "text-red-700 dark:text-red-200"
     end
@@ -61,15 +61,15 @@ class ImportResultsComponent < ViewComponent::Base
   end
 
   def metric_card_classes
-    "p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+    "p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
   end
 
   def metric_label_classes
-    "text-sm font-medium text-gray-600 dark:text-gray-400"
+    "text-sm font-medium text-gray-500 dark:text-gray-400"
   end
 
   def metric_value_classes
-    "text-lg font-bold text-gray-900 dark:text-white"
+    "text-2xl font-bold text-gray-900 dark:text-white"
   end
 
   def section_heading_classes

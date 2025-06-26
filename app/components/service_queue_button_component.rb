@@ -127,4 +127,19 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     # Heading classes
     "mb-2 text-lg font-semibold text-gray-900 dark:text-white"
   end
+
+  def needed_subtitle
+    case service_name
+    when "domain_testing"
+      "Pending"
+    when "domain_mx_testing"
+      "Pending"
+    when "domain_a_record_testing"
+      "Pending"
+    when "domain_web_content_extraction"
+      "Pending"
+    else
+      "Pending"
+    end
+  end
 end

@@ -19,18 +19,18 @@
           
           <div class="<%= metric_card_classes %>">
             <div class="<%= metric_label_classes %>">Successfully Imported</div>
-            <div class="<%= metric_value_classes %> text-green-600"><%= result.imported_count %></div>
+            <div class="<%= metric_value_classes %> text-green-600 dark:text-green-400"><%= result.imported_count %></div>
           </div>
           
           <div class="<%= metric_card_classes %>">
             <div class="<%= metric_label_classes %>">Failed</div>
-            <div class="<%= metric_value_classes %> text-red-600"><%= result.failed_count %></div>
+            <div class="<%= metric_value_classes %> text-red-600 dark:text-red-400"><%= result.failed_count %></div>
           </div>
           
           <% if result.respond_to?(:duplicate_count) && result.duplicate_count > 0 %>
             <div class="<%= metric_card_classes %>">
               <div class="<%= metric_label_classes %>">Skipped (Duplicates)</div>
-              <div class="<%= metric_value_classes %> text-yellow-600"><%= result.duplicate_count %></div>
+              <div class="<%= metric_value_classes %> text-gray-600 dark:text-gray-400"><%= result.duplicate_count %></div>
             </div>
           <% end %>
         </div>
