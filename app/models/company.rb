@@ -51,6 +51,17 @@ class Company < ApplicationRecord
     web_discovery_candidates
   }
 
+  # Companies that have successfully completed web discovery
+  scope :with_web_discovery, -> {
+    where.not(web_pages: nil)
+    .where("web_pages != '{}' AND jsonb_array_length(web_pages) > 0")
+  }
+
+  # Companies that have attempted web discovery but got no results
+  scope :without_web_discovery, -> {
+    where("web_pages IS NULL OR web_pages = '{}' OR jsonb_array_length(web_pages) = 0")
+  }
+
   # Update web discovery scopes to order by revenue (highest first)
   scope :web_discovery_candidates_ordered, -> {
     web_discovery_candidates.order(operating_revenue: :desc)

@@ -105,7 +105,10 @@
               ["All Companies", ""],
               ["With Financial Data", "with_financials"],
               ["Without Financial Data", "without_financials"],
-              ["Needs Update", "needs_update"]
+              ["Needs Update", "needs_update"],
+              ["With Web Discovery", "with_web_discovery"],
+              ["Without Web Discovery", "without_web_discovery"],
+              ["Needs Web Discovery", "needs_web_discovery"]
             ], params[:filter]),
             {},
             class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" %>
@@ -160,6 +163,22 @@
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
                           Financial data
                         </span>
+                      <% end %>
+                      
+                      <% if company.web_pages.present? && company.web_pages != '{}' %>
+                        <% 
+                          web_pages_count = begin
+                            parsed_pages = JSON.parse(company.web_pages.to_s)
+                            parsed_pages.is_a?(Array) ? parsed_pages.length : 0
+                          rescue
+                            0
+                          end
+                        %>
+                        <% if web_pages_count > 0 %>
+                          <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-400">
+                            <%= web_pages_count %> web page<%= web_pages_count == 1 ? '' : 's' %>
+                          </span>
+                        <% end %>
                       <% end %>
                       
                       <% if company.linkedin_url.present? %>

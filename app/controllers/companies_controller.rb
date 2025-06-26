@@ -22,6 +22,12 @@ class CompaniesController < ApplicationController
       companies_scope = companies_scope.without_financial_data
     elsif params[:filter] == "needs_update"
       companies_scope = companies_scope.needs_financial_update
+    elsif params[:filter] == "with_web_discovery"
+      companies_scope = companies_scope.with_web_discovery
+    elsif params[:filter] == "without_web_discovery"
+      companies_scope = companies_scope.without_web_discovery
+    elsif params[:filter] == "needs_web_discovery"
+      companies_scope = companies_scope.needing_web_discovery
     end
 
     @pagy, @companies = pagy(companies_scope)
