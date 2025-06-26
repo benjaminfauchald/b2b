@@ -47,6 +47,22 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     end
   end
 
+  def domains_tested_invalid
+    case service_name
+    when "domain_testing"
+      Domain.dns_inactive.count
+    when "domain_mx_testing"
+      Domain.dns_active.where(mx: false).count
+    when "domain_a_record_testing"
+      Domain.dns_active.www_inactive.count
+    when "domain_web_content_extraction"
+      Domain.with_a_record.where(web_content_data: nil).joins(:service_audit_logs)
+            .where(service_audit_logs: { service_name: "domain_web_content_extraction", status: "failed" }).distinct.count
+    else
+      0
+    end
+  end
+
   def total_domains_for_service
     case service_name
     when "domain_testing"
@@ -68,6 +84,18 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     
     successful = domains_tested_successfully
     ((successful.to_f / total) * 100).round(1)
+  end
+
+  def tested_domains_count
+    domains_tested_successfully + domains_tested_invalid
+  end
+
+  def completion_percentage
+    total = total_domains_for_service
+    return 0 if total.zero?
+    
+    tested = tested_domains_count
+    ((tested.to_f / total) * 100).round(1)
   end
 
   def button_classes

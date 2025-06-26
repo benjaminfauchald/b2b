@@ -11,40 +11,47 @@
   
   <div class="mb-4 space-y-2">
     <!-- Primary Stats -->
-    <div class="grid grid-cols-3 gap-2 text-center">
+    <div class="grid grid-cols-4 gap-1 text-center">
       <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
-        <div class="text-lg font-semibold text-gray-900 dark:text-white" data-available-count="<%= service_name %>">
+        <div class="text-base font-semibold text-gray-900 dark:text-white" data-available-count="<%= service_name %>">
           <%= domains_needing_service %>
         </div>
         <div class="text-xs text-gray-600 dark:text-gray-400">Need Testing</div>
       </div>
       
       <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2">
-        <div class="text-lg font-semibold text-orange-700 dark:text-orange-300" data-queue-stat="<%= queue_name %>">
+        <div class="text-base font-semibold text-orange-700 dark:text-orange-300" data-queue-stat="<%= queue_name %>">
           <%= queue_depth %>
         </div>
         <div class="text-xs text-orange-600 dark:text-orange-400">In Queue</div>
       </div>
       
       <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
-        <div class="text-lg font-semibold text-green-700 dark:text-green-300">
+        <div class="text-base font-semibold text-green-700 dark:text-green-300">
           <%= domains_tested_successfully %>
         </div>
         <div class="text-xs text-green-600 dark:text-green-400">Valid</div>
       </div>
+      
+      <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
+        <div class="text-base font-semibold text-red-700 dark:text-red-300">
+          <%= domains_tested_invalid %>
+        </div>
+        <div class="text-xs text-red-600 dark:text-red-400">Invalid</div>
+      </div>
     </div>
     
-    <!-- Success Rate Progress Bar -->
+    <!-- Progress Bar -->
     <div class="mt-3">
       <div class="flex justify-between items-center mb-1">
-        <span class="text-xs text-gray-600 dark:text-gray-400">Success Rate</span>
-        <span class="text-xs font-medium text-gray-900 dark:text-white"><%= success_percentage %>%</span>
+        <span class="text-xs text-gray-600 dark:text-gray-400">Progress</span>
+        <span class="text-xs font-medium text-gray-900 dark:text-white"><%= completion_percentage %>%</span>
       </div>
       <div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
-        <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: <%= success_percentage %>%"></div>
+        <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: <%= completion_percentage %>%"></div>
       </div>
       <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        <%= domains_tested_successfully %> / <%= total_domains_for_service %> domains
+        <%= tested_domains_count %> / <%= total_domains_for_service %> domains tested
       </div>
     </div>
   </div>
