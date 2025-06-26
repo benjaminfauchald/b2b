@@ -11,30 +11,23 @@
   
   <div class="mb-4 space-y-2">
     <!-- Primary Stats -->
-    <div class="grid grid-cols-4 gap-1 text-center">
+    <div class="grid grid-cols-3 gap-2 text-center">
       <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
-        <div class="text-base font-semibold text-gray-900 dark:text-white" data-available-count="<%= service_name %>">
+        <div class="text-lg font-semibold text-gray-900 dark:text-white" data-available-count="<%= service_name %>">
           <%= domains_needing_service %>
         </div>
         <div class="text-xs text-gray-600 dark:text-gray-400">Need Testing</div>
       </div>
       
-      <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2">
-        <div class="text-base font-semibold text-orange-700 dark:text-orange-300" data-queue-stat="<%= queue_name %>">
-          <%= queue_depth %>
-        </div>
-        <div class="text-xs text-orange-600 dark:text-orange-400">In Queue</div>
-      </div>
-      
       <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
-        <div class="text-base font-semibold text-green-700 dark:text-green-300">
+        <div class="text-lg font-semibold text-green-700 dark:text-green-300">
           <%= domains_tested_successfully %>
         </div>
         <div class="text-xs text-green-600 dark:text-green-400">Valid</div>
       </div>
       
       <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
-        <div class="text-base font-semibold text-red-700 dark:text-red-300">
+        <div class="text-lg font-semibold text-red-700 dark:text-red-300">
           <%= domains_tested_invalid %>
         </div>
         <div class="text-xs text-red-600 dark:text-red-400">Invalid</div>
