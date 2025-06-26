@@ -2,8 +2,8 @@ require "ostruct"
 require "csv"
 
 class DomainsController < ApplicationController
-  before_action :set_domain, only: %i[ show edit update destroy queue_single_dns queue_single_mx queue_single_www ]
-  skip_before_action :verify_authenticity_token, only: [ :queue_testing, :queue_dns_testing, :queue_mx_testing, :queue_a_record_testing, :queue_single_dns, :queue_single_mx, :queue_single_www ]
+  before_action :set_domain, only: %i[ show edit update destroy queue_single_dns queue_single_mx queue_single_www queue_single_web_content ]
+  skip_before_action :verify_authenticity_token, only: [ :queue_testing, :queue_dns_testing, :queue_mx_testing, :queue_a_record_testing, :queue_web_content_extraction, :queue_single_dns, :queue_single_mx, :queue_single_www, :queue_single_web_content ]
 
   # GET /domains or /domains.json
   def index
@@ -281,6 +281,64 @@ class DomainsController < ApplicationController
     }
   end
 
+  # POST /domains/queue_web_content_extraction
+  def queue_web_content_extraction
+    unless ServiceConfiguration.active?("domain_web_content_extraction")
+      render json: {
+        success: false,
+        message: "Web content extraction service is disabled"
+      }
+      return
+    end
+
+    count = params[:count].to_i
+
+    if count <= 0 || count > 1000
+      render json: {
+        success: false,
+        message: "Please enter a number between 1 and 1000"
+      }, status: :unprocessable_entity
+      return
+    end
+
+    # Get domains that need web content extraction
+    available_domains = Domain.needing_web_content
+    available_count = available_domains.count
+
+    # Check if we have any domains to queue
+    if available_count == 0
+      render json: {
+        success: false,
+        message: "No domains need web content extraction at this time",
+        available_count: 0
+      }
+      return
+    end
+
+    # Adjust count to available domains if necessary
+    actual_count = [ count, available_count ].min
+
+    # Queue up to the requested number of domains (or all available if less)
+    domains = available_domains.limit(actual_count)
+    queued = 0
+
+    domains.each do |domain|
+      DomainWebContentExtractionWorker.perform_async(domain.id)
+      queued += 1
+    end
+
+    render json: {
+      success: true,
+      message: actual_count < count ?
+        "Queued all #{queued} available domains for web content extraction (requested: #{count})" :
+        "Queued #{queued} domains for web content extraction",
+      queued_count: queued,
+      requested_count: count,
+      available_count: available_count,
+      queue_stats: get_queue_stats
+    }
+  end
+
   # GET /domains/queue_status
   def queue_status
     render json: {
@@ -414,6 +472,58 @@ class DomainsController < ApplicationController
       render json: {
         success: false,
         message: "Failed to queue domain for WWW testing: #{e.message}"
+      }
+    end
+  end
+
+  # POST /domains/:id/queue_single_web_content
+  def queue_single_web_content
+    unless ServiceConfiguration.active?("domain_web_content_extraction")
+      render json: { success: false, message: "Web content extraction service is disabled" }
+      return
+    end
+
+    # Check if domain has prerequisites (A record)
+    unless @domain.www && @domain.a_record_ip.present?
+      render json: { 
+        success: false, 
+        message: "Domain must have a valid A record before web content extraction" 
+      }
+      return
+    end
+
+    begin
+      # Create service audit log for queueing action
+      audit_log = ServiceAuditLog.create!(
+        auditable: @domain,
+        service_name: "domain_web_content_extraction",
+        operation_type: "queue_individual",
+        status: "pending",
+        table_name: @domain.class.table_name,
+        record_id: @domain.id.to_s,
+        columns_affected: [ "web_content_data" ],
+        metadata: {
+          action: "manual_queue",
+          user_id: current_user.id,
+          timestamp: Time.current
+        }
+      )
+
+      job_id = DomainWebContentExtractionWorker.perform_async(@domain.id)
+
+      render json: {
+        success: true,
+        message: "Domain queued for web content extraction",
+        domain_id: @domain.id,
+        service: "web_content",
+        job_id: job_id,
+        worker: "DomainWebContentExtractionWorker",
+        audit_log_id: audit_log.id
+      }
+    rescue => e
+      render json: {
+        success: false,
+        message: "Failed to queue domain for web content extraction: #{e.message}"
       }
     end
   end
@@ -576,6 +686,22 @@ class DomainsController < ApplicationController
         rescue => e
           stats[queue_name] = "Error: #{e.message}"
         end
+      end
+
+      # Get worker-specific counts from the default queue
+      begin
+        default_queue = Sidekiq::Queue.new("default")
+        
+        # Count A Record Testing workers
+        a_record_count = default_queue.count { |job| job.klass == "DomainARecordTestingWorker" }
+        stats["DomainARecordTestingService"] = a_record_count
+        
+        # Count Web Content Extraction workers  
+        web_content_count = default_queue.count { |job| job.klass == "DomainWebContentExtractionWorker" }
+        stats["DomainWebContentExtractionWorker"] = web_content_count
+      rescue => e
+        stats["DomainARecordTestingService"] = "Error: #{e.message}"
+        stats["DomainWebContentExtractionWorker"] = "Error: #{e.message}"
       end
 
       # Get overall Sidekiq stats

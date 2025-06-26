@@ -140,6 +140,7 @@ GEM
       dry-configurable (~> 1.0, < 2)
       dry-core (~> 1.0, < 2)
       dry-events (~> 1.0, < 2)
+    dynamicschema (1.0.0)
     ed25519 (1.4.0)
     erb (5.0.1)
     erubi (1.13.1)
@@ -172,6 +173,9 @@ GEM
     ffi (1.17.2-x86_64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
     ffi (1.17.2-x86_64-linux-musl)
+    firecrawl (0.2.0)
+      dynamicschema (~> 1.0.0.beta04)
+      faraday (~> 2.7)
     formatador (1.1.0)
     fugit (1.11.1)
       et-orbi (~> 1, >= 1.2.11)
@@ -683,6 +687,7 @@ DEPENDENCIES
   dry-monitor
   factory_bot_rails
   faker
+  firecrawl
   google-api-client
   guard
   guard-rspec

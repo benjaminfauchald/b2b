@@ -14,6 +14,13 @@ class Domain < ApplicationRecord
   scope :www_active, -> { where(www: true) }
   scope :www_inactive, -> { where(www: false) }
   scope :www_untested, -> { where(www: nil) }
+  
+  # Scopes for web content extraction
+  scope :with_a_record, -> { where(www: true).where.not(a_record_ip: nil) }
+  scope :with_a_records, -> { with_a_record }
+  scope :with_web_content, -> { where.not(web_content_data: nil) }
+  scope :needing_web_content, -> { with_a_record.where(web_content_data: nil) }
+  scope :needing_web_content_extraction, -> { needing_web_content }
 
   # Instance methods
   def needs_testing?(service_name = "domain_testing")
@@ -35,6 +42,37 @@ class Domain < ApplicationRecord
   def needs_dns_testing?
     dns.nil? || needs_service?("domain_testing")
   end
+  
+  def needs_web_content_extraction?
+    www == true && a_record_ip.present? && (web_content_data.nil? || needs_service?("domain_web_content_extraction"))
+  end
+  
+  def web_content_extracted_at
+    service_audit_logs
+      .where(service_name: "domain_web_content_extraction", status: "success")
+      .order(completed_at: :desc)
+      .first&.completed_at
+  end
+  
+  def web_content_extraction_status
+    most_recent = service_audit_logs
+                   .where(service_name: "domain_web_content_extraction")
+                   .order(created_at: :desc)
+                   .first
+    
+    return :never_attempted unless most_recent
+    
+    case most_recent.status
+    when "success"
+      :success
+    when "failed"
+      :failed
+    when "pending"
+      :pending
+    else
+      :never_attempted
+    end
+  end
 
   # Override from ServiceAuditable to handle domain-specific logic
   def self.needing_service(service_name)
@@ -45,6 +83,9 @@ class Domain < ApplicationRecord
     when "domain_a_record_testing"
       # A record testing needs DNS to be active but WWW not tested
       dns_active.where(www: nil)
+    when "domain_web_content_extraction"
+      # Web content extraction needs WWW active and A record IP
+      needing_web_content
     when "domain_testing"
       # Use the ServiceAuditable logic for DNS testing
       super(service_name)

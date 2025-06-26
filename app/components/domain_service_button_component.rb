@@ -36,6 +36,14 @@ class DomainServiceButtonComponent < ViewComponent::Base
         action_path: ->(domain) { queue_single_www_domain_path(domain) },
         worker: "DomainARecordTestingWorker",
         icon: www_icon
+      },
+      web_content: {
+        name: "Web Content",
+        service_name: "domain_web_content_extraction",
+        column: :web_content_data,
+        action_path: ->(domain) { queue_single_web_content_domain_path(domain) },
+        worker: "DomainWebContentExtractionWorker",
+        icon: web_content_icon
       }
     }[service]
   end
@@ -46,13 +54,32 @@ class DomainServiceButtonComponent < ViewComponent::Base
 
   def test_status
     value = domain.send(service_config[:column])
-    case value
-    when nil
-      :never_tested
-    when true
-      :passed
-    when false
-      :failed
+    
+    # Handle JSONB column for web content
+    if service_config[:column] == :web_content_data
+      case value
+      when nil
+        :never_tested
+      when Hash
+        # Check if there was a recent successful audit log
+        recent_success = domain.service_audit_logs
+                              .where(service_name: service_config[:service_name], status: "success")
+                              .where("completed_at > ?", 30.days.ago)
+                              .exists?
+        recent_success ? :passed : :failed
+      else
+        :never_tested
+      end
+    else
+      # Handle boolean columns for other services
+      case value
+      when nil
+        :never_tested
+      when true
+        :passed
+      when false
+        :failed
+      end
     end
   end
 
@@ -164,9 +191,23 @@ class DomainServiceButtonComponent < ViewComponent::Base
       when :never_tested
         "Not Tested"
       when :passed
-        "Active"
+        case service
+        when :www
+          # For WWW service, show A record IP if available
+          ip_address = get_a_record_ip
+          ip_address.present? ? ip_address : "Active"
+        when :web_content
+          "Extracted"
+        else
+          "Active"
+        end
       when :failed
-        "Inactive"
+        case service
+        when :web_content
+          "Failed"
+        else
+          "Inactive"
+        end
       end
     end
   end
@@ -193,10 +234,58 @@ class DomainServiceButtonComponent < ViewComponent::Base
     </svg>'.html_safe
   end
 
+  def web_content_icon
+    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+    </svg>'.html_safe
+  end
+
   def spinner_icon
     '<svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>'.html_safe
+  end
+
+  def get_a_record_ip
+    # Try to get from domain model first (for when a_record_ip column exists)
+    if domain.respond_to?(:a_record_ip) && domain.a_record_ip.present?
+      return domain.a_record_ip
+    end
+
+    # Fallback to extracting from audit log metadata
+    last_successful_audit = domain.service_audit_logs
+                                 .where(service_name: service_config[:service_name])
+                                 .where(status: "success")
+                                 .order(completed_at: :desc)
+                                 .first
+
+    if last_successful_audit&.metadata
+      # Look for A record in metadata (could be stored as 'a_record' or in test result)
+      metadata = last_successful_audit.metadata
+      metadata["a_record"] || extract_ip_from_metadata(metadata)
+    end
+  end
+
+  def extract_ip_from_metadata(metadata)
+    # Extract IP from different possible metadata formats
+    return nil unless metadata.is_a?(Hash)
+    
+    # Look for common IP patterns in metadata values
+    metadata.values.each do |value|
+      next unless value.is_a?(String)
+      
+      # Match IPv4 pattern
+      if value.match?(/\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\z/)
+        return value
+      end
+      
+      # Match IPv6 pattern (basic)
+      if value.match?(/\A[0-9a-fA-F:]+\z/) && value.include?(":")
+        return value
+      end
+    end
+    
+    nil
   end
 end

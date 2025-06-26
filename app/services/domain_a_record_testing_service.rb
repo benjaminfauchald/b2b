@@ -76,17 +76,17 @@ class DomainARecordTestingService < ApplicationService
     begin
       Timeout.timeout(DNS_TIMEOUT) do
         a_record = Resolv.getaddress("www.#{domain.domain}")
-        domain.update(www: true)
+        domain.update(www: true, a_record_ip: a_record)
         return true
       end
     rescue Resolv::ResolvError
-      domain.update(www: false)
+      domain.update(www: false, a_record_ip: nil)
       false
     rescue Timeout::Error
-      domain.update(www: false)
+      domain.update(www: false, a_record_ip: nil)
       false
     rescue StandardError
-      domain.update(www: nil)
+      domain.update(www: nil, a_record_ip: nil)
       nil
     end
   end
@@ -101,7 +101,8 @@ class DomainARecordTestingService < ApplicationService
       audit_log.add_metadata(
         domain_name: domain.domain,
         www_status: domain.www,
-        test_result: result[:status]
+        test_result: result[:status],
+        a_record: result[:a_record]
       )
       
       success_result("A record test completed", result: result)
@@ -137,9 +138,9 @@ class DomainARecordTestingService < ApplicationService
   def update_domain_status(domain, result)
     case result[:status]
     when :success
-      domain.update_columns(www: true)
+      domain.update_columns(www: true, a_record_ip: result[:a_record])
     when :no_records, :timeout
-      domain.update_columns(www: false)
+      domain.update_columns(www: false, a_record_ip: nil)
     end
   end
 
@@ -155,7 +156,8 @@ class DomainARecordTestingService < ApplicationService
           audit_log.add_metadata(
             domain_name: domain.domain,
             www_status: domain.www,
-            test_result: result[:status]
+            test_result: result[:status],
+            a_record: result[:a_record]
           )
           
           case result[:status]

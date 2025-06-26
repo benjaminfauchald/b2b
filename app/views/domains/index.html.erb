@@ -24,7 +24,7 @@
   <!-- Testing Queue Management -->
   <div class="mb-8">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <%= render ServiceQueueButtonComponent.new(
         service_name: "domain_testing",
         title: "DNS Testing",
@@ -48,11 +48,19 @@
         action_path: queue_a_record_testing_domains_path,
         queue_name: "DomainARecordTestingService"
       ) %>
+      
+      <%= render ServiceQueueButtonComponent.new(
+        service_name: "domain_web_content_extraction",
+        title: "Web Content Extraction",
+        icon: "📄",
+        action_path: queue_web_content_extraction_domains_path,
+        queue_name: "DomainWebContentExtractionWorker"
+      ) %>
     </div>
   </div>
 
   <!-- Queue Statistics -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
       <div class="text-center">
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">DNS Testing Queue</p>
@@ -76,6 +84,15 @@
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">A Record Queue</p>
         <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="DomainARecordTestingService">
           <%= number_with_delimiter(@queue_stats&.dig('DomainARecordTestingService') || 0) %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Web Content Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="DomainWebContentExtractionWorker">
+          <%= number_with_delimiter(@queue_stats&.dig('DomainWebContentExtractionWorker') || 0) %>
         </p>
       </div>
     </div>
@@ -143,21 +160,25 @@ function updateQueueStatus() {
       const dnsQueue = document.querySelector('[data-stat="domain_dns_testing"]');
       const mxQueue = document.querySelector('[data-stat="domain_mx_testing"]');
       const aRecordQueue = document.querySelector('[data-stat="DomainARecordTestingService"]');
+      const webContentQueue = document.querySelector('[data-stat="DomainWebContentExtractionWorker"]');
       const processed = document.querySelector('[data-stat="processed"]');
       
       if (dnsQueue) dnsQueue.textContent = data.queue_stats.domain_dns_testing || 0;
       if (mxQueue) mxQueue.textContent = data.queue_stats.domain_mx_testing || 0;
       if (aRecordQueue) aRecordQueue.textContent = data.queue_stats.DomainARecordTestingService || 0;
+      if (webContentQueue) webContentQueue.textContent = data.queue_stats.DomainWebContentExtractionWorker || 0;
       if (processed) processed.textContent = data.queue_stats.total_processed || 0;
       
-      // Also update queue counts in the service buttons
+      // Also update queue counts in the service buttons (new format just shows numbers)
       const dnsQueueInButton = document.querySelector('[data-queue-stat="domain_dns_testing"]');
       const mxQueueInButton = document.querySelector('[data-queue-stat="domain_mx_testing"]');
       const aRecordQueueInButton = document.querySelector('[data-queue-stat="DomainARecordTestingService"]');
+      const webContentQueueInButton = document.querySelector('[data-queue-stat="DomainWebContentExtractionWorker"]');
       
-      if (dnsQueueInButton) dnsQueueInButton.textContent = (data.queue_stats.domain_dns_testing || 0) + ' in queue';
-      if (mxQueueInButton) mxQueueInButton.textContent = (data.queue_stats.domain_mx_testing || 0) + ' in queue';
-      if (aRecordQueueInButton) aRecordQueueInButton.textContent = (data.queue_stats.DomainARecordTestingService || 0) + ' in queue';
+      if (dnsQueueInButton) dnsQueueInButton.textContent = data.queue_stats.domain_dns_testing || 0;
+      if (mxQueueInButton) mxQueueInButton.textContent = data.queue_stats.domain_mx_testing || 0;
+      if (aRecordQueueInButton) aRecordQueueInButton.textContent = data.queue_stats.DomainARecordTestingService || 0;
+      if (webContentQueueInButton) webContentQueueInButton.textContent = data.queue_stats.DomainWebContentExtractionWorker || 0;
     })
     .catch(error => console.log('Error fetching queue status:', error));
 }

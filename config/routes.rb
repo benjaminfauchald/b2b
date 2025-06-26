@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       post :queue_dns_testing
       post :queue_mx_testing
       post :queue_a_record_testing
+      post :queue_web_content_extraction
       get :queue_status
       get :import, to: "domains#import_csv"
       post :import, to: "domains#process_import"
@@ -23,6 +24,7 @@ Rails.application.routes.draw do
       post :queue_single_dns
       post :queue_single_mx
       post :queue_single_www
+      post :queue_single_web_content
     end
   end
 

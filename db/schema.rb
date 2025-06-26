@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_26_112517) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -371,6 +371,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_26_112517) do
     t.datetime "updated_at", null: false
     t.boolean "dns"
     t.string "mx_error"
+    t.string "a_record_ip"
+    t.jsonb "web_content_data"
+    t.index ["a_record_ip"], name: "index_domains_on_a_record_ip"
+    t.index ["web_content_data"], name: "index_domains_on_web_content_data", using: :gin
   end
 
   create_table "domains_se_raw", id: false, force: :cascade do |t|

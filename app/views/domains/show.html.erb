@@ -56,6 +56,12 @@
         <!-- WWW Testing -->
         <%= render DomainServiceButtonComponent.new(domain: @domain, service: :www, size: :normal) %>
         
+        <!-- Divider -->
+        <div class="border-t border-gray-200 dark:border-gray-700"></div>
+        
+        <!-- Web Content Extraction -->
+        <%= render DomainServiceButtonComponent.new(domain: @domain, service: :web_content, size: :normal) %>
+        
       </div>
     <% end %>
 

@@ -18,7 +18,56 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   end
 
   def queue_depth
-    Sidekiq::Queue.new(queue_name).size
+    case queue_name
+    when "DomainARecordTestingService"
+      # A Record testing runs in the default queue as DomainARecordTestingWorker
+      Sidekiq::Queue.new("default").count { |job| job.klass == "DomainARecordTestingWorker" }
+    when "DomainWebContentExtractionWorker"
+      # Web content extraction runs in the default queue
+      Sidekiq::Queue.new("default").count { |job| job.klass == "DomainWebContentExtractionWorker" }
+    else
+      Sidekiq::Queue.new(queue_name).size
+    end
+  rescue StandardError
+    0
+  end
+
+  def domains_tested_successfully
+    case service_name
+    when "domain_testing"
+      Domain.dns_active.count
+    when "domain_mx_testing"
+      Domain.with_mx.count
+    when "domain_a_record_testing"
+      Domain.www_active.count
+    when "domain_web_content_extraction"
+      Domain.with_web_content.count
+    else
+      0
+    end
+  end
+
+  def total_domains_for_service
+    case service_name
+    when "domain_testing"
+      Domain.count
+    when "domain_mx_testing"
+      Domain.dns_active.count
+    when "domain_a_record_testing"
+      Domain.dns_active.count
+    when "domain_web_content_extraction"
+      Domain.with_a_record.count
+    else
+      Domain.count
+    end
+  end
+
+  def success_percentage
+    total = total_domains_for_service
+    return 0 if total.zero?
+    
+    successful = domains_tested_successfully
+    ((successful.to_f / total) * 100).round(1)
   end
 
   def button_classes
