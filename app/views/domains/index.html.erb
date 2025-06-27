@@ -52,7 +52,7 @@
       
       <%= render ServiceQueueButtonComponent.new(
         service_name: "domain_web_content_extraction",
-        title: "Web Content Extraction",
+        title: "Web Extraction",
         icon: "📄",
         action_path: queue_web_content_extraction_domains_path,
         queue_name: "DomainWebContentExtractionWorker"
@@ -193,11 +193,11 @@ function updateQueueStatus() {
       const webContentQueue = document.querySelector('[data-stat="DomainWebContentExtractionWorker"]');
       const processed = document.querySelector('[data-stat="processed"]');
       
-      if (dnsQueue) dnsQueue.textContent = data.queue_stats.domain_dns_testing || 0;
-      if (mxQueue) mxQueue.textContent = data.queue_stats.domain_mx_testing || 0;
-      if (aRecordQueue) aRecordQueue.textContent = data.queue_stats.DomainARecordTestingService || 0;
-      if (webContentQueue) webContentQueue.textContent = data.queue_stats.DomainWebContentExtractionWorker || 0;
-      if (processed) processed.textContent = data.queue_stats.total_processed || 0;
+      if (dnsQueue) dnsQueue.textContent = (data.queue_stats.domain_dns_testing || 0).toLocaleString();
+      if (mxQueue) mxQueue.textContent = (data.queue_stats.domain_mx_testing || 0).toLocaleString();
+      if (aRecordQueue) aRecordQueue.textContent = (data.queue_stats.DomainARecordTestingService || 0).toLocaleString();
+      if (webContentQueue) webContentQueue.textContent = (data.queue_stats.DomainWebContentExtractionWorker || 0).toLocaleString();
+      if (processed) processed.textContent = (data.queue_stats.total_processed || 0).toLocaleString();
       
       // Also update queue counts in the service buttons (new format just shows numbers)
       const dnsQueueInButton = document.querySelector('[data-queue-stat="domain_dns_testing"]');
@@ -205,16 +205,29 @@ function updateQueueStatus() {
       const aRecordQueueInButton = document.querySelector('[data-queue-stat="DomainARecordTestingService"]');
       const webContentQueueInButton = document.querySelector('[data-queue-stat="DomainWebContentExtractionWorker"]');
       
-      if (dnsQueueInButton) dnsQueueInButton.textContent = data.queue_stats.domain_dns_testing || 0;
-      if (mxQueueInButton) mxQueueInButton.textContent = data.queue_stats.domain_mx_testing || 0;
-      if (aRecordQueueInButton) aRecordQueueInButton.textContent = data.queue_stats.DomainARecordTestingService || 0;
-      if (webContentQueueInButton) webContentQueueInButton.textContent = data.queue_stats.DomainWebContentExtractionWorker || 0;
+      if (dnsQueueInButton) dnsQueueInButton.textContent = (data.queue_stats.domain_dns_testing || 0).toLocaleString();
+      if (mxQueueInButton) mxQueueInButton.textContent = (data.queue_stats.domain_mx_testing || 0).toLocaleString();
+      if (aRecordQueueInButton) aRecordQueueInButton.textContent = (data.queue_stats.DomainARecordTestingService || 0).toLocaleString();
+      if (webContentQueueInButton) webContentQueueInButton.textContent = (data.queue_stats.DomainWebContentExtractionWorker || 0).toLocaleString();
+      
+      // Update domains needing service counts (Not Tested stats)
+      if (data.queue_stats.domains_needing) {
+        const dnsNeeding = document.querySelector('[data-available-count="domain_testing"]');
+        const mxNeeding = document.querySelector('[data-available-count="domain_mx_testing"]');
+        const aRecordNeeding = document.querySelector('[data-available-count="domain_a_record_testing"]');
+        const webContentNeeding = document.querySelector('[data-available-count="domain_web_content_extraction"]');
+        
+        if (dnsNeeding) dnsNeeding.textContent = (data.queue_stats.domains_needing.domain_testing || 0).toLocaleString();
+        if (mxNeeding) mxNeeding.textContent = (data.queue_stats.domains_needing.domain_mx_testing || 0).toLocaleString();
+        if (aRecordNeeding) aRecordNeeding.textContent = (data.queue_stats.domains_needing.domain_a_record_testing || 0).toLocaleString();
+        if (webContentNeeding) webContentNeeding.textContent = (data.queue_stats.domains_needing.domain_web_content_extraction || 0).toLocaleString();
+      }
     })
     .catch(error => console.log('Error fetching queue status:', error));
 }
 
-// Auto-refresh every 10 seconds
-setInterval(updateQueueStatus, 10000);
+// Auto-refresh every 1 second
+setInterval(updateQueueStatus, 1000);
 
 // Listen for custom update events from service queue controller
 window.addEventListener('updateQueueStats', updateQueueStatus);
@@ -293,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
               const serviceName = form.closest('[data-service]').dataset.service;
               const availableElement = document.querySelector(`[data-available-count="${serviceName}"]`);
               if (availableElement) {
-                availableElement.textContent = `${data.available_count} domains need testing`;
+                availableElement.textContent = data.available_count.toLocaleString();
               }
               
               // Update input constraints
