@@ -1,0 +1,19 @@
+<section class="py-12">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+    <% stats.each do |stat| %>
+      <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700 text-center group hover:shadow-md transition-shadow duration-200">
+        <div class="text-3xl lg:text-4xl font-bold mb-2" style="color: <%= stat[:color] %>;">
+          <%= stat[:value] %>
+        </div>
+        <div class="text-sm font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+          <%= stat[:label] %>
+        </div>
+        <% if stat[:description] %>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <%= stat[:description] %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>

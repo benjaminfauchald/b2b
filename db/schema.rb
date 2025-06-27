@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_23_062937) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -343,11 +343,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_23_062937) do
     t.decimal "long_term_liabilities"
     t.integer "year"
     t.text "financial_data"
+    t.datetime "financial_data_updated_at"
+    t.jsonb "web_pages"
+    t.datetime "web_discovery_updated_at"
+    t.jsonb "employees_data"
+    t.datetime "employee_discovery_updated_at"
+    t.index ["employee_discovery_updated_at"], name: "index_companies_on_employee_discovery_updated_at"
+    t.index ["employees_data"], name: "index_companies_on_employees_data", using: :gin
+    t.index ["financial_data_updated_at"], name: "index_companies_on_financial_data_updated_at"
+    t.index ["id"], name: "index_companies_needing_web_discovery", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)) AND ((web_pages IS NULL) OR (web_pages = '{}'::jsonb) OR (jsonb_array_length(web_pages) = 0)))"
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["linkedin_last_processed_at"], name: "index_companies_on_linkedin_last_processed_at"
+    t.index ["operating_revenue", "website"], name: "index_companies_web_discovery_candidates", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)))"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
     t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
     t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
+    t.index ["web_discovery_updated_at"], name: "index_companies_on_web_discovery_updated_at"
+    t.index ["web_pages"], name: "index_companies_on_web_pages", using: :gin
   end
 
   create_table "domains", force: :cascade do |t|
@@ -358,10 +371,40 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_23_062937) do
     t.datetime "updated_at", null: false
     t.boolean "dns"
     t.string "mx_error"
+    t.string "a_record_ip"
+    t.jsonb "web_content_data"
+    t.index ["a_record_ip"], name: "index_domains_on_a_record_ip"
+    t.index ["web_content_data"], name: "index_domains_on_web_content_data", using: :gin
   end
 
   create_table "domains_se_raw", id: false, force: :cascade do |t|
     t.text "c1"
+  end
+
+  create_table "people", force: :cascade do |t|
+    t.string "name"
+    t.string "title"
+    t.string "company_name"
+    t.string "location"
+    t.string "profile_url"
+    t.string "email"
+    t.string "phone"
+    t.string "connection_degree"
+    t.jsonb "linkedin_data"
+    t.jsonb "social_media_data"
+    t.boolean "email_verified"
+    t.boolean "phone_verified"
+    t.text "bio"
+    t.string "profile_picture_url"
+    t.integer "company_id"
+    t.string "phantom_run_id"
+    t.datetime "profile_extracted_at"
+    t.datetime "email_extracted_at"
+    t.datetime "social_media_extracted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "profile_data"
+    t.jsonb "email_data"
   end
 
   create_table "service_audit_logs", force: :cascade do |t|

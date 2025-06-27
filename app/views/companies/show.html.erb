@@ -1,0 +1,205 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white"><%= @company.company_name %></h1>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          Registration #: <%= @company.registration_number %> • 
+          <%= @company.organization_form_description %>
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <%= link_to "Edit", edit_company_path(@company), 
+            class: "text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700" %>
+        <%= link_to "Back to List", companies_path, 
+            class: "text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Company Info Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Basic Information -->
+    <div class="lg:col-span-2">
+      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Company Information</h3>
+        
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-900 dark:text-gray-100">
+          <% if @company.website.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Website</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= link_to @company.website, @company.website, target: "_blank", 
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @company.email.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= mail_to @company.email, @company.email, 
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @company.phone.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.phone %></dd>
+            </div>
+          <% end %>
+          
+          <% if @company.employee_count.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Employees</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= number_with_delimiter(@company.employee_count) %></dd>
+            </div>
+          <% end %>
+          
+          <% if @company.primary_industry_description.present? %>
+            <div class="sm:col-span-2">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Industry</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= @company.primary_industry_description %>
+                <% if @company.primary_industry_code.present? %>
+                  <span class="text-gray-500 dark:text-gray-400">(#<%= @company.primary_industry_code %>)</span>
+                <% end %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @company.postal_address.present? %>
+            <div class="sm:col-span-2">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Address</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= @company.postal_address %><br>
+                <%= [@company.postal_code, @company.postal_city].compact.join(" ") %><br>
+                <%= @company.postal_country %>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="lg:col-span-1">
+      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Registration Details</h3>
+        
+        <dl class="space-y-4 text-gray-900 dark:text-gray-100">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Country</dt>
+            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.source_country || "Norway" %></dd>
+          </div>
+          
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Registry</dt>
+            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.source_registry || "Brreg" %></dd>
+          </div>
+          
+          <% if @company.registration_date.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Registered</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <%= @company.registration_date.strftime("%B %d, %Y") %>
+              </dd>
+            </div>
+          <% end %>
+          
+          <% if @company.vat_registered? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">VAT Status</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <span class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  VAT Registered
+                </span>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Testing Buttons -->
+  <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Enhancement Services</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Financial Data</h4>
+        <%= render CompanyServiceButtonComponent.new(company: @company, service: :financial_data) %>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Web Discovery</h4>
+        <%= render CompanyServiceButtonComponent.new(company: @company, service: :web_discovery) %>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn Discovery</h4>
+        <%= render CompanyServiceButtonComponent.new(company: @company, service: :linkedin_discovery) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhancement Status -->
+  <%= render CompanyEnhancementStatusComponent.new(company: @company) %>
+
+  <!-- Financial Data -->
+  <div class="mt-6" 
+       data-controller="company-financials" 
+       data-company-financials-company-id-value="<%= @company.id %>"
+       data-company-financials-fallback-interval-value="30000">
+    <div id="company_financial_data_<%= @company.id %>">
+      <%= render CompanyFinancialDataComponent.new(company: @company) %>
+    </div>
+  </div>
+
+  <!-- Service Audit Logs -->
+  <div class="mt-6">
+    <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Recent Service Activity</h3>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-3 font-medium">Service</th>
+              <th scope="col" class="px-6 py-3 font-medium">Status</th>
+              <th scope="col" class="px-6 py-3 font-medium">Duration</th>
+              <th scope="col" class="px-6 py-3 font-medium">Time</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+            <% @service_audit_logs.each do |log| %>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                  <%= log.service_name.humanize %>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    <%= if log.success?
+                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                        else
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                        end %>">
+                    <%= log.status.capitalize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                  <%= log.execution_time_ms ? "#{log.execution_time_ms}ms" : "—" %>
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                  <%= time_ago_in_words(log.created_at) %> ago
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

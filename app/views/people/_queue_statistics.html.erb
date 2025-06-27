@@ -1,0 +1,39 @@
+<turbo-frame id="queue_statistics">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Profile Extraction Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="person_profile_extraction">
+          <%= number_with_delimiter(queue_stats&.dig('person_profile_extraction') || 0) %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Email Extraction Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="person_email_extraction">
+          <%= number_with_delimiter(queue_stats&.dig('person_email_extraction') || 0) %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Social Media Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="person_social_media_extraction">
+          <%= number_with_delimiter(queue_stats&.dig('person_social_media_extraction') || 0) %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Processed</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="total_processed">
+          <%= number_with_delimiter(queue_stats&.dig(:total_processed) || 0) %>
+        </p>
+      </div>
+    </div>
+  </div>
+</turbo-frame>

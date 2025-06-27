@@ -1,4 +1,4 @@
-<div class="<%= css_classes %>" <%= tag.attributes(options.except(:class)) %>>
+<div class="<%= css_classes %>" <%= tag.attributes(options.is_a?(Hash) ? options.except(:class) : {}) %>>
   <% if title %>
     <h3 class="mb-4 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
       <%= title %>
@@ -12,7 +12,7 @@
   <% end %>
   
   <% if content? %>
-    <div class="card-content -mx-6">
+    <div class="card-content">
       <%= content %>
     </div>
   <% end %>

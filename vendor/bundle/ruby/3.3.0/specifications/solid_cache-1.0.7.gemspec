@@ -15,10 +15,10 @@ Gem::Specification.new do |s|
   s.homepage = "http://github.com/rails/solid_cache".freeze
   s.licenses = ["MIT".freeze]
   s.post_install_message = "Upgrading from Solid Cache v0.3 or earlier? There are new database migrations in v0.4.\nSee https://github.com/rails/solid_cache/blob/main/upgrading_to_version_0.4.x.md for upgrade instructions.\n".freeze
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.5.22".freeze
   s.summary = "A database backed ActiveSupport::Cache::Store".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

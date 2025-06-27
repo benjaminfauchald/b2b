@@ -23,6 +23,10 @@ module B2b
     config.service_auditing_enabled = true
     config.automatic_auditing_enabled = true
 
+    # File upload configuration
+    config.force_ssl = false
+    config.max_request_size = 50.megabytes
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

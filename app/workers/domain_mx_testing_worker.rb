@@ -7,22 +7,9 @@ class DomainMxTestingWorker
     domain = Domain.find_by(id: domain_id)
     return unless domain
 
+    # Use audit system for tracking - the service handles all audit logging
     service = DomainMxTestingService.new(domain: domain)
-    result = service.call
-
-    if result[:status] == :success
-      domain.update(
-        mx: result[:mx_records].any?,
-        mx_records: result[:mx_records],
-        last_mx_check: Time.current
-      )
-    else
-      domain.update(
-        mx: false,
-        mx_error: result[:error],
-        last_mx_check: Time.current
-      )
-    end
+    service.call
   rescue ActiveRecord::RecordNotFound
     Rails.logger.error "Domain ##{domain_id} not found for MX testing"
   rescue StandardError => e

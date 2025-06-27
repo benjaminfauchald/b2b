@@ -1,34 +1,31 @@
 <% content_for :title, "Domain Testing Dashboard" %>
 
-<div class="w-full">
-  <%= render PageHeaderComponent.new(
-    title: "Domain Testing Dashboard", 
-    subtitle: "Manage and monitor your domain testing operations"
-  ) do |component|
-    component.with_actions do %>
-      <div class="flex space-x-3">
-        <%= link_to import_domains_path, 
-            class: "px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium text-sm transition-colors" do %>
-          <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-          </svg>
-          Import CSV
-        <% end %>
-        
-        <%= link_to new_domain_path, 
-            class: "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium text-sm transition-colors" do %>
-          <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Add New Domain
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <!-- Testing Controls Section -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Page Header -->
   <div class="mb-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="sm:flex sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Domains</h1>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+          Manage and monitor your domain testing operations
+        </p>
+      </div>
+      <div class="mt-4 sm:mt-0">
+        <div class="flex space-x-3">
+          <%= link_to "Import CSV", import_domains_path, 
+              class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" %>
+          <%= link_to "New Domain", new_domain_path, 
+              class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Testing Queue Management -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <%= render ServiceQueueButtonComponent.new(
         service_name: "domain_testing",
         title: "DNS Testing",
@@ -52,47 +49,89 @@
         action_path: queue_a_record_testing_domains_path,
         queue_name: "DomainARecordTestingService"
       ) %>
+      
+      <%= render ServiceQueueButtonComponent.new(
+        service_name: "domain_web_content_extraction",
+        title: "Web Extraction",
+        icon: "📄",
+        action_path: queue_web_content_extraction_domains_path,
+        queue_name: "DomainWebContentExtractionWorker"
+      ) %>
     </div>
   </div>
 
-  <!-- Statistics Section -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <%= render StatsCardComponent.new(
-      label: "DNS Testing Queue",
-      value: @queue_stats['domain_dns_testing'] || 0,
-      icon: "🌐",
-      data_stat: "domain_dns_testing"
-    ) %>
+  <!-- Queue Statistics -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">DNS Testing Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="domain_dns_testing">
+          <%= number_with_delimiter(@queue_stats&.dig('domain_dns_testing') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "MX Testing Queue", 
-      value: @queue_stats['domain_mx_testing'] || 0,
-      icon: "📧",
-      data_stat: "domain_mx_testing"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">MX Testing Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="domain_mx_testing">
+          <%= number_with_delimiter(@queue_stats&.dig('domain_mx_testing') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "A Record Queue",
-      value: @queue_stats['DomainARecordTestingService'] || 0,
-      icon: "🔍",
-      data_stat: "DomainARecordTestingService"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">A Record Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="DomainARecordTestingService">
+          <%= number_with_delimiter(@queue_stats&.dig('DomainARecordTestingService') || 0) %>
+        </p>
+      </div>
+    </div>
     
-    <%= render StatsCardComponent.new(
-      label: "Total Processed",
-      value: @queue_stats[:total_processed] || 0,
-      icon: "✅",
-      trend: "+12.5%",
-      trend_direction: "up",
-      data_stat: "processed"
-    ) %>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Web Content Queue</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="DomainWebContentExtractionWorker">
+          <%= number_with_delimiter(@queue_stats&.dig('DomainWebContentExtractionWorker') || 0) %>
+        </p>
+      </div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+      <div class="text-center">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Processed</p>
+        <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-stat="processed">
+          <%= number_with_delimiter(@queue_stats&.dig(:total_processed) || 0) %>
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- Domains Table Section -->
-  <%= render CardComponent.new(title: "Domain List") do %>
+  <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Domain List</h3>
+      <%= form_with url: domains_path, method: :get, local: true, class: "flex items-center gap-2" do |form| %>
+        <%= form.select :successful_services,
+            options_for_select([
+              ["All Domains", ""],
+              ["DNS Active", "with_dns"],
+              ["MX Active", "with_mx"], 
+              ["WWW Active", "with_www"],
+              ["Content Extracted", "with_web_content"],
+              ["Fully Tested", "fully_tested"]
+            ], params[:successful_services]),
+            {},
+            {
+              class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md",
+              onchange: "this.form.submit();"
+            } %>
+      <% end %>
+    </div>
     <% if @domains.any? %>
       <% 
-        headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "Actions"]
+        headers = ["Domain", "Status", "Last Tested", "DNS Status", "MX Status", "WWW Status", "Web Content", "Actions"]
         rows = @domains.map do |domain|
           [
             domain.domain,
@@ -100,6 +139,16 @@
             domain.updated_at&.strftime("%Y-%m-%d %H:%M") || "Never",
             domain.dns.nil? ? "Not tested" : (domain.dns ? "Active" : "Inactive"),
             domain.mx.nil? ? "Not tested" : (domain.mx ? "Active" : "Inactive"),
+            domain.www.nil? ? "Not tested" : (domain.www ? "Active" : "Inactive"),
+            case
+            when domain.web_content_data.present?
+              "Extracted"
+            when domain.www == true && domain.a_record_ip.present?
+              failed_extraction = domain.service_audit_logs.where(service_name: "domain_web_content_extraction", status: "failed").exists?
+              failed_extraction ? "Failed" : "Ready"
+            else
+              "Not available"
+            end,
             link_to("View", domain_path(domain), class: "text-blue-600 hover:text-blue-800 font-medium")
           ]
         end
@@ -128,12 +177,12 @@
         </div>
       </div>
     <% end %>
-  <% end %>
+  </div>
 </div>
 
 <script>
-// Auto-refresh queue status every 10 seconds
-setInterval(function() {
+// Auto-refresh queue status every 10 seconds and on custom events
+function updateQueueStatus() {
   fetch('<%= queue_status_domains_path %>')
     .then(response => response.json())
     .then(data => {
@@ -141,22 +190,187 @@ setInterval(function() {
       const dnsQueue = document.querySelector('[data-stat="domain_dns_testing"]');
       const mxQueue = document.querySelector('[data-stat="domain_mx_testing"]');
       const aRecordQueue = document.querySelector('[data-stat="DomainARecordTestingService"]');
+      const webContentQueue = document.querySelector('[data-stat="DomainWebContentExtractionWorker"]');
       const processed = document.querySelector('[data-stat="processed"]');
       
-      if (dnsQueue) dnsQueue.textContent = data.queue_stats.domain_dns_testing || 0;
-      if (mxQueue) mxQueue.textContent = data.queue_stats.domain_mx_testing || 0;
-      if (aRecordQueue) aRecordQueue.textContent = data.queue_stats.DomainARecordTestingService || 0;
-      if (processed) processed.textContent = data.queue_stats.total_processed || 0;
+      if (dnsQueue) dnsQueue.textContent = (data.queue_stats.domain_dns_testing || 0).toLocaleString();
+      if (mxQueue) mxQueue.textContent = (data.queue_stats.domain_mx_testing || 0).toLocaleString();
+      if (aRecordQueue) aRecordQueue.textContent = (data.queue_stats.DomainARecordTestingService || 0).toLocaleString();
+      if (webContentQueue) webContentQueue.textContent = (data.queue_stats.DomainWebContentExtractionWorker || 0).toLocaleString();
+      if (processed) processed.textContent = (data.queue_stats.total_processed || 0).toLocaleString();
       
-      // Also update queue counts in the service buttons
+      // Also update queue counts in the service buttons (new format just shows numbers)
       const dnsQueueInButton = document.querySelector('[data-queue-stat="domain_dns_testing"]');
       const mxQueueInButton = document.querySelector('[data-queue-stat="domain_mx_testing"]');
       const aRecordQueueInButton = document.querySelector('[data-queue-stat="DomainARecordTestingService"]');
+      const webContentQueueInButton = document.querySelector('[data-queue-stat="DomainWebContentExtractionWorker"]');
       
-      if (dnsQueueInButton) dnsQueueInButton.textContent = (data.queue_stats.domain_dns_testing || 0) + ' in queue';
-      if (mxQueueInButton) mxQueueInButton.textContent = (data.queue_stats.domain_mx_testing || 0) + ' in queue';
-      if (aRecordQueueInButton) aRecordQueueInButton.textContent = (data.queue_stats.DomainARecordTestingService || 0) + ' in queue';
+      if (dnsQueueInButton) dnsQueueInButton.textContent = (data.queue_stats.domain_dns_testing || 0).toLocaleString();
+      if (mxQueueInButton) mxQueueInButton.textContent = (data.queue_stats.domain_mx_testing || 0).toLocaleString();
+      if (aRecordQueueInButton) aRecordQueueInButton.textContent = (data.queue_stats.DomainARecordTestingService || 0).toLocaleString();
+      if (webContentQueueInButton) webContentQueueInButton.textContent = (data.queue_stats.DomainWebContentExtractionWorker || 0).toLocaleString();
+      
+      // Update domains needing service counts (Not Tested stats)
+      if (data.queue_stats.domains_needing) {
+        const dnsNeeding = document.querySelector('[data-available-count="domain_testing"]');
+        const mxNeeding = document.querySelector('[data-available-count="domain_mx_testing"]');
+        const aRecordNeeding = document.querySelector('[data-available-count="domain_a_record_testing"]');
+        const webContentNeeding = document.querySelector('[data-available-count="domain_web_content_extraction"]');
+        
+        if (dnsNeeding) dnsNeeding.textContent = (data.queue_stats.domains_needing.domain_testing || 0).toLocaleString();
+        if (mxNeeding) mxNeeding.textContent = (data.queue_stats.domains_needing.domain_mx_testing || 0).toLocaleString();
+        if (aRecordNeeding) aRecordNeeding.textContent = (data.queue_stats.domains_needing.domain_a_record_testing || 0).toLocaleString();
+        if (webContentNeeding) webContentNeeding.textContent = (data.queue_stats.domains_needing.domain_web_content_extraction || 0).toLocaleString();
+      }
     })
     .catch(error => console.log('Error fetching queue status:', error));
-}, 10000);
+}
+
+// Auto-refresh every 1 second
+setInterval(updateQueueStatus, 1000);
+
+// Listen for custom update events from service queue controller
+window.addEventListener('updateQueueStats', updateQueueStatus);
+
+// Add service queue button handling directly (fallback for Stimulus issues)
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Setting up service queue button handlers...');
+  
+  // Find all service queue forms
+  const serviceForms = document.querySelectorAll('[data-controller="service-queue"] form');
+  console.log('Found service forms:', serviceForms.length);
+  
+  serviceForms.forEach(form => {
+    const submitButton = form.querySelector('[data-service-queue-target="submitButton"]');
+    const countInput = form.querySelector('[data-service-queue-target="countInput"]');
+    
+    if (submitButton && countInput) {
+      console.log('Setting up form handler for:', form.action);
+      
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Form submit intercepted!');
+        
+        const count = parseInt(countInput.value);
+        const maxAvailable = parseInt(countInput.dataset.maxAvailable || 1000);
+        
+        // Client-side validation
+        if (count <= 0) {
+          showToast('Count must be greater than 0', 'error');
+          return;
+        }
+        
+        if (count > maxAvailable) {
+          showToast(`Only ${maxAvailable} domains are available for testing`, 'error');
+          return;
+        }
+        
+        if (count > 1000) {
+          showToast('Cannot queue more than 1000 domains at once', 'error');
+          return;
+        }
+        
+        // Disable button immediately
+        submitButton.disabled = true;
+        countInput.disabled = true;
+        submitButton.style.opacity = '0.6';
+        submitButton.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Processing...
+        `;
+        
+        try {
+          const formData = new FormData(form);
+          
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            // Show success message
+            showToast(data.message + ` (${data.queued_count} domains queued)`, 'success');
+            
+            // Update available count if provided
+            if (data.available_count !== undefined) {
+              const serviceName = form.closest('[data-service]').dataset.service;
+              const availableElement = document.querySelector(`[data-available-count="${serviceName}"]`);
+              if (availableElement) {
+                availableElement.textContent = data.available_count.toLocaleString();
+              }
+              
+              // Update input constraints
+              countInput.dataset.maxAvailable = data.available_count;
+              countInput.max = Math.min(data.available_count, 1000);
+              
+              // Reset to sensible default
+              const newMax = Math.min(data.available_count, 10);
+              countInput.value = newMax;
+            } else {
+              countInput.value = 10;
+            }
+            
+            await updateQueueStatus();
+          } else {
+            showToast(data.message || 'Failed to queue domains', 'error');
+          }
+        } catch (error) {
+          console.error('Error submitting form:', error);
+          showToast('Network error occurred', 'error');
+        } finally {
+          // Re-enable button
+          submitButton.disabled = false;
+          countInput.disabled = false;
+          submitButton.style.opacity = '1';
+          submitButton.innerHTML = 'Queue Testing';
+        }
+      });
+    }
+  });
+  
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 text-white max-w-sm ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    }`;
+    toast.innerHTML = `
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          ${type === 'success' ? 
+            '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' :
+            '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>'
+          }
+        </div>
+        <div class="ml-3 flex-1">
+          <p class="text-sm font-medium">${message}</p>
+        </div>
+        <div class="ml-4 flex-shrink-0">
+          <button class="inline-flex text-white hover:text-gray-200 focus:outline-none" onclick="this.parentElement.parentElement.parentElement.remove()">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 5000);
+  }
+});
 </script>

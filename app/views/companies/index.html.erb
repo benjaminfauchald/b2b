@@ -1,0 +1,133 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" 
+     data-controller="service-stats" 
+     data-service-stats-url-value="<%= service_stats_companies_path %>"
+     data-service-stats-interval-value="1000">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="sm:flex sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Companies</h1>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+          Manage company records and enhancement services
+        </p>
+      </div>
+      <div class="mt-4 sm:mt-0">
+        <%= link_to "New Company", new_company_path, 
+            class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhancement Queue Management -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Service Queue Management</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <%= render CompanyServiceQueueButtonComponent.new(
+        service_name: "company_financial_data",
+        title: "Financial Data",
+        icon: "currency-dollar",
+        action_path: queue_financial_data_companies_path,
+        queue_name: "company_financial_data"
+      ) %>
+      
+      <%= render CompanyServiceQueueButtonComponent.new(
+        service_name: "company_web_discovery",
+        title: "Web Discovery",
+        icon: "globe-alt",
+        action_path: queue_web_discovery_companies_path,
+        queue_name: "company_web_discovery"
+      ) %>
+      
+      <%= render CompanyServiceQueueButtonComponent.new(
+        service_name: "company_linkedin_discovery",
+        title: "LinkedIn Discovery",
+        icon: "user-group",
+        action_path: queue_linkedin_discovery_companies_path,
+        queue_name: "company_linkedin_discovery"
+      ) %>
+    </div>
+  </div>
+
+  <!-- Queue Statistics -->
+  <turbo-frame id="queue_statistics">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+        <div class="text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Financial Queue</p>
+          <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="company_financial_data">
+            <%= number_with_delimiter(@queue_stats&.dig('company_financial_data') || 0) %>
+          </p>
+        </div>
+      </div>
+      
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+        <div class="text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Web Discovery Queue</p>
+          <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="company_web_discovery">
+            <%= number_with_delimiter(@queue_stats&.dig('company_web_discovery') || 0) %>
+          </p>
+        </div>
+      </div>
+      
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+        <div class="text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">LinkedIn Queue</p>
+          <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="company_linkedin_discovery">
+            <%= number_with_delimiter(@queue_stats&.dig('company_linkedin_discovery') || 0) %>
+          </p>
+        </div>
+      </div>
+      
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 h-32 grid place-items-center">
+        <div class="text-center">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Processed</p>
+          <p class="text-3xl font-semibold text-gray-900 dark:text-white" data-queue-stat="total_processed">
+            <%= number_with_delimiter(@queue_stats&.dig(:total_processed) || 0) %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </turbo-frame>
+
+  <!-- Search and Filter Bar -->
+  <div class="mb-6">
+    <%= form_with url: companies_path, method: :get, class: "sm:flex sm:items-center sm:space-x-4" do |f| %>
+      <div class="flex-1">
+        <%= f.text_field :search, 
+            value: params[:search],
+            placeholder: "Search by company name or registration number...",
+            class: "shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" %>
+      </div>
+      
+      <div class="mt-3 sm:mt-0">
+        <%= f.select :filter,
+            options_for_select([
+              ["All Companies", ""],
+              ["With Financials", "with_financials"],
+              ["With Website", "with_website"],
+              ["With LinkedIn", "with_linkedin"]
+            ], params[:filter]),
+            {},
+            class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" %>
+      </div>
+      
+      <div class="mt-3 sm:mt-0">
+        <%= f.submit "Filter", class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Companies List -->
+  <div class="bg-white dark:bg-gray-800 shadow-sm overflow-hidden sm:rounded-lg border border-gray-200 dark:border-gray-700">
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% @companies.each_with_index do |company, index| %>
+        <%= render CompanyRowComponent.new(company: company, index: index) %>
+      <% end %>
+    </ul>
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-6">
+    <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
+  </div>
+</div>

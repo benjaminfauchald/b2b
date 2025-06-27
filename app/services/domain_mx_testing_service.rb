@@ -1,22 +1,29 @@
 require "resolv"
 require "timeout"
+require "ostruct"
 
-class DomainMxTestingService < KafkaService
-  attr_reader :domain, :batch_size, :max_retries
+class DomainMxTestingService < ApplicationService
+  attr_reader :domain_obj, :batch_size, :max_retries
 
   MX_TIMEOUT = 5 # seconds
 
-  def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    @domain = domain
+  def initialize(domain: nil, batch_size: 100, max_retries: 3, **options)
+    @domain_obj = domain
     @batch_size = batch_size
     @max_retries = max_retries
-    super(service_name: "domain_mx_testing", action: "test_mx")
+    super(service_name: "domain_mx_testing", action: "test_mx", **options)
   end
 
-  def call
-    return test_single_domain if domain
-    return { processed: 0, successful: 0, failed: 0, errors: 0 } unless service_active?
-    test_domains_in_batches(Domain.needing_service("domain_mx_testing"))
+  def perform
+    return error_result("Service is disabled") unless service_active?
+    
+    if domain_obj
+      test_single_domain
+    else
+      test_domains_in_batches(Domain.needing_service("domain_mx_testing"))
+    end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   def self.queue_all_domains
@@ -58,45 +65,55 @@ class DomainMxTestingService < KafkaService
   private
 
   def test_single_domain
-    result = perform_mx_test(domain.domain)
-    update_domain_status(domain, result)
-    result
+    audit_service_operation(@domain_obj) do |audit_log|
+      result = perform_mx_test(@domain_obj.domain)
+      update_domain_status(@domain_obj, result)
+      
+      audit_log.add_metadata(
+        domain_name: @domain_obj.domain,
+        mx_status: @domain_obj.mx,
+        test_duration_ms: result[:duration]
+      )
+      
+      success_result("MX test completed", result: result)
+    end
   end
 
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
+    
     domains.find_each(batch_size: batch_size) do |domain|
-      audit_log = nil
       begin
-        audit_log = ServiceAuditLog.create!(
-          auditable: domain,
-          service_name: service_name,
-          operation_type: action,
-          status: :pending,
-          columns_affected: [ "mx" ],
-          metadata: { domain_name: domain.domain }
-        )
-        result = perform_mx_test(domain.domain)
-        if result[:status] == :success
+        audit_service_operation(domain) do |audit_log|
+          result = perform_mx_test(domain.domain)
           update_domain_status(domain, result)
-          audit_log.mark_success!({
-            "domain_name" => domain.domain,
-            "mx_status" => domain.mx,
-            "test_duration_ms" => result[:duration]
-          }, [ "mx" ])
-          results[:successful] += 1
-        else
-          update_domain_status(domain, result)
-          audit_log.mark_failed!(result[:error] || "MX test failed", { "error" => result[:error] || "MX test failed", "domain_name" => domain.domain }, [])
-          results[:failed] += 1
+          
+          audit_log.add_metadata(
+            domain_name: domain.domain,
+            mx_status: domain.mx,
+            test_duration_ms: result[:duration]
+          )
+          
+          if result[:status] == :success
+            results[:successful] += 1
+            success_result("MX test completed", result: result)
+          else
+            results[:failed] += 1
+            error_result(result[:error] || "MX test failed")
+          end
         end
         results[:processed] += 1
       rescue StandardError => e
         results[:errors] += 1
-        audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, []) if audit_log
+        Rails.logger.error "Error testing domain #{domain.domain}: #{e.message}"
       end
     end
-    results
+    
+    success_result("Batch MX testing completed", 
+                  processed: results[:processed],
+                  successful: results[:successful], 
+                  failed: results[:failed],
+                  errors: results[:errors])
   end
 
   def perform_mx_test(domain_name)
@@ -136,7 +153,27 @@ class DomainMxTestingService < KafkaService
   end
 
   def service_active?
-    ServiceConfiguration.active?(service_name)
+    config = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless config
+    config.active?
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 
   # Legacy class methods for backward compatibility

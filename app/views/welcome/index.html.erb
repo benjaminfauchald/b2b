@@ -1,0 +1,96 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <%= render HomepageHeroComponent.new(
+      title: "Welcome to Connectica",
+      subtitle: "Enterprise Data Enhancement Platform",
+      description: "Transform your business intelligence with automated domain verification, company enrichment, and comprehensive data analysis tools."
+    ) %>
+
+    <%= render HomepageStatsComponent.new(
+      stats: [
+        {
+          value: number_with_delimiter(@domain_count),
+          label: "Domains Tracked",
+          description: "DNS & web verified",
+          color: "#3B82F6"
+        },
+        {
+          value: number_with_delimiter(@company_count),
+          label: "Companies Enriched",
+          description: "Financial & profile data",
+          color: "#10B981"
+        },
+        {
+          value: number_with_delimiter(@total_processed),
+          label: "Records Processed",
+          description: "Total enhancements",
+          color: "#8B5CF6"
+        },
+        {
+          value: @services_active,
+          label: "Active Services",
+          description: "Real-time monitoring",
+          color: "#F59E0B"
+        }
+      ]
+    ) %>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+      <%= render HomepageFeatureCardComponent.new(
+        title: "Domain Verification",
+        description: "Comprehensive domain health checks with real-time DNS monitoring and web accessibility validation.",
+        icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"), class: "w-8 h-8 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24"),
+        color: {
+          icon: "text-blue-600 dark:text-blue-400",
+          background: "bg-gradient-to-br from-blue-500 to-blue-600",
+          button: "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
+          focus: "focus:ring-blue-300"
+        },
+        features: ["DNS Record Analysis", "MX Configuration Testing", "SSL Certificate Validation", "Website Accessibility Checks"],
+        link_path: domains_path,
+        link_text: "Manage Domains"
+      ) %>
+      
+      <%= render HomepageFeatureCardComponent.new(
+        title: "Company Intelligence",
+        description: "Advanced company data enrichment with financial insights, web discovery, and professional network analysis.",
+        icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"), class: "w-8 h-8 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24"),
+        color: {
+          icon: "text-green-600 dark:text-green-400",
+          background: "bg-gradient-to-br from-green-500 to-green-600",
+          button: "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
+          focus: "focus:ring-green-300"
+        },
+        features: ["Financial Data Integration", "Web Presence Discovery", "LinkedIn Profile Matching", "Employee Count Analysis"],
+        link_path: companies_path,
+        link_text: "Explore Companies"
+      ) %>
+    </div>
+
+    <%= render HomepageFeaturesGridComponent.new(
+      features: [
+        {
+          title: "Real-time Processing",
+          description: "Live updates with instant feedback and monitoring",
+          icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M13 10V3L4 14h7v7l9-11h-7z"), class: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24")
+        },
+        {
+          title: "Enterprise Security",
+          description: "Bank-grade security with encrypted data handling",
+          icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"), class: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24")
+        },
+        {
+          title: "Bulk Operations",
+          description: "Process thousands of records simultaneously",
+          icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"), class: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24")
+        },
+        {
+          title: "Advanced Analytics",
+          description: "Deep insights with comprehensive reporting",
+          icon: content_tag(:svg, content_tag(:path, "", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "2", "d": "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"), class: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24")
+        }
+      ]
+    ) %>
+  </div>
+</div>

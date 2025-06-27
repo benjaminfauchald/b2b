@@ -17,10 +17,10 @@ Gem::Specification.new do |s|
   s.homepage = "https://sidekiq.org".freeze
   s.licenses = ["LGPL-3.0".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.2.0".freeze)
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.6.2".freeze
   s.summary = "Simple, efficient background processing for Ruby".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

@@ -1,0 +1,52 @@
+<div class="<%= card_classes %>">
+  <% unless available %>
+    <div class="absolute inset-0 bg-gradient-to-br from-gray-900/70 to-gray-900/50 dark:from-gray-900/80 dark:to-gray-900/60 flex items-center justify-center backdrop-blur-sm">
+      <span class="text-white text-xl font-bold bg-gray-800/90 px-6 py-3 rounded-xl shadow-lg">
+        Coming Soon
+      </span>
+    </div>
+  <% end %>
+  
+  <div class="<%= available ? '' : 'opacity-60' %>">
+    <div class="<%= icon_container_classes %>">
+      <%= icon %>
+    </div>
+    
+    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+      <%= title %>
+    </h3>
+    
+    <p class="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+      <%= description %>
+    </p>
+    
+    <ul class="space-y-3 mb-8">
+      <% features.each do |feature| %>
+        <li class="flex items-center text-sm text-gray-600 dark:text-gray-300">
+          <div class="w-5 h-5 mr-3 flex-shrink-0">
+            <svg class="w-5 h-5 <%= available ? 'text-green-500' : 'text-gray-400' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <%= feature %>
+        </li>
+      <% end %>
+    </ul>
+    
+    <% if available %>
+      <%= link_to link_path, class: button_classes do %>
+        <%= link_text %>
+        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      <% end %>
+    <% else %>
+      <button disabled class="<%= button_classes %>">
+        <%= link_text %>
+        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </button>
+    <% end %>
+  </div>
+</div>

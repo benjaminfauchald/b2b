@@ -1,0 +1,387 @@
+require "ostruct"
+require "net/http"
+require "json"
+require "uri"
+require "google/apis/customsearch_v1"
+require "openai"
+
+class CompanyLinkedinDiscoveryService < ApplicationService
+  def initialize(company_id:, **options)
+    @company = Company.find(company_id)
+    super(service_name: "company_linkedin_discovery", action: "discover", **options)
+  end
+
+  def perform
+    return error_result("Service is disabled") unless service_active?
+
+    # Check if update is needed before starting audit
+    unless needs_update?
+      # Create a simple audit log for the up-to-date case
+      audit_log = ServiceAuditLog.create!(
+        auditable: @company,
+        service_name: "company_linkedin_discovery",
+        operation_type: "discover",
+        status: :success,
+        table_name: @company.class.table_name,
+        record_id: @company.id.to_s,
+        columns_affected: [ "none" ],
+        metadata: { reason: "up_to_date", skipped: true },
+        started_at: Time.current,
+        completed_at: Time.current
+      )
+      return success_result("LinkedIn discovery data is up to date")
+    end
+
+    audit_service_operation(@company) do |audit_log|
+      # Search for LinkedIn profiles related to the company
+      discovered_profiles = discover_linkedin_profiles
+
+      if discovered_profiles.any?
+        # Store the discovered profiles
+        update_company_linkedin_data(discovered_profiles)
+
+        # Add metadata for successful discovery
+        audit_log.add_metadata(
+          profiles_found: discovered_profiles.size,
+          confidence_scores: discovered_profiles.map { |p| p[:confidence] },
+          discovered_profiles: discovered_profiles,
+          best_match: discovered_profiles.first,
+          discovery_timestamp: Time.current.iso8601
+        )
+
+        success_result("LinkedIn profiles discovered", linkedin_profiles: discovered_profiles)
+      else
+        # No profiles found but not an error
+        audit_log.add_metadata(profiles_found: 0)
+        success_result("No LinkedIn profiles found for company")
+      end
+    end
+  rescue StandardError => e
+    # For rate limit errors, include retry_after in the result data
+    if e.message.include?("rate limit") && e.respond_to?(:retry_after)
+      error_result(e.message, retry_after: e.retry_after)
+    else
+      error_result("Service error: #{e.message}")
+    end
+  end
+
+  private
+
+  def service_active?
+    config = ServiceConfiguration.find_by(service_name: "company_linkedin_discovery")
+    return false unless config
+    config.active?
+  end
+
+  def needs_update?
+    @company.needs_service?("company_linkedin_discovery")
+  end
+
+  def discover_linkedin_profiles
+    Rails.logger.info "Starting LinkedIn discovery for: #{@company.company_name}"
+
+    # Generate search queries
+    search_queries = generate_search_queries
+
+    # Search using Google Custom Search API
+    all_results = []
+    search_queries.each do |query|
+      results = google_search(query)
+      all_results.concat(results) if results
+    end
+
+    # Remove duplicates by URL
+    unique_results = all_results.uniq { |r| normalize_url(r[:url]) }
+
+    # Validate and score each result
+    validated_results = []
+    unique_results.each do |result|
+      if valid_linkedin_profile?(result[:url])
+        validated = validate_and_score_linkedin_profile(result)
+        validated_results << validated if validated
+      end
+    end
+
+    # Sort by confidence score
+    validated_results.sort_by { |r| -r[:confidence] }
+  end
+
+  def generate_search_queries
+    queries = []
+
+    # Base company name without legal suffixes
+    base_name = @company.company_name
+      .gsub(/\s+(AS|ASA|SA|DA|ANS|BA|NUF|ENK|KS|AL|BBL)$/i, "")
+      .strip
+
+    # Primary search queries for LinkedIn
+    queries << "#{@company.company_name} site:linkedin.com"
+    queries << "#{base_name} Norge site:linkedin.com"
+    queries << "#{base_name} Norway site:linkedin.com"
+    queries << "#{@company.company_name} LinkedIn company page"
+
+    # Industry-specific search if available
+    if @company.primary_industry_description.present?
+      queries << "#{base_name} #{@company.primary_industry_description} site:linkedin.com"
+    end
+
+    # Location-specific search if available
+    if @company.business_city.present?
+      queries << "#{base_name} #{@company.business_city} site:linkedin.com"
+    end
+
+    queries.uniq
+  end
+
+  def google_search(query)
+    unless google_api_configured?
+      Rails.logger.info "Google API not configured, returning empty results"
+      return []
+    end
+
+    Rails.logger.info "Google search for LinkedIn profiles: #{query}"
+
+    begin
+      search = Google::Apis::CustomsearchV1::CustomSearchAPIService.new
+      search.key = ENV["GOOGLE_SEARCH_API_KEY"]
+
+      response = search.list_cses(
+        q: query,
+        cx: ENV["GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID"],
+        num: 10,
+        safe: "active"
+      )
+
+      return [] unless response&.items
+
+      # Filter and map results
+      response.items.filter_map do |item|
+        # Only include LinkedIn URLs
+        next unless item.link.include?("linkedin.com")
+
+        {
+          url: item.link,
+          title: item.title,
+          snippet: item.snippet,
+          search_query: query
+        }
+      end
+    rescue Google::Apis::RateLimitError => e
+      Rails.logger.warn "Google API rate limit hit"
+      error = StandardError.new("API rate limit exceeded")
+      error.define_singleton_method(:retry_after) { 3600 }
+      raise error
+    rescue StandardError => e
+      Rails.logger.error "Google search error: #{e.message}"
+      # Re-raise for the service to handle
+      raise e
+    end
+  end
+
+  def valid_linkedin_profile?(url)
+    begin
+      uri = URI.parse(url)
+      return false unless uri.scheme =~ /^https?$/
+      return false unless uri.host&.include?("linkedin.com")
+      
+      # Check if it's a company page (not personal profile)
+      return url.include?("/company/") || url.include?("/in/") || url.include?("/showcase/")
+      
+    rescue StandardError => e
+      Rails.logger.debug "LinkedIn URL validation failed for #{url}: #{e.message}"
+      false
+    end
+  end
+
+  def validate_and_score_linkedin_profile(result)
+    url = result[:url]
+
+    begin
+      # For LinkedIn, we primarily rely on URL pattern matching and title/snippet analysis
+      # since LinkedIn blocks most scraping attempts
+      
+      # Extract LinkedIn profile type
+      profile_type = extract_linkedin_profile_type(url)
+      
+      # Check if content matches company using AI
+      confidence = calculate_confidence_score(
+        url: url,
+        title: result[:title],
+        description: result[:snippet],
+        content: result[:snippet], # Use snippet as content for LinkedIn
+        search_result: result,
+        profile_type: profile_type
+      )
+
+      {
+        url: url,
+        title: result[:title],
+        description: result[:snippet],
+        confidence: confidence,
+        profile_type: profile_type,
+        discovered_at: Time.current.iso8601,
+        validation_method: "google_search_ai_validation",
+        search_query: result[:search_query]
+      }
+    rescue StandardError => e
+      Rails.logger.error "LinkedIn profile validation error for #{url}: #{e.message}"
+      nil
+    end
+  end
+
+  def extract_linkedin_profile_type(url)
+    if url.include?("/company/")
+      "company"
+    elsif url.include?("/showcase/")
+      "showcase"
+    elsif url.include?("/in/")
+      "personal"
+    elsif url.include?("/school/")
+      "school"
+    else
+      "unknown"
+    end
+  end
+
+  def calculate_confidence_score(data)
+    return 70 unless openai_configured?
+
+    begin
+      client = OpenAI::Client.new(access_token: ENV["OPENAI_API_KEY"])
+
+      prompt = build_validation_prompt(data)
+
+      response = client.chat(
+        parameters: {
+          model: "gpt-3.5-turbo",
+          messages: [ { role: "user", content: prompt } ],
+          temperature: 0.1,
+          max_tokens: 200
+        }
+      )
+
+      content = response.dig("choices", 0, "message", "content") || ""
+      parse_confidence_from_response(content)
+    rescue StandardError => e
+      Rails.logger.error "OpenAI validation error: #{e.message}"
+      # Fallback to basic scoring
+      basic_confidence_score(data)
+    end
+  end
+
+  def build_validation_prompt(data)
+    <<~PROMPT
+      Validate if this LinkedIn profile belongs to the Norwegian company and assign a confidence score.
+
+      Company Information:
+      - Name: #{@company.company_name}
+      - Industry: #{@company.primary_industry_description || 'Unknown'}
+      - Location: #{@company.business_city}, Norway
+      - Organization Type: #{@company.organization_form_description || 'Unknown'}
+
+      LinkedIn Profile Information:
+      - URL: #{data[:url]}
+      - Title: #{data[:title]}
+      - Description: #{data[:description]}
+      - Profile Type: #{data[:profile_type]}
+
+      Question: Does this LinkedIn profile belong to or represent this Norwegian company?
+
+      Consider:
+      1. Company name match in title/description
+      2. Industry/business alignment
+      3. Geographic relevance (Norwegian company)
+      4. Profile type appropriateness (company vs personal)
+
+      Respond with:
+      MATCH: Yes/No
+      CONFIDENCE: [0-100]
+      REASONING: [Brief explanation]
+    PROMPT
+  end
+
+  def parse_confidence_from_response(response)
+    match = response.match(/CONFIDENCE:\s*(\d+)/i)
+    confidence = match ? match[1].to_i : 70
+
+    # Check if it's a match
+    is_match = response.match(/MATCH:\s*Yes/i)
+
+    # If not a match, cap confidence at 40
+    is_match ? confidence : [ confidence, 40 ].min
+  end
+
+  def basic_confidence_score(data)
+    score = 50
+    company_name = @company.company_name.downcase
+    base_name = company_name.gsub(/\s+(as|asa|sa|da)$/i, "").strip.downcase
+
+    # Check URL
+    if data[:url].downcase.include?(base_name.gsub(/\s+/, ""))
+      score += 20
+    end
+
+    # Check title
+    if data[:title].downcase.include?(base_name)
+      score += 15
+    end
+
+    # Check description
+    if data[:description].downcase.include?(base_name)
+      score += 10
+    end
+
+    # Company profile bonus
+    if data[:profile_type] == "company"
+      score += 10
+    elsif data[:profile_type] == "showcase"
+      score += 5
+    end
+
+    [ score, 95 ].min
+  end
+
+  def normalize_url(url)
+    url.downcase.gsub(/\/$/, "").gsub(/^https?:\/\/(www\.)?/, "https://")
+  end
+
+  def google_api_configured?
+    ENV["GOOGLE_SEARCH_API_KEY"].present? && ENV["GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID"].present?
+  end
+
+  def openai_configured?
+    ENV["OPENAI_API_KEY"].present?
+  end
+
+  def update_company_linkedin_data(discovered_profiles)
+    # Take the highest confidence LinkedIn URL as the main LinkedIn profile
+    if discovered_profiles.any?
+      best_match = discovered_profiles.first
+      if best_match[:confidence] >= 70
+        @company.linkedin_url = best_match[:url]
+        @company.linkedin_ai_confidence = best_match[:confidence]
+      end
+    end
+
+    # Save the company updates (only existing columns)
+    @company.save!
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
+  end
+end

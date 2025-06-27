@@ -41,6 +41,16 @@ module ServiceAuditable
   def needs_service?(service_name)
     service_configuration = ServiceConfiguration.find_by(service_name: service_name)
     return false unless service_configuration&.active?
+    
+    # For Company financial data, check business logic criteria first
+    if self.class == Company && service_name == "company_financial_data"
+      # Only process companies that match the business criteria
+      return false unless source_country == "NO" && 
+                         source_registry == "brreg" && 
+                         ordinary_result.nil? && 
+                         ["AS", "ASA", "DA", "ANS"].include?(organization_form_code)
+    end
+    
     last_run = last_service_run(service_name)
     return true unless last_run
     refresh_threshold = service_configuration.refresh_interval_hours.hours.ago
@@ -137,21 +147,40 @@ module ServiceAuditable
   end
 
   # Class methods
-  def self.needing_service(service_name)
-    service_config = ServiceConfiguration.find_by(service_name: service_name)
-    return [] unless service_config&.active?
+  class_methods do
+    def needing_service(service_name)
+      service_config = ServiceConfiguration.find_by(service_name: service_name)
+      return none unless service_config&.active?
 
-    # Use a robust join for all AR models
-    left = arel_table
-    logs = ServiceAuditLog.arel_table
-    join_cond = logs[:auditable_type].eq(name)
-      .and(logs[:auditable_id].eq(left[:id]))
-      .and(logs[:service_name].eq(service_name))
-      .and(logs[:status].eq(ServiceAuditLog.statuses[:success]))
+      # Special handling for company services - use targeted scopes
+      if self == Company && service_name == "company_web_discovery"
+        return needing_web_discovery
+      elsif self == Company && service_name == "company_financial_data"
+        return needs_financial_update
+      elsif self == Company && service_name == "company_linkedin_discovery"
+        return needing_linkedin_discovery
+      elsif self == Person && service_name == "person_profile_extraction"
+        return needs_profile_extraction
+      elsif self == Person && service_name == "person_email_extraction"
+        return needs_email_extraction
+      elsif self == Person && service_name == "person_social_media_extraction"
+        return needs_social_media_extraction
+      end
 
-    joins(left.join(logs, Arel::Nodes::OuterJoin).on(join_cond).join_sources)
-      .where("service_audit_logs.id IS NULL OR service_audit_logs.completed_at < ?",
-             service_config.refresh_interval_hours.hours.ago)
+      # Use a simpler subquery approach that mirrors the instance method logic
+      refresh_threshold = service_config.refresh_interval_hours.hours.ago
+      
+      # Find records that either have no successful audit logs OR their most recent successful log is stale
+      records_with_recent_success = ServiceAuditLog
+        .where(auditable_type: name)
+        .where(service_name: service_name)
+        .where(status: ServiceAuditLog.statuses[:success])
+        .where("completed_at >= ?", refresh_threshold)
+        .select(:auditable_id)
+        .distinct
+
+      where.not(id: records_with_recent_success)
+    end
   end
 
   private

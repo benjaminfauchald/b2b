@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CsvUploadComponent < ViewComponent::Base
-  def initialize(max_size: "10MB", help_text: nil, **options)
+  def initialize(max_size: "50MB", help_text: nil, **options)
     @max_size = max_size
     @help_text = help_text
     @options = options
@@ -20,9 +20,9 @@ class CsvUploadComponent < ViewComponent::Base
     [
       "flex flex-col items-center justify-center w-full h-64",
       "border-2 border-gray-300 border-dashed rounded-lg cursor-pointer",
-      "bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700",
+      "bg-gray-50 dark:bg-gray-800",
       "hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500",
-      "dark:hover:bg-gray-600 transition-colors duration-200"
+      "dark:hover:bg-gray-700 transition-colors duration-200"
     ].join(" ")
   end
 

@@ -1,22 +1,29 @@
 require "resolv"
 require "timeout"
+require "ostruct"
 
 class DomainARecordTestingService < ApplicationService
   attr_reader :domain, :batch_size, :max_retries
 
   DNS_TIMEOUT = 5 # seconds
 
-  def initialize(domain: nil, batch_size: 100, max_retries: 3)
-    super(service_name: "domain_a_record_testing", action: "test_a_record")
+  def initialize(domain: nil, batch_size: 100, max_retries: 3, **options)
     @domain = domain
     @batch_size = batch_size
     @max_retries = max_retries
+    super(service_name: "domain_a_record_testing", action: "test_a_record", **options)
   end
 
-  def call
-    return unless domain
-    return unless needs_www_testing?(domain)
-    process_domain(domain)
+  def perform
+    return error_result("Service is disabled") unless service_active?
+    
+    if domain
+      test_single_domain
+    else
+      test_domains_in_batches(Domain.dns_active.where(www: nil))
+    end
+  rescue StandardError => e
+    error_result("Service error: #{e.message}")
   end
 
   # Legacy class methods for backward compatibility
@@ -69,17 +76,17 @@ class DomainARecordTestingService < ApplicationService
     begin
       Timeout.timeout(DNS_TIMEOUT) do
         a_record = Resolv.getaddress("www.#{domain.domain}")
-        domain.update(www: true)
+        domain.update(www: true, a_record_ip: a_record)
         return true
       end
     rescue Resolv::ResolvError
-      domain.update(www: false)
+      domain.update(www: false, a_record_ip: nil)
       false
     rescue Timeout::Error
-      domain.update(www: false)
+      domain.update(www: false, a_record_ip: nil)
       false
     rescue StandardError
-      domain.update(www: nil)
+      domain.update(www: nil, a_record_ip: nil)
       nil
     end
   end
@@ -87,42 +94,94 @@ class DomainARecordTestingService < ApplicationService
   private
 
   def test_single_domain
+    audit_service_operation(domain) do |audit_log|
+      result = perform_a_record_test
+      update_domain_status(domain, result)
+      
+      audit_log.add_metadata(
+        domain_name: domain.domain,
+        www_status: domain.www,
+        test_result: result[:status],
+        a_record: result[:a_record]
+      )
+      
+      success_result("A record test completed", result: result)
+    end
+  end
+
+  def perform_a_record_test
+    perform_a_record_test_for_domain(domain)
+  end
+  
+  def perform_a_record_test_for_domain(test_domain)
     begin
       Timeout.timeout(DNS_TIMEOUT) do
-        a_record = Resolv.getaddress("www.#{domain.domain}")
-        domain.update(www: true)
-        return true
+        a_record = Resolv.getaddress("www.#{test_domain.domain}")
+        {
+          status: :success,
+          a_record: a_record
+        }
       end
-    rescue Resolv::ResolvError
-      domain.update(www: false)
-      false
-    rescue Timeout::Error
-      domain.update(www: false)
-      false
-    rescue StandardError
-      domain.update(www: nil)
-      nil
+    rescue Resolv::ResolvError => e
+      {
+        status: :no_records,
+        error: "A record resolution failed"
+      }
+    rescue Timeout::Error => e
+      {
+        status: :timeout,
+        error: "A record resolution timed out after #{DNS_TIMEOUT} seconds"
+      }
+    end
+  end
+
+  def update_domain_status(domain, result)
+    case result[:status]
+    when :success
+      domain.update_columns(www: true, a_record_ip: result[:a_record])
+    when :no_records, :timeout
+      domain.update_columns(www: false, a_record_ip: nil)
     end
   end
 
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
 
-    domains.find_each do |domain|
-      result = self.class.test_a_record(domain)
-      results[:processed] += 1
-      case result
-      when true
-        results[:successful] += 1
-      when false
-        results[:failed] += 1
-      else
+    domains.find_each(batch_size: batch_size) do |domain|
+      begin
+        audit_service_operation(domain) do |audit_log|
+          result = perform_a_record_test_for_domain(domain)
+          update_domain_status(domain, result)
+          
+          audit_log.add_metadata(
+            domain_name: domain.domain,
+            www_status: domain.www,
+            test_result: result[:status],
+            a_record: result[:a_record]
+          )
+          
+          case result[:status]
+          when :success
+            results[:successful] += 1
+            success_result("A record test completed", result: result)
+          else
+            results[:failed] += 1
+            error_result(result[:error] || "A record test failed")
+          end
+        end
+        results[:processed] += 1
+        produce_message_with_retry(domain.domain, result)
+      rescue StandardError => e
         results[:errors] += 1
+        Rails.logger.error "Error testing A record for domain #{domain.domain}: #{e.message}"
       end
-      produce_message_with_retry(domain.domain, result)
     end
 
-    results
+    success_result("Batch A record testing completed", 
+                  processed: results[:processed],
+                  successful: results[:successful], 
+                  failed: results[:failed],
+                  errors: results[:errors])
   end
 
   def produce_message_with_retry(domain_name, result)
@@ -158,7 +217,27 @@ class DomainARecordTestingService < ApplicationService
   end
 
   def service_active?
-    ServiceConfiguration.active?(service_name)
+    config = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless config
+    config.active?
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 
   def needs_www_testing?(domain)

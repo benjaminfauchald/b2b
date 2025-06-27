@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Company < ApplicationRecord
+  include ServiceAuditable
+
   # Associations
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
 
@@ -11,10 +13,11 @@ class Company < ApplicationRecord
   scope :with_financial_data, -> { where.not(ordinary_result: nil, annual_result: nil) }
   scope :without_financial_data, -> { where(ordinary_result: nil, annual_result: nil) }
   scope :needs_financial_update, -> {
-    twelve_months_ago = 12.months.ago
+    service_config = ServiceConfiguration.find_by(service_name: "company_financial_data")
+    refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
     subquery = ServiceAuditLog
-      .where(service_name: "company_financials", status: ServiceAuditLog.statuses[:success])
-      .where("completed_at > ?", twelve_months_ago)
+      .where(service_name: "company_financial_data", status: ServiceAuditLog.statuses[:success])
+      .where("completed_at > ?", refresh_threshold)
       .select(:auditable_id)
       .distinct
 
@@ -27,6 +30,95 @@ class Company < ApplicationRecord
       "companies.id NOT IN (?)",
       subquery
     )
+  }
+
+  # Scopes for web discovery
+  # Companies with revenue > 10M NOK and no website that need web discovery
+  scope :web_discovery_candidates, -> {
+    where("operating_revenue > ?", 10_000_000)
+    .where("website IS NULL OR website = ''")
+  }
+
+  # Companies that are web discovery candidates AND haven't been processed yet
+  scope :needing_web_discovery, -> {
+    web_discovery_candidates
+    .where("web_pages IS NULL OR web_pages = '{}' OR jsonb_array_length(web_pages) = 0")
+  }
+
+  # Companies that are web discovery candidates regardless of processing status
+  # Used for showing total potential in UI
+  scope :web_discovery_potential, -> {
+    web_discovery_candidates
+  }
+
+  # Companies that have successfully completed web discovery
+  scope :with_web_discovery, -> {
+    where.not(web_pages: nil)
+    .where("web_pages != '{}' AND jsonb_array_length(web_pages) > 0")
+  }
+
+  # Companies that have attempted web discovery but got no results
+  scope :without_web_discovery, -> {
+    where("web_pages IS NULL OR web_pages = '{}' OR jsonb_array_length(web_pages) = 0")
+  }
+
+  # Update web discovery scopes to order by revenue (highest first)
+  scope :web_discovery_candidates_ordered, -> {
+    web_discovery_candidates.order(operating_revenue: :desc)
+  }
+
+  scope :needing_web_discovery_ordered, -> {
+    needing_web_discovery.order(operating_revenue: :desc)
+  }
+
+  # Scopes for LinkedIn discovery
+  # Companies with revenue > 10M NOK that need LinkedIn discovery
+  scope :linkedin_discovery_candidates, -> {
+    where("operating_revenue > ?", 10_000_000)
+    .order(operating_revenue: :desc)
+  }
+
+  # Companies that are LinkedIn discovery candidates AND have no LinkedIn data yet
+  scope :needing_linkedin_discovery, -> {
+    linkedin_discovery_candidates
+    .where("(linkedin_url IS NULL OR linkedin_url = '') AND (linkedin_ai_url IS NULL OR linkedin_ai_url = '')")
+  }
+
+  # Companies that are LinkedIn discovery candidates regardless of processing status
+  scope :linkedin_discovery_potential, -> {
+    linkedin_discovery_candidates
+  }
+
+  # Scopes for Profile Extraction
+  # Companies that are ready for LinkedIn profile extraction
+  # Includes companies with either linkedin_url OR linkedin_ai_url with high confidence (>= 80%)
+  scope :profile_extraction_candidates, -> {
+    where(
+      "(linkedin_url IS NOT NULL AND linkedin_url != '') OR " \
+      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 80)"
+    ).order(operating_revenue: :desc)
+  }
+
+  # Companies that need profile extraction (candidates that haven't been processed successfully recently)
+  scope :needing_profile_extraction, -> {
+    service_config = ServiceConfiguration.find_by(service_name: "person_profile_extraction")
+    refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
+    
+    subquery = ServiceAuditLog
+      .where(service_name: "person_profile_extraction", status: ServiceAuditLog.statuses[:success])
+      .where("completed_at > ?", refresh_threshold)
+      .select(:auditable_id)
+      .distinct
+
+    profile_extraction_candidates.where(
+      "companies.id NOT IN (?)",
+      subquery
+    )
+  }
+
+  # Total potential companies for profile extraction (for progress tracking)
+  scope :profile_extraction_potential, -> {
+    profile_extraction_candidates
   }
 
   # Instance Methods
@@ -74,6 +166,23 @@ class Company < ApplicationRecord
       last_updated: last_financial_audit&.completed_at || updated_at,
       status: financial_data_status
     }
+  end
+
+  # Get the best LinkedIn URL for profile extraction
+  # Prefers manual linkedin_url over AI-discovered linkedin_ai_url
+  def best_linkedin_url
+    if linkedin_url.present?
+      linkedin_url
+    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 80
+      linkedin_ai_url
+    else
+      nil
+    end
+  end
+
+  # Check if company is ready for profile extraction
+  def ready_for_profile_extraction?
+    best_linkedin_url.present?
   end
 
   # Returns the status of the most recent financial data update via SCT

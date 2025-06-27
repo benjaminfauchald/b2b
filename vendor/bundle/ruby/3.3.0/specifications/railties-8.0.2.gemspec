@@ -19,10 +19,10 @@ Gem::Specification.new do |s|
   s.licenses = ["MIT".freeze]
   s.rdoc_options = ["--exclude".freeze, ".".freeze]
   s.required_ruby_version = Gem::Requirement.new(">= 3.2.0".freeze)
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.6.2".freeze
   s.summary = "Tools for creating, working with, and running Rails applications.".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

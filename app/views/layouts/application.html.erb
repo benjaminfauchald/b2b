@@ -25,14 +25,78 @@
     
     <%= javascript_importmap_tags %>
     
+    <%# Apply dark mode immediately to prevent flash %>
+    <script>
+      // This runs before page load to prevent flash
+      const theme = localStorage.getItem('theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+    
     <%# Flowbite JS %>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
   </head>
 
-  <body class="bg-gray-50 dark:bg-gray-900">
+  <body class="bg-gray-50 dark:bg-gray-900" data-controller="theme">
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex">
+            <!-- Logo -->
+            <div class="flex-shrink-0 flex items-center">
+              <!-- Logo removed as requested -->
+            </div>
+            <!-- Navigation Links -->
+            <div class="hidden sm:ml-8 sm:flex sm:space-x-6">
+              <%= link_to "Home", root_path, 
+                  class: "#{request.path == root_path ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <%= link_to "Domains", domains_path, 
+                  class: "#{request.path.start_with?('/domains') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <%= link_to "Companies", companies_path, 
+                  class: "#{request.path.start_with?('/companies') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <%= link_to "People", people_path, 
+                  class: "#{request.path.start_with?('/people') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <% if user_signed_in? && current_user.admin? %>
+                <%= link_to "Quality", quality_dashboard_index_path, 
+                    class: "#{request.path.start_with?('/quality') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+                <%= link_to "Sidekiq", sidekiq_web_path, 
+                    class: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+              <% end %>
+            </div>
+          </div>
+          <div class="flex items-center space-x-6">
+            <% if user_signed_in? %>
+              <span class="text-sm text-gray-700 dark:text-gray-300"><%= current_user.email %></span>
+              <%= link_to "Sign out", destroy_user_session_path, data: { turbo_method: :delete }, 
+                  class: "text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors duration-200" %>
+            <% else %>
+              <%= link_to "Sign in", new_user_session_path, 
+                  class: "text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors duration-200" %>
+            <% end %>
+            <!-- Theme Toggle Button -->
+            <button data-action="click->theme#toggle" 
+                    class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                    aria-label="Toggle theme">
+              <!-- Sun icon (shown in dark mode to indicate switching to light) -->
+              <svg class="w-5 h-5 text-yellow-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+              <!-- Moon icon (shown in light mode to indicate switching to dark) -->
+              <svg class="w-5 h-5 text-gray-700 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+    
     <!-- Toast notifications -->
     <% if notice %>
-      <div id="toast-success" class="fixed top-5 right-5 z-50 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+      <div id="toast-success" class="fixed top-20 right-5 z-40 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
         <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg dark:bg-green-800 dark:text-green-200">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -47,7 +111,7 @@
       </div>
     <% end %>
     <% if alert %>
-      <div id="toast-error" class="fixed top-5 right-5 z-50 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+      <div id="toast-error" class="fixed top-20 right-5 z-40 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
         <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg dark:bg-red-800 dark:text-red-200">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
@@ -62,7 +126,7 @@
       </div>
     <% end %>
     
-    <main class="container mx-auto px-4 py-8 min-h-screen">
+    <main class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <%= yield %>
     </main>
   </body>

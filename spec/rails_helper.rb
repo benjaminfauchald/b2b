@@ -16,7 +16,11 @@ require 'rspec/rails'
 require 'shoulda/matchers'
 require 'view_component/test_helpers'
 require 'capybara/rspec'
+require 'webmock/rspec'
 require_relative 'support/latest_service_run_stub'
+
+# Configure WebMock
+WebMock.disable_net_connect!(allow_localhost: true)
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
@@ -32,7 +36,7 @@ require_relative 'support/latest_service_run_stub'
 # directory. Alternatively, in the individual `*_spec.rb` files, manually
 # require only the support files necessary.
 #
-# Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }
+Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }
 
 # Checks for pending migrations and applies them before tests are run.
 # If you are not using ActiveRecord, you can remove these lines.

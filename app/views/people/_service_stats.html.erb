@@ -1,0 +1,47 @@
+<turbo-frame id="<%= service_name %>_stats">
+  <% if service_name == "person_profile_extraction" && defined?(companies_potential) %>
+    <!-- Profile Extraction Completion percentage display -->
+    <div class="mb-3">
+      <%
+        # Calculate companies that have actually been successfully processed by profile extraction service
+        companies_completed = ServiceAuditLog
+          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.auditable_id AS INTEGER)")
+          .where(service_name: "person_profile_extraction", status: "success")
+          .where(auditable_type: "Company")
+          .where(
+            "(companies.linkedin_url IS NOT NULL AND companies.linkedin_url != '') OR " \
+            "(companies.linkedin_ai_url IS NOT NULL AND companies.linkedin_ai_url != '' AND companies.linkedin_ai_confidence >= 80)"
+          )
+          .count
+        
+        completion_percentage = companies_potential > 0 ? (companies_completed.to_f / companies_potential.to_f) * 100 : 0
+        completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
+      %>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-medium text-blue-700 dark:text-white"><%= service_title %> Completion</span>
+        <span class="text-sm font-medium text-blue-700 dark:text-white"><%= completion_percentage %>%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+        <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
+      </div>
+      <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(companies_potential) %> companies processed
+      </p>
+    </div>
+  <% else %>
+    <div class="text-sm text-gray-600 dark:text-gray-400">
+      <% 
+        # Use appropriate variable and text based on service type
+        if service_name == "person_profile_extraction"
+          needing_count = companies_needing
+          item_type = "companies"
+        else
+          needing_count = persons_needing
+          item_type = "persons"
+        end
+      %>
+      <p data-available-count="<%= service_name %>" data-raw-count="<%= needing_count %>"><%= number_with_delimiter(needing_count) %> <%= item_type %> need processing</p>
+      <p data-queue-stat="<%= service_name %>" data-raw-queue="<%= queue_depth %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
+    </div>
+  <% end %>
+</turbo-frame>

@@ -1,0 +1,30 @@
+# SCT Pattern Compliance Configuration for RuboCop
+# Include this in your main .rubocop.yml file with: inherit_from: .rubocop_sct.yml
+
+require:
+  - ./lib/rubocop/cop/sct/service_compliance.rb
+
+SCT/ServiceCompliance:
+  Description: 'Enforces SCT pattern compliance in ApplicationService subclasses'
+  Enabled: true
+  VersionAdded: '1.0'
+  Include:
+    - 'app/services/**/*.rb'
+  Exclude:
+    - 'app/services/application_service.rb'
+    - 'spec/**/*'
+    - 'test/**/*'
+
+# Additional style rules for services
+Style/Documentation:
+  Exclude:
+    - 'app/services/**/*.rb'  # Allow services without class documentation for now
+
+Metrics/ClassLength:
+  Exclude:
+    - 'app/services/**/*.rb'  # Services can be longer due to audit logging and error handling
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - 'app/services/**/*.rb'  # Service methods can be longer due to SCT patterns

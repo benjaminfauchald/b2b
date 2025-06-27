@@ -15,10 +15,10 @@ Gem::Specification.new do |s|
   s.email = ["matz@ruby-lang.org".freeze]
   s.homepage = "https://github.com/ruby/net-pop".freeze
   s.licenses = ["Ruby".freeze, "BSD-2-Clause".freeze]
-  s.rubygems_version = "3.5.3".freeze
+  s.rubygems_version = "3.4.0.dev".freeze
   s.summary = "Ruby client library for POP3.".freeze
 
-  s.installed_by_version = "3.5.3".freeze if s.respond_to? :installed_by_version
+  s.installed_by_version = "3.5.22".freeze
 
   s.specification_version = 4
 

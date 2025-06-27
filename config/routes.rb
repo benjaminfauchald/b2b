@@ -8,12 +8,61 @@ Rails.application.routes.draw do
   resources :domains do
     collection do
       post :queue_testing
+      post :queue_dns_testing
+      post :queue_mx_testing
+      post :queue_a_record_testing
+      post :queue_web_content_extraction
       get :queue_status
       get :import, to: "domains#import_csv"
       post :import, to: "domains#process_import"
       get :import_results, to: "domains#import_results"
       get :template, to: "domains#download_template"
       get :export_errors, to: "domains#export_errors"
+    end
+
+    member do
+      post :queue_single_dns
+      post :queue_single_mx
+      post :queue_single_www
+      post :queue_single_web_content
+    end
+  end
+
+  resources :companies do
+    collection do
+      # Enhancement service queue actions
+      post :queue_financial_data
+      post :queue_web_discovery
+      post :queue_linkedin_discovery
+      post :queue_employee_discovery
+      get :enhancement_queue_status
+      get :service_stats
+    end
+
+    member do
+      # Individual company service triggers
+      post :queue_single_financial_data
+      post :queue_single_web_discovery
+      post :queue_single_linkedin_discovery
+      post :queue_single_employee_discovery
+      get :financial_data
+    end
+  end
+
+  resources :people do
+    collection do
+      # Person enhancement service queue actions
+      post :queue_profile_extraction
+      post :queue_email_extraction
+      post :queue_social_media_extraction
+      get :service_stats
+    end
+
+    member do
+      # Individual person service triggers
+      post :queue_single_profile_extraction
+      post :queue_single_email_extraction
+      post :queue_single_social_media_extraction
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
@@ -29,8 +78,19 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # Welcome page
+  get "welcome", to: "welcome#index"
+
+  # Test routes (development only)
+  if Rails.env.development?
+    get "test/web_discovery", to: "test#web_discovery_test"
+    post "test/run_web_discovery", to: "test#run_web_discovery"
+    get "test/linkedin_discovery", to: "test#linkedin_discovery_test"
+    post "test/run_linkedin_discovery", to: "test#run_linkedin_discovery"
+  end
+
   # Defines the root path route ("/")
-  root "domains#index"
+  root "welcome#index"
 
   namespace :webhooks do
     post "/instantly", to: "instantly_webhook#create"

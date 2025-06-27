@@ -18,6 +18,9 @@ class ApplicationService
   validates :service_name, presence: true, format: { with: /\A[a-z0-9_]+\z/, message: "can only contain lowercase letters, numbers, and underscores" }
 
   def initialize(service_name:, action: "process", batch_size: 1000, **attributes)
+    # Initialize ActiveModel::Attributes
+    @attributes = {}
+
     @service_name = service_name
     @action = action
     @batch_size = batch_size
@@ -27,6 +30,7 @@ class ApplicationService
   # Main entry point
   def call
     validate!
+    validate_sct_compliance!
     log_service_start
 
     begin
@@ -42,6 +46,36 @@ class ApplicationService
   # Validation helper
   def validate!
     raise ActiveModel::ValidationError, self unless valid?
+  end
+
+  # SCT Pattern compliance validation
+  def validate_sct_compliance!
+    errors = []
+    
+    # Check required methods exist
+    errors << "Service must implement #perform method" unless respond_to?(:perform, true)
+    errors << "Service must implement #service_active? method" unless respond_to?(:service_active?, true)
+    errors << "Service must implement #success_result method" unless respond_to?(:success_result, true)
+    errors << "Service must implement #error_result method" unless respond_to?(:error_result, true)
+    
+    # Check service configuration exists
+    if service_name.present?
+      config = ServiceConfiguration.find_by(service_name: service_name)
+      unless config
+        Rails.logger.warn "SCT Warning: Service '#{service_name}' has no ServiceConfiguration record"
+      end
+    end
+    
+    # Check for audit_service_operation usage (this is a warning, not an error)
+    if respond_to?(:audit_service_operation, true)
+      Rails.logger.debug "SCT: Service '#{service_name}' implements audit_service_operation ✓"
+    else
+      Rails.logger.warn "SCT Warning: Service '#{service_name}' should implement audit_service_operation for proper audit tracking"
+    end
+    
+    if errors.any?
+      raise StandardError, "SCT Compliance Errors: #{errors.join(', ')}"
+    end
   end
 
   # Configuration access
@@ -107,21 +141,46 @@ class ApplicationService
 
   # Audit logging for service operations
   def audit_service_operation(auditable = nil)
+    # Services don't have saved_changes - that's an ActiveRecord feature
+    columns = [ "none" ]
+
+    metadata_value = { error: "no metadata" }
+    if defined?(context) && context.present?
+      metadata_value = context
+    end
+
     audit_log = ServiceAuditLog.create!(
       auditable: auditable,
       service_name: service_name,
       operation_type: action,
       status: :pending,
-      columns_affected: (respond_to?(:saved_changes) && saved_changes.keys.present? ? saved_changes.keys : [ "none" ]),
-      metadata: (defined?(context) && context.present? ? context : { error: "no metadata" })
+      columns_affected: columns,
+      metadata: metadata_value,
+      table_name: auditable ? auditable.class.table_name : "unknown",
+      record_id: auditable ? auditable.id.to_s : "unknown",
+      started_at: Time.current
     )
 
     begin
       result = yield(audit_log)
-      audit_log.mark_success!(result: result, context: result.respond_to?(:saved_changes) ? result.saved_changes.keys : [], columns_affected: (respond_to?(:saved_changes) ? saved_changes.keys : []))
+
+      # Don't overwrite metadata, just mark as success and calculate execution time
+      audit_log.update!(
+        status: :success,
+        completed_at: Time.current,
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
+      )
+
       result
     rescue StandardError => e
-      audit_log.mark_failed!(e, { "error" => e.message }, [])
+      # Check if this is a rate limit error with retry_after
+      metadata = { "error" => e.message }
+      if e.message.include?("rate limit") && e.respond_to?(:retry_after)
+        metadata["rate_limited"] = true
+        metadata["retry_after"] = e.retry_after
+      end
+
+      audit_log.mark_failed!(e.message, metadata, [])
       raise e
     end
   end

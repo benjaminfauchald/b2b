@@ -16,7 +16,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "#{base_classes} bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700"
     when :partial
-      "#{base_classes} bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700"
+      "#{base_classes} bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700"
     else
       "#{base_classes} bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700"
     end
@@ -27,11 +27,11 @@ class ImportResultsComponent < ViewComponent::Base
 
     case result_type
     when :success
-      "#{base_classes} text-green-400 dark:text-green-300"
+      "#{base_classes} text-green-500 dark:text-green-400"
     when :partial
-      "#{base_classes} text-yellow-400 dark:text-yellow-300"
+      "#{base_classes} text-blue-500 dark:text-blue-400"
     else
-      "#{base_classes} text-red-400 dark:text-red-300"
+      "#{base_classes} text-red-500 dark:text-red-400"
     end
   end
 
@@ -40,7 +40,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "text-green-700 dark:text-green-200"
     when :partial
-      "text-yellow-700 dark:text-yellow-200"
+      "text-blue-700 dark:text-blue-200"
     else
       "text-red-700 dark:text-red-200"
     end
@@ -55,19 +55,21 @@ class ImportResultsComponent < ViewComponent::Base
   end
 
   def metrics_classes
-    "mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4"
+    has_duplicates = result.respond_to?(:duplicate_count) && result.duplicate_count > 0
+    grid_cols = has_duplicates ? "sm:grid-cols-4" : "sm:grid-cols-3"
+    "mt-4 grid grid-cols-1 #{grid_cols} gap-4"
   end
 
   def metric_card_classes
-    "p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+    "p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
   end
 
   def metric_label_classes
-    "text-sm font-medium text-gray-600 dark:text-gray-400"
+    "text-sm font-medium text-gray-500 dark:text-gray-400"
   end
 
   def metric_value_classes
-    "text-lg font-bold text-gray-900 dark:text-white"
+    "text-2xl font-bold text-gray-900 dark:text-white"
   end
 
   def section_heading_classes
@@ -150,15 +152,32 @@ class ImportResultsComponent < ViewComponent::Base
   end
 
   def has_imported_domains?
-    result.imported_domains.any?
+    return false unless result.respond_to?(:imported_domains)
+    result.imported_domains&.any? || false
   end
 
   def has_failed_domains?
-    result.failed_domains.any?
+    return result.failed_domains&.any? || false if result.respond_to?(:failed_domains)
+    return result[:failed_domains]&.any? || false if result.is_a?(Hash)
+    false
+  end
+
+  def has_errors_to_export?
+    has_failed = has_failed_domains?
+    has_duplicates = false
+
+    if result.respond_to?(:duplicate_domains)
+      has_duplicates = result.duplicate_domains&.any? || false
+    elsif result.is_a?(Hash)
+      has_duplicates = result[:duplicate_domains]&.any? || false
+    end
+
+    has_failed || has_duplicates
   end
 
   def mobile_friendly_errors
-    result.failed_domains.map do |failed_domain|
+    domains = result.respond_to?(:failed_domains) ? result.failed_domains : (result[:failed_domains] || [])
+    domains.map do |failed_domain|
       {
         summary: "Row #{failed_domain[:row]}: #{failed_domain[:domain].presence || '(blank)'}",
         errors: failed_domain[:errors].join(", ")
