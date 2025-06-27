@@ -14,6 +14,10 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   attr_reader :service_name, :title, :icon, :action_path, :queue_name
 
   def domains_needing_service
+    helpers.number_with_delimiter(domains_needing_service_raw)
+  end
+  
+  def domains_needing_service_raw
     Domain.needing_service(service_name).count
   end
 
@@ -33,7 +37,7 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   end
 
   def domains_tested_successfully
-    case service_name
+    count = case service_name
     when "domain_testing"
       Domain.dns_active.count
     when "domain_mx_testing"
@@ -45,10 +49,11 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
+    helpers.number_with_delimiter(count)
   end
 
   def domains_tested_invalid
-    case service_name
+    count = case service_name
     when "domain_testing"
       Domain.dns_inactive.count
     when "domain_mx_testing"
@@ -61,9 +66,14 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
+    helpers.number_with_delimiter(count)
   end
 
   def total_domains_for_service
+    helpers.number_with_delimiter(total_domains_for_service_raw)
+  end
+  
+  def total_domains_for_service_raw
     case service_name
     when "domain_testing"
       Domain.count
@@ -79,23 +89,86 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   end
 
   def success_percentage
-    total = total_domains_for_service
+    total = total_domains_for_service_raw
     return 0 if total.zero?
     
-    successful = domains_tested_successfully
+    successful = domains_tested_successfully_raw
     ((successful.to_f / total) * 100).round(1)
+  end
+  
+  def domains_tested_successfully_raw
+    case service_name
+    when "domain_testing"
+      Domain.dns_active.count
+    when "domain_mx_testing"
+      Domain.with_mx.count
+    when "domain_a_record_testing"
+      Domain.www_active.count
+    when "domain_web_content_extraction"
+      Domain.with_web_content.count
+    else
+      0
+    end
   end
 
   def tested_domains_count
-    domains_tested_successfully + domains_tested_invalid
+    # Note: Need to extract numbers from formatted strings for calculation
+    successful = case service_name
+    when "domain_testing"
+      Domain.dns_active.count
+    when "domain_mx_testing"
+      Domain.with_mx.count
+    when "domain_a_record_testing"
+      Domain.www_active.count
+    when "domain_web_content_extraction"
+      Domain.with_web_content.count
+    else
+      0
+    end
+    
+    invalid = case service_name
+    when "domain_testing"
+      Domain.dns_inactive.count
+    when "domain_mx_testing"
+      Domain.dns_active.where(mx: false).count
+    when "domain_a_record_testing"
+      Domain.dns_active.www_inactive.count
+    when "domain_web_content_extraction"
+      Domain.with_a_record.where(web_content_data: nil).joins(:service_audit_logs)
+            .where(service_audit_logs: { service_name: "domain_web_content_extraction", status: "failed" }).distinct.count
+    else
+      0
+    end
+    
+    helpers.number_with_delimiter(successful + invalid)
   end
 
   def completion_percentage
-    total = total_domains_for_service
+    total = total_domains_for_service_raw
     return 0 if total.zero?
     
-    tested = tested_domains_count
+    tested = tested_domains_count_raw
     ((tested.to_f / total) * 100).round(1)
+  end
+  
+  def tested_domains_count_raw
+    domains_tested_successfully_raw + domains_tested_invalid_raw
+  end
+  
+  def domains_tested_invalid_raw
+    case service_name
+    when "domain_testing"
+      Domain.dns_inactive.count
+    when "domain_mx_testing"
+      Domain.dns_active.where(mx: false).count
+    when "domain_a_record_testing"
+      Domain.dns_active.www_inactive.count
+    when "domain_web_content_extraction"
+      Domain.with_a_record.where(web_content_data: nil).joins(:service_audit_logs)
+            .where(service_audit_logs: { service_name: "domain_web_content_extraction", status: "failed" }).distinct.count
+    else
+      0
+    end
   end
 
   def button_classes
@@ -131,13 +204,13 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   def needed_subtitle
     case service_name
     when "domain_testing"
-      "Pending"
+      "Not Tested"
     when "domain_mx_testing"
-      "Pending"
+      "No MX Record"
     when "domain_a_record_testing"
-      "Pending"
+      "No A Record"
     when "domain_web_content_extraction"
-      "Pending"
+      "No Content"
     else
       "Pending"
     end

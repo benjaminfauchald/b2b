@@ -16,24 +16,28 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   attr_reader :service_name, :title, :icon, :action_path, :queue_name
 
   def companies_needing_service
+    number_with_delimiter(companies_needing_service_raw)
+  end
+  
+  def companies_needing_service_raw
     Company.needing_service(service_name).count
   end
 
   # For web discovery, show total potential companies that could be processed
   def web_discovery_potential
     return 0 unless service_name == "company_web_discovery"
-    Company.web_discovery_potential.count
+    number_with_delimiter(Company.web_discovery_potential.count)
   end
 
   # For LinkedIn discovery, show total potential companies that could be processed
   def linkedin_discovery_potential
     return 0 unless service_name == "company_linkedin_discovery"
-    Company.linkedin_discovery_potential.count
+    number_with_delimiter(Company.linkedin_discovery_potential.count)
   end
 
   # Calculate companies that have been successfully processed for this service
   def companies_completed
-    case service_name
+    count = case service_name
     when "company_web_discovery"
       # Count companies that have actually been successfully processed by web discovery service
       ServiceAuditLog
@@ -62,6 +66,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
+    number_with_delimiter(count)
   end
 
   # Calculate completion percentage
@@ -111,7 +116,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   end
 
   def queue_depth
-    Sidekiq::Queue.new(queue_name).size
+    number_with_delimiter(Sidekiq::Queue.new(queue_name).size)
   end
 
   def button_classes

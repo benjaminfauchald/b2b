@@ -73,12 +73,12 @@
       <input type="number" 
              name="count" 
              id="<%= service_name %>_count"
-             value="<%= [companies_needing_service, 100].min %>" 
+             value="<%= [companies_needing_service_raw, 100].min %>" 
              min="1" 
-             max="<%= [companies_needing_service, 1000].min %>"
+             max="<%= [companies_needing_service_raw, 1000].min %>"
              class="<%= input_classes %>"
              data-service-queue-target="countInput"
-             data-max-available="<%= companies_needing_service %>" />
+             data-max-available="<%= companies_needing_service_raw %>" />
     </div>
     
     <button type="submit" 
