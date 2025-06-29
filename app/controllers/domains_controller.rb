@@ -486,9 +486,9 @@ class DomainsController < ApplicationController
 
     # Check if domain has prerequisites (A record)
     unless @domain.www && @domain.a_record_ip.present?
-      render json: { 
-        success: false, 
-        message: "Domain must have a valid A record before web content extraction" 
+      render json: {
+        success: false,
+        message: "Domain must have a valid A record before web content extraction"
       }
       return
     end
@@ -540,7 +540,7 @@ class DomainsController < ApplicationController
     Rails.logger.info "\n" + "="*60
     Rails.logger.info "🚀 CSV IMPORT REQUEST START: #{request_start_time}"
     Rails.logger.info "="*60
-    
+
     Rails.logger.info "📋 REQUEST DETAILS:"
     Rails.logger.info "  - User ID: #{current_user&.id}"
     Rails.logger.info "  - User email: #{current_user&.email}"
@@ -548,7 +548,7 @@ class DomainsController < ApplicationController
     Rails.logger.info "  - User agent: #{request.user_agent&.truncate(100)}"
     Rails.logger.info "  - Params present: #{params.keys}"
     Rails.logger.info "  - CSV file present: #{params[:csv_file].present?}"
-    
+
     if params[:csv_file]
       Rails.logger.info "📁 FILE DETAILS:"
       Rails.logger.info "  - File class: #{params[:csv_file].class}"
@@ -557,7 +557,7 @@ class DomainsController < ApplicationController
       Rails.logger.info "  - Content type: #{params[:csv_file].content_type}"
       Rails.logger.info "  - Temp file path: #{params[:csv_file].path}"
     end
-    
+
     unless params[:csv_file].present?
       redirect_to import_domains_path, alert: "Please select a CSV file to upload."
       return
@@ -573,7 +573,7 @@ class DomainsController < ApplicationController
       # Check file size and decide processing method
       file_size_mb = (params[:csv_file].size / 1024.0 / 1024.0).round(2)
       large_file_threshold = 5.0 # MB
-      
+
       Rails.logger.info "\n🔍 PROCESSING DECISION:"
       Rails.logger.info "  - File size: #{file_size_mb} MB"
       Rails.logger.info "  - Large file threshold: #{large_file_threshold} MB"
@@ -582,18 +582,18 @@ class DomainsController < ApplicationController
       if file_size_mb > large_file_threshold
         # Large file - use background job
         Rails.logger.info "\n🚀 QUEUEING BACKGROUND JOB:"
-        
+
         # Create unique import ID
         import_id = SecureRandom.uuid
         Rails.logger.info "  - Import ID: #{import_id}"
-        
+
         # Save file to temporary location
-        temp_file_path = Rails.root.join('tmp', "import_#{import_id}_#{params[:csv_file].original_filename}")
-        File.open(temp_file_path, 'wb') do |file|
+        temp_file_path = Rails.root.join("tmp", "import_#{import_id}_#{params[:csv_file].original_filename}")
+        File.open(temp_file_path, "wb") do |file|
           file.write(params[:csv_file].read)
         end
         Rails.logger.info "  - Temporary file saved: #{temp_file_path}"
-        
+
         # Queue the background job
         DomainImportJob.perform_later(
           temp_file_path.to_s,
@@ -601,50 +601,50 @@ class DomainsController < ApplicationController
           params[:csv_file].original_filename,
           import_id
         )
-        
+
         Rails.logger.info "  - Background job queued successfully"
-        
+
         # Store import ID in session for status checking
         session[:import_id] = import_id
-        session[:import_status] = 'queued'
+        session[:import_status] = "queued"
         session[:import_started_at] = Time.current
-        
+
         total_request_duration = Time.current - request_start_time
         Rails.logger.info "\n📈 BACKGROUND JOB REQUEST SUMMARY:"
         Rails.logger.info "  - Total request time: #{total_request_duration.round(4)} seconds"
         Rails.logger.info "  - Processing queued in background"
-        
+
         redirect_to import_status_domains_path
         return
       else
         # Small file - process synchronously
         Rails.logger.info "\n🔧 SYNCHRONOUS PROCESSING:"
-        
+
         # Service instantiation
         service_creation_start = Time.current
         Rails.logger.info "  - Creating service..."
-        
+
         import_service = DomainImportService.new(
           file: params[:csv_file],
           user: current_user
         )
-        
+
         service_creation_duration = Time.current - service_creation_start
         Rails.logger.info "  - Service created in #{service_creation_duration.round(6)} seconds"
-        
+
         # Service execution
         service_execution_start = Time.current
         Rails.logger.info "  - Starting import execution..."
-        
+
         result = import_service.perform
       end
-      
+
       service_execution_duration = Time.current - service_execution_start
       Rails.logger.info "\n✅ SERVICE EXECUTION COMPLETE:"
       Rails.logger.info "  - Execution duration: #{service_execution_duration.round(4)} seconds"
       Rails.logger.info "  - Result class: #{result.class}"
       Rails.logger.info "  - Result success?: #{result.success?}"
-      
+
       if result.respond_to?(:data) && result.data.is_a?(Hash)
         Rails.logger.info "  - Result data keys: #{result.data.keys}"
       end
@@ -652,19 +652,19 @@ class DomainsController < ApplicationController
       # Result processing
       result_processing_start = Time.current
       Rails.logger.info "\n📊 RESULT PROCESSING START:"
-      
+
       # Handle both DomainImportResult and OpenStruct (error) results
       if result.success?
         Rails.logger.info "  - Processing successful result"
         import_data = result.data[:result] || result
-        
+
         Rails.logger.info "  - Import data class: #{import_data.class}"
         Rails.logger.info "  - Imported count: #{import_data.imported_count || 0}"
         Rails.logger.info "  - Failed count: #{import_data.failed_count || 0}"
         Rails.logger.info "  - Duplicate count: #{import_data.duplicate_count || 0}"
         Rails.logger.info "  - Total count: #{import_data.total_count || 0}"
         Rails.logger.info "  - Processing time: #{import_data.processing_time}"
-        
+
         session_data = {
           success: true,
           imported_count: import_data.imported_count || 0,
@@ -677,15 +677,15 @@ class DomainsController < ApplicationController
           failed_domains: (import_data.failed_domains || []).first(10),
           duplicate_domains: (import_data.duplicate_domains || []).first(10)
         }
-        
+
         session[:import_results] = session_data.to_json
         Rails.logger.info "  - Session data size: #{session[:import_results].length} characters"
-        
+
       else
         Rails.logger.info "  - Processing failed result"
         error_message = result.error || "Import failed"
         Rails.logger.info "  - Error message: #{error_message}"
-        
+
         session_data = {
           success: false,
           imported_count: 0,
@@ -694,17 +694,17 @@ class DomainsController < ApplicationController
           total_count: 0,
           processing_time: nil,
           summary_message: error_message,
-          csv_errors: [error_message],
+          csv_errors: [ error_message ],
           failed_domains: [],
           duplicate_domains: []
         }
-        
+
         session[:import_results] = session_data.to_json
       end
-      
+
       session[:last_import_at] = Time.current
       result_processing_duration = Time.current - result_processing_start
-      
+
       total_request_duration = Time.current - request_start_time
       Rails.logger.info "\n📈 FINAL REQUEST SUMMARY:"
       Rails.logger.info "  - Result processing: #{result_processing_duration.round(4)} seconds"
@@ -716,7 +716,7 @@ class DomainsController < ApplicationController
     rescue StandardError => e
       error_time = Time.current
       error_duration = error_time - request_start_time
-      
+
       Rails.logger.error "\n" + "🚨" * 20
       Rails.logger.error "❌ IMPORT FAILED AFTER #{error_duration.round(4)} SECONDS"
       Rails.logger.error "🚨" * 20
@@ -732,7 +732,7 @@ class DomainsController < ApplicationController
       Rails.logger.error "  - File name: #{params[:csv_file]&.original_filename}"
       Rails.logger.error "  - Request duration: #{error_duration.round(4)} seconds"
       Rails.logger.error "🚨" * 20
-      
+
       redirect_to import_domains_path, alert: "Import failed: #{e.message}"
     end
   end
@@ -766,9 +766,9 @@ class DomainsController < ApplicationController
   # GET /domains/check_import_status (AJAX)
   def check_import_status
     import_id = session[:import_id]
-    
+
     unless import_id
-      render json: { status: 'no_import', message: 'No import in progress' }
+      render json: { status: "no_import", message: "No import in progress" }
       return
     end
 
@@ -789,14 +789,14 @@ class DomainsController < ApplicationController
           processing_time: (result_data[:completed_at] - Time.parse(session[:import_started_at].to_s)).round(2),
           summary_message: "Background import completed successfully"
         }.to_json
-        
+
         # Clean up session
         session.delete(:import_id)
         session.delete(:import_status)
         session.delete(:import_started_at)
-        
-        render json: { 
-          status: 'completed', 
+
+        render json: {
+          status: "completed",
           success: true,
           redirect_url: import_results_domains_path
         }
@@ -810,16 +810,16 @@ class DomainsController < ApplicationController
           total_count: 0,
           processing_time: nil,
           summary_message: result_data[:error] || "Import failed",
-          csv_errors: [result_data[:error] || "Import failed"]
+          csv_errors: [ result_data[:error] || "Import failed" ]
         }.to_json
-        
+
         # Clean up session
         session.delete(:import_id)
         session.delete(:import_status)
         session.delete(:import_started_at)
-        
-        render json: { 
-          status: 'failed', 
+
+        render json: {
+          status: "failed",
           success: false,
           error: result_data[:error],
           redirect_url: import_results_domains_path
@@ -828,22 +828,22 @@ class DomainsController < ApplicationController
     elsif status_data
       # Import in progress - return progress data
       response_data = {
-        status: 'processing',
-        message: status_data[:message] || 'Import in progress...',
+        status: "processing",
+        message: status_data[:message] || "Import in progress...",
         started_at: status_data[:started_at]
       }
-      
+
       # Add progress information if available
       if status_data[:progress]
         response_data[:progress] = status_data[:progress]
       end
-      
+
       render json: response_data
     else
       # Status not found - might be queued
       render json: {
-        status: 'queued',
-        message: 'Import queued for processing...'
+        status: "queued",
+        message: "Import queued for processing..."
       }
     end
   end
@@ -940,12 +940,12 @@ class DomainsController < ApplicationController
       # Get worker-specific counts from the default queue
       begin
         default_queue = Sidekiq::Queue.new("default")
-        
+
         # Count A Record Testing workers
         a_record_count = default_queue.count { |job| job.klass == "DomainARecordTestingWorker" }
         stats["DomainARecordTestingService"] = a_record_count
-        
-        # Count Web Content Extraction workers  
+
+        # Count Web Content Extraction workers
         web_content_count = default_queue.count { |job| job.klass == "DomainWebContentExtractionWorker" }
         stats["DomainWebContentExtractionWorker"] = web_content_count
       rescue => e
@@ -991,17 +991,17 @@ class DomainsController < ApplicationController
 
     def apply_successful_services_filter(domains)
       return domains unless params[:successful_services].present?
-      
+
       case params[:successful_services]
-      when 'with_dns'
+      when "with_dns"
         domains.dns_active
-      when 'with_mx'
+      when "with_mx"
         domains.mx_active
-      when 'with_www'
+      when "with_www"
         domains.www_active
-      when 'with_web_content'
+      when "with_web_content"
         domains.web_content_extracted
-      when 'fully_tested'
+      when "fully_tested"
         domains.dns_active.mx_tested.www_tested.where.not(web_content_data: nil)
       else
         domains

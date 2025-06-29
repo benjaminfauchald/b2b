@@ -16,7 +16,7 @@ class HomepageFeaturesGridComponent < ViewComponent::Base
         icon: "text-white"
       },
       {
-        background: "bg-gradient-to-br from-green-500 to-green-600", 
+        background: "bg-gradient-to-br from-green-500 to-green-600",
         icon: "text-white"
       },
       {

@@ -29,7 +29,7 @@ domain.service_audit_logs
 puts "\nChecking background jobs..."
 begin
   require 'sidekiq/api'
-  
+
   # Check queues
   Sidekiq::Queue.all.each do |queue|
     puts "Queue '#{queue.name}': #{queue.size} jobs"
@@ -39,11 +39,11 @@ begin
       end
     end
   end
-  
+
   # Check retry set
   retry_set = Sidekiq::RetrySet.new
   puts "Retry set: #{retry_set.size} jobs"
-  
+
 rescue => e
   puts "Could not check Sidekiq: #{e.message}"
 end

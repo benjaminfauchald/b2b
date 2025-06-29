@@ -4,14 +4,14 @@ require 'sidekiq/testing'
 RSpec.describe "Profile Extraction Integration", type: :request do
   include Warden::Test::Helpers
   let!(:service_config) do
-    create(:service_configuration, 
-      service_name: "person_profile_extraction", 
+    create(:service_configuration,
+      service_name: "person_profile_extraction",
       active: true
     )
   end
 
   let!(:company_with_manual_linkedin) do
-    create(:company, 
+    create(:company,
       company_name: "Manual LinkedIn Company",
       linkedin_url: "https://linkedin.com/company/manual-test",
       linkedin_ai_url: nil,
@@ -21,7 +21,7 @@ RSpec.describe "Profile Extraction Integration", type: :request do
 
   let!(:company_with_ai_linkedin) do
     create(:company,
-      company_name: "AI LinkedIn Company", 
+      company_name: "AI LinkedIn Company",
       linkedin_url: nil,
       linkedin_ai_url: "https://linkedin.com/company/ai-test",
       linkedin_ai_confidence: 90
@@ -40,15 +40,15 @@ RSpec.describe "Profile Extraction Integration", type: :request do
   before do
     # Create a test user
     @user = create(:user)
-    
+
     # Setup Sidekiq fake mode
     Sidekiq::Testing.fake!
     Sidekiq::Worker.clear_all
-    
+
     # Login the user with Warden
     login_as(@user, scope: :user)
   end
-  
+
   after do
     Sidekiq::Testing.fake!
     Warden.test_reset!
@@ -57,7 +57,7 @@ RSpec.describe "Profile Extraction Integration", type: :request do
   describe "GET /people" do
     it "displays the People index with profile extraction service" do
       get people_path
-      
+
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Profile Extraction")
       expect(response.body).to include("Queue Processing")
@@ -65,7 +65,7 @@ RSpec.describe "Profile Extraction Integration", type: :request do
 
     it "shows correct company count for profile extraction" do
       get people_path
-      
+
       # The component shows completion percentage instead of "companies need processing"
       # when it's profile extraction service. Look for the completion display.
       expect(response.body).to include("Profile Extraction Completion")
@@ -83,10 +83,10 @@ RSpec.describe "Profile Extraction Integration", type: :request do
 
     it "queues companies for profile extraction" do
       expect {
-        post queue_profile_extraction_people_path, 
+        post queue_profile_extraction_people_path,
              params: { count: 2 },
              headers: { 'Accept' => 'application/json' }
-      }.to change { 
+      }.to change {
         # Check for queued workers instead of audit logs
         PersonProfileExtractionWorker.jobs.size
       }.by(2)
@@ -104,7 +104,7 @@ RSpec.describe "Profile Extraction Integration", type: :request do
         queued_companies << company_id
       end
 
-      post queue_profile_extraction_people_path, 
+      post queue_profile_extraction_people_path,
            params: { count: 2 },
            headers: { 'Accept' => 'application/json' }
 
@@ -116,8 +116,8 @@ RSpec.describe "Profile Extraction Integration", type: :request do
     it "excludes companies with low confidence AI URLs" do
       # Mock the worker to track queued jobs
       allow(PersonProfileExtractionWorker).to receive(:perform_async).and_return(true)
-      
-      post queue_profile_extraction_people_path, 
+
+      post queue_profile_extraction_people_path,
            params: { count: 10 }, # Request more than available
            headers: { 'Accept' => 'application/json' }
 
@@ -130,7 +130,7 @@ RSpec.describe "Profile Extraction Integration", type: :request do
   describe "Company scopes" do
     it "correctly identifies companies ready for profile extraction" do
       candidates = Company.profile_extraction_candidates
-      
+
       expect(candidates).to include(company_with_manual_linkedin)
       expect(candidates).to include(company_with_ai_linkedin)
       expect(candidates).not_to include(company_with_low_confidence)
@@ -155,11 +155,11 @@ RSpec.describe "Profile Extraction Integration", type: :request do
         completed_at: 30.minutes.ago,
         table_name: "companies",
         record_id: company_with_manual_linkedin.id.to_s,
-        columns_affected: ["profile_data"],
+        columns_affected: [ "profile_data" ],
         metadata: { "success" => true }
       )
 
-      get service_stats_people_path, 
+      get service_stats_people_path,
           headers: { 'Accept' => 'text/vnd.turbo-stream.html' }
 
       expect(response).to have_http_status(:success)

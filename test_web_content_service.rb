@@ -18,13 +18,13 @@ begin
   puts "\nRunning DomainWebContentExtractionService..."
   service = DomainWebContentExtractionService.new(domain: domain)
   result = service.perform
-  
+
   puts "Service result:"
   puts "  Success: #{result.success?}"
   puts "  Message: #{result.message}" if result.respond_to?(:message)
   puts "  Error: #{result.error}" if result.respond_to?(:error)
   puts "  Data keys: #{result.data.keys}" if result.respond_to?(:data) && result.data.respond_to?(:keys)
-  
+
 rescue => e
   puts "Service failed with exception: #{e.message}"
   puts "Backtrace: #{e.backtrace.first(3).join("\n")}"

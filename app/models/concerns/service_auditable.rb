@@ -41,15 +41,15 @@ module ServiceAuditable
   def needs_service?(service_name)
     service_configuration = ServiceConfiguration.find_by(service_name: service_name)
     return false unless service_configuration&.active?
-    
+
     # For Company financial data, check business logic criteria first
     if self.class == Company && service_name == "company_financial_data"
       # Only process companies that match the business criteria
-      return false unless source_registry == "brreg" && 
-                         ordinary_result.nil? && 
-                         ["AS", "ASA", "DA", "ANS"].include?(organization_form_code)
+      return false unless source_registry == "brreg" &&
+                         ordinary_result.nil? &&
+                         [ "AS", "ASA", "DA", "ANS" ].include?(organization_form_code)
     end
-    
+
     last_run = last_service_run(service_name)
     return true unless last_run
     refresh_threshold = service_configuration.refresh_interval_hours.hours.ago
@@ -169,7 +169,7 @@ module ServiceAuditable
 
       # Use a simpler subquery approach that mirrors the instance method logic
       refresh_threshold = service_config.refresh_interval_hours.hours.ago
-      
+
       # Find records that either have no successful audit logs OR their most recent successful log is stale
       records_with_recent_success = ServiceAuditLog
         .where(auditable_type: name)

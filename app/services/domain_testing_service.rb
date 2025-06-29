@@ -16,7 +16,7 @@ class DomainTestingService < ApplicationService
 
   def perform
     return error_result("Service is disabled") unless service_active?
-    
+
     if domain
       test_single_domain
     else
@@ -148,19 +148,19 @@ class DomainTestingService < ApplicationService
 
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
-    
+
     domains.find_each(batch_size: batch_size) do |domain|
       begin
         audit_service_operation(domain) do |audit_log|
           result = perform_dns_test_for_domain(domain)
           update_domain_status(domain, result)
-          
+
           audit_log.add_metadata(
             domain_name: domain.domain,
             dns_status: domain.dns,
             test_result: result[:status]
           )
-          
+
           if result[:status] == "success"
             results[:successful] += 1
             success_result("DNS test completed", result: result)
@@ -175,10 +175,10 @@ class DomainTestingService < ApplicationService
         Rails.logger.error "Error testing DNS for domain #{domain.domain}: #{e.message}"
       end
     end
-    
-    success_result("Batch DNS testing completed", 
+
+    success_result("Batch DNS testing completed",
                   processed: results[:processed],
-                  successful: results[:successful], 
+                  successful: results[:successful],
                   failed: results[:failed],
                   errors: results[:errors])
   end
@@ -189,18 +189,18 @@ class DomainTestingService < ApplicationService
     audit_service_operation(domain) do |audit_log|
       result = perform_dns_test
       update_domain_status(domain, result)
-      
+
       # If DNS test was successful, automatically queue MX and A Record tests
       if result[:status] == "success"
         queue_follow_up_tests
       end
-      
+
       audit_log.add_metadata(
         domain_name: domain.domain,
         dns_status: domain.dns,
         test_result: result[:status]
       )
-      
+
       success_result("DNS test completed", result: result)
     end
   end

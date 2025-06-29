@@ -34,7 +34,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
         service_name: "company_linkedin_discovery",
         icon: "user-group",
         last_updated: company.linkedin_last_processed_at,
-        has_data: company.linkedin_url.present?,
+        has_data: company.linkedin_url.present? || company.linkedin_ai_url.present?,
         data_summary: linkedin_summary,
         color: "indigo"
       },
@@ -69,7 +69,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
     begin
       # Parse JSON if it's a string, or use directly if it's already parsed
       parsed_pages = company.web_pages.is_a?(String) ? JSON.parse(company.web_pages) : company.web_pages
-      
+
       # Handle different possible structures
       if parsed_pages.is_a?(Array)
         "#{parsed_pages.size} pages found"
@@ -88,9 +88,22 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
   end
 
   def linkedin_summary
-    return "No data" unless company.linkedin_url.present?
+    return "No data" unless company.linkedin_url.present? || company.linkedin_ai_url.present?
 
-    "Profile found"
+    if company.linkedin_url.present?
+      "Profile confirmed"
+    elsif company.linkedin_ai_url.present?
+      parts = []
+      parts << "AI discovered"
+      parts << "#{company.linkedin_ai_confidence}% confidence" if company.linkedin_ai_confidence.present?
+
+      if company.linkedin_alternatives.present? && company.linkedin_alternatives.is_a?(Array)
+        alternative_count = company.linkedin_alternatives.size - 1
+        parts << "#{alternative_count} alternatives" if alternative_count > 0
+      end
+
+      parts.join(" • ")
+    end
   end
 
   def employees_summary
@@ -99,7 +112,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
     begin
       # Parse JSON if it's a string, or use directly if it's already parsed
       parsed_employees = company.employees_data.is_a?(String) ? JSON.parse(company.employees_data) : company.employees_data
-      
+
       # Handle different possible structures
       if parsed_employees.is_a?(Array)
         "#{parsed_employees.size} employees found"

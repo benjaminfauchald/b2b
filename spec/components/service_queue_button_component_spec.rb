@@ -46,7 +46,7 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
 
     it "renders count input field with default value" do
       allow(Domain).to receive_message_chain(:needing_service, :count).and_return(100)
-      
+
       render_inline(component)
 
       expect(page).to have_field("count", with: "10")

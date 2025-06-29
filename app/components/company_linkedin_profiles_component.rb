@@ -2,7 +2,7 @@
 
 class CompanyLinkedinProfilesComponent < ViewComponent::Base
   include ActionView::Helpers::NumberHelper
-  
+
   def initialize(company:)
     @company = company
     @people = company.people.order(created_at: :desc)
@@ -25,7 +25,7 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
     executives = people.select { |p| executive?(p) }
     managers = people.select { |p| manager?(p) && !executive?(p) }
     others = people.select { |p| !executive?(p) && !manager?(p) }
-    
+
     {
       "Executives" => executives,
       "Management" => managers,
@@ -36,15 +36,15 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
   def executive?(person)
     return false unless person.title.present?
     title = person.title.downcase
-    title.include?("ceo") || title.include?("cto") || title.include?("cfo") || 
-    title.include?("chief") || title.include?("president") || 
+    title.include?("ceo") || title.include?("cto") || title.include?("cfo") ||
+    title.include?("chief") || title.include?("president") ||
     title.include?("executive") || title.include?("vp")
   end
 
   def manager?(person)
     return false unless person.title.present?
     title = person.title.downcase
-    title.include?("director") || title.include?("manager") || 
+    title.include?("director") || title.include?("manager") ||
     title.include?("head") || title.include?("lead")
   end
 
@@ -53,7 +53,7 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
       .where(service_name: "person_profile_extraction", status: "success")
       .order(completed_at: :desc)
       .first
-    
+
     latest_log&.completed_at
   end
 

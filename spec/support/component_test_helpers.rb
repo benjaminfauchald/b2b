@@ -38,7 +38,7 @@ end
 RSpec.configure do |config|
   config.include ComponentTestHelpers, type: :component
   config.include ActionView::Helpers::FormTagHelper, type: :component
-  
+
   # Mock Company model methods for tests
   config.before(:each, type: :component) do
     allow(Company).to receive(:needs_financial_update).and_return(double(count: 0))

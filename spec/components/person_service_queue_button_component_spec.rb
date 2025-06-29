@@ -28,7 +28,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
   describe "rendering" do
     it "renders the component with title and form" do
       render_inline(component)
-      
+
       expect(page).to have_text(title)
       expect(page).to have_css("form[action='#{action_path}']")
       expect(page).to have_css("input[name='count']")
@@ -37,7 +37,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     it "includes service queue controller data attributes" do
       render_inline(component)
-      
+
       expect(page).to have_css("[data-controller='service-queue']")
       expect(page).to have_css("[data-service-queue-service-name-value='#{service_name}']")
     end
@@ -131,7 +131,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
           action_path: "/other",
           queue_name: "other"
         )
-        
+
         expect(other_component.send(:show_completion_percentage?)).to be false
       end
     end
@@ -156,7 +156,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     it "renders progress bar with correct percentage" do
       render_inline(component)
-      
+
       expect(page).to have_text("Profile Extraction Completion")
       expect(page).to have_text("33%")
       expect(page).to have_css(".bg-blue-600[style*='width: 33%']")
@@ -169,7 +169,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     it "sets correct default and max values for batch size input" do
       render_inline(component)
-      
+
       input = page.find("input[name='count']")
       expect(input.value).to eq("2") # min of companies_needing (2) and 100
       expect(input["max"]).to eq("2") # min of companies_needing (2) and 1000
@@ -183,7 +183,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
       it "limits default value to 100" do
         render_inline(component)
-        
+
         input = page.find("input[name='count']")
         expect(input.value).to eq("100") # min of companies_needing (152) and 100
         expect(input["max"]).to eq("152") # min of companies_needing (152) and 1000

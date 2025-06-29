@@ -2,7 +2,7 @@ require "redis"
 
 # Redis database allocation:
 # 0 - Rails cache store
-# 1 - Sidekiq job queues  
+# 1 - Sidekiq job queues
 # 2 - Application-specific data (if needed)
 
 # Cache store Redis (database 0)
@@ -11,7 +11,7 @@ cache_redis_config = {
   ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }
 }
 
-# Sidekiq Redis (database 1) 
+# Sidekiq Redis (database 1)
 sidekiq_redis_config = {
   url: ENV.fetch("REDIS_URL", "redis://localhost:6379/1"),
   ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE }

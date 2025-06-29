@@ -36,12 +36,12 @@ puts "Creating Norwegian companies..."
     operating_revenue: 5_000_000 + (i * 5_000_000),
     ordinary_result: i.even? ? 500_000 + (i * 100_000) : nil,
     annual_result: i.even? ? 400_000 + (i * 80_000) : nil,
-    postal_city: ["OSLO", "BERGEN", "TRONDHEIM", "STAVANGER"][i % 4],
+    postal_city: [ "OSLO", "BERGEN", "TRONDHEIM", "STAVANGER" ][i % 4],
     postal_code: "#{i + 1}000",
     website: i < 3 ? "https://testselskap#{i}.no" : nil,
     email: i < 5 ? "post@testselskap#{i}.no" : nil,
     phone: "#{22 + i} #{10 + i} #{20 + i} #{30 + i}",
-    primary_industry_code: ["68.209", "70.22", "62.01", "46.69"][i % 4],
+    primary_industry_code: [ "68.209", "70.22", "62.01", "46.69" ][i % 4],
     employee_count: 5 + (i * 3)
   )
 end
@@ -59,7 +59,7 @@ puts "Creating Swedish companies..."
     operating_revenue: 10_000_000 + (i * 10_000_000),
     ordinary_result: 1_000_000 + (i * 200_000),
     annual_result: 800_000 + (i * 150_000),
-    postal_city: ["STOCKHOLM", "GÖTEBORG", "MALMÖ"][i % 3],
+    postal_city: [ "STOCKHOLM", "GÖTEBORG", "MALMÖ" ][i % 3],
     postal_code: "#{i + 1}#{i + 1}#{i + 1} #{i + 1}#{i + 1}",
     website: i < 2 ? "https://testbolag#{i}.se" : nil,
     linkedin_url: i == 0 ? "https://linkedin.com/company/testbolag#{i}" : nil
@@ -77,7 +77,7 @@ puts "Creating Danish companies..."
     organization_form_code: "ApS",
     organization_form_description: "Anpartsselskab",
     operating_revenue: 15_000_000 + (i * 5_000_000),
-    postal_city: ["KØBENHAVN", "AARHUS", "ODENSE"][i],
+    postal_city: [ "KØBENHAVN", "AARHUS", "ODENSE" ][i],
     postal_code: "#{i + 1}000"
   )
 end
@@ -94,13 +94,13 @@ Company.limit(5).each do |company|
       status: ServiceAuditLog::STATUS_SUCCESS,
       table_name: "companies",
       record_id: company.id.to_s,
-      columns_affected: ["ordinary_result", "annual_result", "operating_revenue"],
+      columns_affected: [ "ordinary_result", "annual_result", "operating_revenue" ],
       metadata: { source: "brreg_api", year: 2023 },
       started_at: 2.hours.ago,
       completed_at: 1.hour.ago
     )
   end
-  
+
   # Web discovery audit
   if company.website.present?
     ServiceAuditLog.create!(
@@ -110,10 +110,10 @@ Company.limit(5).each do |company|
       status: ServiceAuditLog::STATUS_SUCCESS,
       table_name: "companies",
       record_id: company.id.to_s,
-      columns_affected: ["website", "web_pages"],
-      metadata: { 
+      columns_affected: [ "website", "web_pages" ],
+      metadata: {
         pages_found: 3,
-        confidence_scores: [80, 75, 70],
+        confidence_scores: [ 80, 75, 70 ],
         search_queries_used: 2
       },
       started_at: 3.hours.ago,
@@ -144,9 +144,9 @@ puts "Creating test domains..."
 %w[example.no testselskap.no bedrift.se virksomhed.dk test.com].each do |domain_name|
   Domain.create!(
     domain: domain_name,
-    www: [true, false].sample,
-    mx: [true, false, nil].sample,
-    a_record_ip: [true, false].sample ? "192.168.1.#{rand(1..255)}" : nil
+    www: [ true, false ].sample,
+    mx: [ true, false, nil ].sample,
+    a_record_ip: [ true, false ].sample ? "192.168.1.#{rand(1..255)}" : nil
   )
 end
 

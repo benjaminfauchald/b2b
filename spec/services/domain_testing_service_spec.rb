@@ -17,7 +17,7 @@ RSpec.describe DomainTestingService, type: :service do
         context 'with successful DNS resolution' do
           before do
             # Mock successful DNS resolution
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return(['fake_record'])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
           end
 
           it 'creates a successful audit log' do
@@ -57,7 +57,7 @@ RSpec.describe DomainTestingService, type: :service do
 
           it 'tracks execution time in audit log' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.execution_time_ms).to be > 0
             expect(audit_log.started_at).to be_present
@@ -154,7 +154,7 @@ RSpec.describe DomainTestingService, type: :service do
 
         before do
           # Mock successful DNS resolution for all domains
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return(['fake_record'])
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
         end
 
         it 'creates audit logs for each domain' do
@@ -259,7 +259,7 @@ RSpec.describe DomainTestingService, type: :service do
 
   describe '#has_dns?' do
     it 'returns true for domains with A records' do
-      allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return(['fake_record'])
+      allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
 
       result = service.send(:has_dns?, 'example.com')
       expect(result).to be true

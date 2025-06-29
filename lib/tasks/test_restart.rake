@@ -84,7 +84,7 @@ namespace :test do
 
     # Step 4: Start Sidekiq in background
     puts "\n4️⃣ Starting Sidekiq..."
-    
+
     # Kill any existing Sidekiq processes
     sidekiq_pids = `pgrep -f "sidekiq"`.strip.split("\n")
     if sidekiq_pids.any? && !sidekiq_pids.first.empty?

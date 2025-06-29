@@ -32,3 +32,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Git Commit Guidelines
 - When creating commits, DO NOT include the "Generated with Claude Code" or "Co-Authored-By: Claude" lines
 - Keep commit messages focused on the technical changes only
+- Use detailed, elaborate commit messages with the following structure:
+  - Start with a concise summary line (50-72 characters)
+  - Follow with a blank line
+  - Include a detailed bullet list of all specific changes made
+  - Explain the reasoning behind the changes and what problems they solve
+  - Mention any UI/UX improvements or design system updates
+  - Note any temporary changes, workarounds, or future considerations
+  - End with a brief summary paragraph of what was accomplished
+  - Example format:
+    ```
+    Improve authentication pages design and UX consistency
+
+    - Remove duplicate OAuth buttons and "Forgot password" links from shared links partial
+    - Update sign-in and create account buttons to use Flowbite primary button styling
+    - Standardize dividers with uppercase text and flexbox layout  
+    - Add support for custom OAuth button text (e.g., "Create account with" vs "Sign in with")
+    - Ensure consistent button styling: rounded-lg, px-5 py-2.5, focus:ring-4
+    - Comment out Google OAuth (keeping code for future implementation)
+    - Fix dark mode color inconsistencies across all authentication components
+
+    All the requested design improvements have been implemented to ensure consistency
+    across the authentication flow and align with the Flowbite design system used
+    throughout the application.
+    ```

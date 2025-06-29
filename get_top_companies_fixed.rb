@@ -3,7 +3,7 @@ puts "=" * 80
 
 Company.limit(25).each_with_index do |company, index|
   puts "#{(index + 1).to_s.rjust(2)}. #{company.company_name}"
-  
+
   # Show key info
   info_parts = []
   info_parts << "Org: #{company.registration_number}" if company.registration_number.present?
@@ -11,7 +11,7 @@ Company.limit(25).each_with_index do |company, index|
   info_parts << "Revenue: #{number_with_delimiter(company.operating_revenue)} NOK" if company.operating_revenue.present?
   info_parts << "Employees: #{company.employee_count}" if company.employee_count.present?
   info_parts << "Website: #{company.website}" if company.website.present?
-  
+
   puts "    #{info_parts.join(' | ')}" if info_parts.any?
   puts "    #{company.postal_city}, #{company.postal_country}" if company.postal_city.present?
   puts

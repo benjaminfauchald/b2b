@@ -56,7 +56,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
           it 'tracks execution time in audit log' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.execution_time_ms).to be > 0
             expect(audit_log.started_at).to be_present

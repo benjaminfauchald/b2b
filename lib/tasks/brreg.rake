@@ -469,7 +469,7 @@ namespace :brreg do
 
               # Check if company already exists
               existing_company = Company.find_by(registration_number: registration_number)
-              
+
               # Build company attributes including financial data
               company_attrs = build_company_attributes(remote_record)
 
@@ -478,7 +478,7 @@ namespace :brreg do
                 existing_company.update!(company_attrs)
                 Rails.logger.debug "✓ Updated company: #{registration_number}"
                 total_updated += 1
-                
+
                 # Check if financial data was updated
                 if has_financial_data?(remote_record)
                   financial_data_copied += 1
@@ -488,7 +488,7 @@ namespace :brreg do
                 company = Company.create!(company_attrs)
                 Rails.logger.debug "✓ Created company: #{registration_number}"
                 total_migrated += 1
-                
+
                 # Check if financial data was included
                 if has_financial_data?(remote_record)
                   financial_data_copied += 1
@@ -552,7 +552,7 @@ namespace :brreg do
     # Copy all available fields from remote record
     Company.column_names.each do |column_name|
       next if %w[id created_at updated_at].include?(column_name)
-      
+
       # Get value from remote record
       value = remote_record[column_name]
       next if value.nil? || (value.is_a?(String) && value.strip.empty?)
@@ -575,7 +575,7 @@ namespace :brreg do
         end
       when "bankruptcy", "under_liquidation", "vat_registered", "under_deletion"
         # Handle boolean fields
-        attrs[column_name] = ["true", "t", "1", 1, true].include?(value)
+        attrs[column_name] = [ "true", "t", "1", 1, true ].include?(value)
       when /count$/, /employees$/, "year", "http_error", "employee_count"
         # Handle integer fields
         attrs[column_name] = value.to_i if value.to_s.match?(/^\d+$/)
@@ -601,7 +601,7 @@ namespace :brreg do
       revenue profit equity total_assets current_assets fixed_assets
       current_liabilities long_term_liabilities financial_data
     ]
-    
+
     financial_fields.any? do |field|
       value = remote_record[field]
       value.present? && value.to_s.strip != "" && value.to_s != "0"

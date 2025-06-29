@@ -53,6 +53,27 @@
             </div>
           <% end %>
           
+          <% if @company.linkedin_url.present? || @company.linkedin_ai_url.present? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">LinkedIn</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <% if @company.linkedin_url.present? %>
+                  <%= link_to @company.linkedin_url, @company.linkedin_url, target: "_blank", 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                  <span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+                    Confirmed
+                  </span>
+                <% elsif @company.linkedin_ai_url.present? %>
+                  <%= link_to @company.linkedin_ai_url, @company.linkedin_ai_url, target: "_blank", 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                  <span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                    AI (<%= @company.linkedin_ai_confidence %>% confidence)
+                  </span>
+                <% end %>
+              </dd>
+            </div>
+          <% end %>
+          
           <% if @company.employee_count.present? %>
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Employees</dt>

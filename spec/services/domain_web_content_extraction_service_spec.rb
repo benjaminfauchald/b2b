@@ -2,8 +2,8 @@ require 'rails_helper'
 
 RSpec.describe DomainWebContentExtractionService, type: :service do
   let(:service_config) do
-    create(:service_configuration, 
-      service_name: "domain_web_content_extraction", 
+    create(:service_configuration,
+      service_name: "domain_web_content_extraction",
       active: true
     )
   end
@@ -34,7 +34,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
               "statusCode" => 200,
               "responseTime" => 150
             },
-            "links" => ["https://www.iana.org/domains/example"]
+            "links" => [ "https://www.iana.org/domains/example" ]
           }
         }
       end
@@ -52,10 +52,10 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "extracts and stores web content successfully" do
           result = service.perform
-          
+
           expect(result.success?).to be true
           domain.reload
-          
+
           expect(domain.web_content_data).to be_present
           expect(domain.web_content_data["content"]).to include("Example Domain")
           expect(domain.web_content_data["metadata"]["title"]).to eq("Example Domain")
@@ -64,12 +64,12 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "creates successful audit log with extraction metadata" do
           service.perform
-          
+
           audit_log = ServiceAuditLog.where(
             auditable: domain,
             service_name: "domain_web_content_extraction"
           ).last
-          
+
           expect(audit_log.status).to eq("success")
           expect(audit_log.metadata["domain_name"]).to eq("example.com")
           expect(audit_log.metadata["url"]).to eq("https://example.com")
@@ -80,7 +80,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
         it "stores normalized and structured content data" do
           service.perform
           domain.reload
-          
+
           web_data = domain.web_content_data
           expect(web_data).to include(
             "content", "markdown", "html", "metadata", "links", "extracted_at"
@@ -92,7 +92,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
           # Test HTTP URL
           domain.update(domain: "http-example.com")
           allow(mock_firecrawl_client).to receive(:scrape).with("http://http-example.com").and_return(mock_firecrawl_response)
-          
+
           result = service.perform
           expect(result.success?).to be true
         end
@@ -118,22 +118,22 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "handles Firecrawl API errors gracefully" do
           result = service.perform
-          
+
           expect(result.success?).to be false
           expect(result.error).to include("Failed to fetch content")
-          
+
           domain.reload
           expect(domain.web_content_data).to be_nil
         end
 
         it "creates failed audit log with error details" do
           service.perform
-          
+
           audit_log = ServiceAuditLog.where(
             auditable: domain,
             service_name: "domain_web_content_extraction"
           ).last
-          
+
           expect(audit_log.status).to eq("failed")
           expect(audit_log.metadata["error"]).to include("Failed to fetch content")
           expect(audit_log.metadata["extraction_success"]).to be false
@@ -147,15 +147,15 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "handles exceptions and creates failed audit log" do
           result = service.perform
-          
+
           expect(result.success?).to be false
           expect(result.error).to include("Network error")
-          
+
           audit_log = ServiceAuditLog.where(
             auditable: domain,
             service_name: "domain_web_content_extraction"
           ).last
-          
+
           expect(audit_log.status).to eq("failed")
           expect(audit_log.metadata["error"]).to include("Network error")
         end
@@ -166,7 +166,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "returns error for domains without A records" do
           result = service.perform
-          
+
           expect(result.success?).to be false
           expect(result.error).to match(/domain does not have.*a record/i)
         end
@@ -190,17 +190,17 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "skips extraction for recently extracted content" do
           result = service.perform
-          
+
           expect(result.success?).to be true
           expect(result.message).to match(/recently extracted/i)
-          
+
           expect(mock_firecrawl_client).not_to receive(:scrape)
         end
 
         it "allows forced re-extraction" do
           service_with_force = described_class.new(domain: domain, force: true)
           allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com").and_return(mock_firecrawl_response)
-          
+
           result = service_with_force.perform
           expect(result.success?).to be true
           expect(mock_firecrawl_client).to have_received(:scrape)
@@ -222,7 +222,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       before do
         allow(Firecrawl::Client).to receive(:new).and_return(mock_firecrawl_client)
-        
+
         # Mock successful responses for domains with A records
         allow(mock_firecrawl_client).to receive(:scrape).with("https://test1.com").and_return(
           { "success" => true, "data" => { "content" => "Test1 content", "metadata" => { "title" => "Test1" } } }
@@ -234,7 +234,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       it "processes only domains with A records" do
         result = batch_service.perform
-        
+
         expect(result.success?).to be true
         expect(result.data[:processed]).to eq(2) # Only domains with A records
         expect(result.data[:successful]).to eq(2)
@@ -244,18 +244,18 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       it "creates audit logs for all attempted extractions" do
         batch_service.perform
-        
+
         # Should have audit logs for domains with A records
         expect(ServiceAuditLog.where(
           auditable: domains[0],
           service_name: "domain_web_content_extraction"
         )).to exist
-        
+
         expect(ServiceAuditLog.where(
-          auditable: domains[1], 
+          auditable: domains[1],
           service_name: "domain_web_content_extraction"
         )).to exist
-        
+
         # Should not have audit log for domain without A record
         expect(ServiceAuditLog.where(
           auditable: domains[2],
@@ -294,7 +294,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
       it "handles domains with special characters" do
         domain.update(domain: "åäö-example.com")
         allow(mock_firecrawl_client).to receive(:scrape).with("https://åäö-example.com").and_return(mock_firecrawl_response)
-        
+
         result = service.perform
         expect(result.success?).to be true
       end
@@ -302,7 +302,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
       it "handles domains with ports" do
         domain.update(domain: "example.com:8080")
         allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com:8080").and_return(mock_firecrawl_response)
-        
+
         result = service.perform
         expect(result.success?).to be true
       end
@@ -310,7 +310,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
       it "handles subdomains correctly" do
         domain.update(domain: "www.example.com")
         allow(mock_firecrawl_client).to receive(:scrape).with("https://www.example.com").and_return(mock_firecrawl_response)
-        
+
         result = service.perform
         expect(result.success?).to be true
       end
@@ -333,7 +333,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       it "handles malformed Firecrawl responses" do
         result = service.perform
-        
+
         expect(result.success?).to be false
         expect(result.error).to match(/invalid.*content/i)
       end
@@ -345,9 +345,9 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
             "metadata" => { "title" => "Test" }
           }
         }
-        
+
         allow(mock_firecrawl_client).to receive(:scrape).and_return(response_without_content)
-        
+
         result = service.perform
         expect(result.success?).to be false
       end
@@ -357,7 +357,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
       describe ".extract_web_content" do
         it "provides legacy interface" do
           allow(mock_firecrawl_client).to receive(:scrape).and_return(mock_firecrawl_response)
-          
+
           result = described_class.extract_web_content(domain)
           expect(result.success?).to be true
         end
@@ -369,7 +369,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "queues only domains with A records" do
           expect(DomainWebContentExtractionWorker).to receive(:perform_async).exactly(3).times
-          
+
           count = described_class.queue_all_domains
           expect(count).to eq(3)
         end
@@ -380,7 +380,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "queues specified number of domains" do
           expect(DomainWebContentExtractionWorker).to receive(:perform_async).exactly(50).times
-          
+
           count = described_class.queue_batch_domains(50)
           expect(count).to eq(50)
         end

@@ -57,14 +57,14 @@ class DomainWebContentExtractionService < ApplicationService
 
   def extract_single_domain
     return error_result("Domain does not have a valid A record") unless domain.www && domain.a_record_ip.present?
-    
+
     # Skip if recently extracted (unless forced)
     unless force
       last_extraction = domain.service_audit_logs
                              .where(service_name: service_name, status: "success")
                              .where("completed_at > ?", 24.hours.ago)
                              .exists?
-      
+
       if last_extraction && domain.web_content_data.present?
         return success_result("Web content recently extracted", skipped: true)
       end
@@ -72,17 +72,17 @@ class DomainWebContentExtractionService < ApplicationService
 
     audit_service_operation(domain) do |audit_log|
       result = perform_web_content_extraction
-      
+
       if result[:success]
         store_web_content_data(domain, result[:data])
-        
+
         audit_log.add_metadata(
           domain_name: domain.domain,
           url: build_url,
           content_length: result[:data]["content"]&.length || 0,
           extraction_success: true
         )
-        
+
         success_result("Web content extracted successfully", result: result)
       else
         audit_log.add_metadata(
@@ -91,7 +91,7 @@ class DomainWebContentExtractionService < ApplicationService
           error: result[:error],
           extraction_success: false
         )
-        
+
         error_result(result[:error])
       end
     end
@@ -99,12 +99,12 @@ class DomainWebContentExtractionService < ApplicationService
 
   def perform_web_content_extraction
     url = build_url
-    
+
     # Configure API key for this request
     Firecrawl.api_key firecrawl_api_key
-    
+
     response = Firecrawl.scrape(url)
-    
+
     if response.success?
       validate_and_normalize_content(response.result)
     else
@@ -151,7 +151,7 @@ class DomainWebContentExtractionService < ApplicationService
           end
 
           result = perform_web_content_extraction_for_domain(domain)
-          
+
           audit_log.add_metadata(
             domain_name: domain.domain,
             url: build_url_for_domain(domain),
@@ -159,7 +159,7 @@ class DomainWebContentExtractionService < ApplicationService
             extraction_success: result[:success],
             error: result[:error]
           )
-          
+
           if result[:success]
             store_web_content_data(domain, result[:data])
             results[:successful] += 1
@@ -186,12 +186,12 @@ class DomainWebContentExtractionService < ApplicationService
 
   def perform_web_content_extraction_for_domain(domain)
     url = build_url_for_domain(domain)
-    
+
     # Configure API key for this request
     Firecrawl.api_key firecrawl_api_key
-    
+
     response = Firecrawl.scrape(url)
-    
+
     if response.success?
       validate_and_normalize_content(response.result)
     else

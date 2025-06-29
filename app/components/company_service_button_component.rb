@@ -163,19 +163,19 @@ class CompanyServiceButtonComponent < ViewComponent::Base
 
   def financial_summary
     return "No Data" unless company.operating_revenue.present?
-    
+
     parts = []
     parts << "Revenue: #{format_currency(company.operating_revenue)}" if company.operating_revenue.present?
     parts << "Costs: #{format_currency(company.operating_costs)}" if company.operating_costs.present?
     parts << "Ordinary: #{format_currency(company.ordinary_result)}" if company.ordinary_result.present?
     parts << "Annual: #{format_currency(company.annual_result)}" if company.annual_result.present?
-    
+
     parts.any? ? parts.join(" • ") : "Financial data available"
   end
 
   def format_currency(amount)
     return "N/A" unless amount
-    
+
     if amount.abs >= 1_000_000
       "#{(amount / 1_000_000.0).round(1)}M NOK"
     elsif amount.abs >= 1_000

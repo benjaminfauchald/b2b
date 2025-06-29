@@ -155,11 +155,11 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
 
       it "detects queued jobs for the domain" do
         mock_queue = double("Sidekiq::Queue")
-        mock_job = double("Sidekiq::Job", 
-          klass: "DomainWebContentExtractionWorker", 
-          args: [domain.id]
+        mock_job = double("Sidekiq::Job",
+          klass: "DomainWebContentExtractionWorker",
+          args: [ domain.id ]
         )
-        
+
         allow(Sidekiq::Queue).to receive(:new).with("default").and_return(mock_queue)
         allow(mock_queue).to receive(:any?).and_yield(mock_job).and_return(true)
 
@@ -176,7 +176,7 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
 
       it "handles Sidekiq errors gracefully" do
         allow(Sidekiq::Queue).to receive(:new).and_raise(StandardError.new("Redis connection failed"))
-        
+
         expect(component.send(:job_queued?)).to be false
       end
     end
@@ -249,7 +249,7 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
             status: "success",
             completed_at: 1.day.ago
           )
-          
+
           classes = component.send(:button_classes)
           expect(classes).to include("bg-green-600", "hover:bg-green-700", "text-white")
         end
@@ -264,7 +264,7 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
             completed_at: 1.day.ago,
             metadata: { 'error' => 'Failed to extract content' }
           )
-          
+
           classes = component.send(:button_classes)
           expect(classes).to include("bg-orange-600", "hover:bg-orange-700", "text-white")
         end
@@ -454,7 +454,7 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
 
     it "includes all required elements" do
       render_inline(component)
-      
+
       expect(page).to have_css("[data-service='web_content']")
       expect(page).to have_css("[data-domain-id='#{domain.id}']")
       expect(page).to have_text("Web Content Status")
@@ -464,7 +464,7 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
 
     it "includes correct form attributes" do
       render_inline(component)
-      
+
       form = page.find("form")
       expect(form[:action]).to eq(queue_single_web_content_domain_path(domain))
       expect(form[:method]).to eq("post")

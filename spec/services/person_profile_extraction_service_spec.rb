@@ -69,7 +69,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
             persons = Person.where(company: company)
             expect(persons.count).to eq(3)
-            
+
             first_person = persons.first
             expect(first_person.name).to eq('John Doe')
             expect(first_person.title).to eq('Software Engineer')
@@ -80,7 +80,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
           it 'tracks execution time in audit log' do
             start_time = Time.current
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.execution_time_ms).to be > 0
             expect(audit_log.started_at).to be_present

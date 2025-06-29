@@ -51,13 +51,13 @@ class ApplicationService
   # SCT Pattern compliance validation
   def validate_sct_compliance!
     errors = []
-    
+
     # Check required methods exist
     errors << "Service must implement #perform method" unless respond_to?(:perform, true)
     errors << "Service must implement #service_active? method" unless respond_to?(:service_active?, true)
     errors << "Service must implement #success_result method" unless respond_to?(:success_result, true)
     errors << "Service must implement #error_result method" unless respond_to?(:error_result, true)
-    
+
     # Check service configuration exists
     if service_name.present?
       config = ServiceConfiguration.find_by(service_name: service_name)
@@ -65,14 +65,14 @@ class ApplicationService
         Rails.logger.warn "SCT Warning: Service '#{service_name}' has no ServiceConfiguration record"
       end
     end
-    
+
     # Check for audit_service_operation usage (this is a warning, not an error)
     if respond_to?(:audit_service_operation, true)
       Rails.logger.debug "SCT: Service '#{service_name}' implements audit_service_operation ✓"
     else
       Rails.logger.warn "SCT Warning: Service '#{service_name}' should implement audit_service_operation for proper audit tracking"
     end
-    
+
     if errors.any?
       raise StandardError, "SCT Compliance Errors: #{errors.join(', ')}"
     end

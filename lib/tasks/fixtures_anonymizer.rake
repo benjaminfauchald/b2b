@@ -1,13 +1,13 @@
 namespace :fixtures do
   desc "Generate anonymized fixtures from production data"
   task anonymize: :environment do
-    require 'faker'
-    
+    require "faker"
+
     puts "Generating anonymized fixtures..."
-    
-    fixtures_dir = Rails.root.join('spec', 'fixtures', 'anonymized')
+
+    fixtures_dir = Rails.root.join("spec", "fixtures", "anonymized")
     FileUtils.mkdir_p(fixtures_dir)
-    
+
     # Sample companies with anonymized data
     companies_to_anonymize = Company.limit(50).map do |company|
       {
@@ -30,9 +30,9 @@ namespace :fixtures do
         primary_industry_description: company.primary_industry_description
       }
     end
-    
+
     # Write anonymized fixtures
-    File.open(fixtures_dir.join('companies.yml'), 'w') do |file|
+    File.open(fixtures_dir.join("companies.yml"), "w") do |file|
       companies_to_anonymize.each_with_index do |attrs, index|
         file.puts "company_#{index}:"
         attrs.each do |key, value|
@@ -45,7 +45,7 @@ namespace :fixtures do
         file.puts
       end
     end
-    
+
     puts "Anonymized fixtures created in spec/fixtures/anonymized/"
   end
 end

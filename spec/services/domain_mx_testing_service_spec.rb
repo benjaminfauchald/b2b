@@ -17,7 +17,7 @@ RSpec.describe DomainMxTestingService, type: :service do
           before do
             # Mock successful MX resolution
             resolver_double = double('Resolv::DNS')
-            allow(resolver_double).to receive(:getresources).and_return([double(exchange: 'mail.example.com')])
+            allow(resolver_double).to receive(:getresources).and_return([ double(exchange: 'mail.example.com') ])
             allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
           end
 
@@ -58,7 +58,7 @@ RSpec.describe DomainMxTestingService, type: :service do
 
           it 'tracks execution time in audit log' do
             service.perform
-            
+
             audit_log = ServiceAuditLog.last
             expect(audit_log.execution_time_ms).to be > 0
             expect(audit_log.started_at).to be_present
@@ -146,7 +146,7 @@ RSpec.describe DomainMxTestingService, type: :service do
         before do
           # Mock successful MX resolution for all domains
           resolver_double = double('Resolv::DNS')
-          allow(resolver_double).to receive(:getresources).and_return([double(exchange: 'mail.example.com')])
+          allow(resolver_double).to receive(:getresources).and_return([ double(exchange: 'mail.example.com') ])
           allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
         end
 
@@ -199,7 +199,7 @@ RSpec.describe DomainMxTestingService, type: :service do
   describe '#check_mx_record' do
     it 'returns true when MX records exist' do
       resolver_double = double('Resolv::DNS')
-      allow(resolver_double).to receive(:getresources).and_return([double(exchange: 'mail.example.com')])
+      allow(resolver_double).to receive(:getresources).and_return([ double(exchange: 'mail.example.com') ])
       allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
 
       result = service.send(:check_mx_record, 'example.com')

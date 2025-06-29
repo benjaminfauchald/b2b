@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe CompaniesController, type: :request do
   let(:user) { create(:user) }
-  
+
   before do
     # Stub authentication
     allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
@@ -42,7 +42,7 @@ RSpec.describe CompaniesController, type: :request do
         it "respects search filters within country" do
           norwegian_company = Company.where(source_country: "NO").first
           norwegian_company.update!(company_name: "Test Norge AS")
-          
+
           get companies_path, params: { search: "Norge" }
           expect(response.body).to include("Test Norge AS")
           expect(response.body).not_to include("Swedish Company")
@@ -50,7 +50,7 @@ RSpec.describe CompaniesController, type: :request do
 
         it "respects other filters within country" do
           Company.where(source_country: "NO").first.update!(website: "https://example.no")
-          
+
           get companies_path, params: { filter: "with_website" }
           expect(response.body).to include("example.no")
         end
@@ -68,7 +68,7 @@ RSpec.describe CompaniesController, type: :request do
       it "updates selected country in session" do
         post set_country_companies_path, params: { country: "SE" }
         expect(response).to redirect_to(companies_path)
-        
+
         follow_redirect!
         expect(response.body).to include("Swedish Company")
         expect(response.body).not_to include("Norwegian Company")
@@ -77,7 +77,7 @@ RSpec.describe CompaniesController, type: :request do
       it "rejects invalid country codes" do
         post set_country_companies_path, params: { country: "XX" }
         expect(response).to redirect_to(companies_path)
-        
+
         follow_redirect!
         # Should default to first available country (DK)
         expect(response.body).to include("Danish Company")
@@ -93,7 +93,7 @@ RSpec.describe CompaniesController, type: :request do
 
       it "only queues companies from selected country" do
         post queue_financial_data_companies_path, params: { count: 10 }, as: :json
-        
+
         response_data = JSON.parse(response.body)
         # Should only process Norwegian companies
         expect(response_data["queued_count"]).to be <= 3
@@ -103,18 +103,18 @@ RSpec.describe CompaniesController, type: :request do
     describe "Service stats" do
       it "returns stats filtered by selected country" do
         post set_country_companies_path, params: { country: "NO" }
-        
+
         # Create some audit logs
         norwegian_company = Company.where(source_country: "NO").first
-        create(:service_audit_log, 
+        create(:service_audit_log,
           auditable: norwegian_company,
           service_name: "company_financials",
           status: ServiceAuditLog::STATUS_SUCCESS
         )
-        
+
         get service_stats_companies_path, as: :json
         stats = JSON.parse(response.body)
-        
+
         expect(stats["total_processed"]).to eq(1)
       end
     end

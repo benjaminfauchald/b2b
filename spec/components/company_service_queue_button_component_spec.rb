@@ -29,11 +29,21 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
 
   describe "regular service" do
     before do
+      # Create test companies that match the criteria for financial data service
+      # Financial data service looks for NO companies with AS, ASA, DA, ANS org forms
+      15.times do |i|
+        Company.create!(
+          registration_number: "NO99999#{1000 + i}",
+          company_name: "Test Company #{i}",
+          source_country: "NO",
+          source_registry: "brreg",
+          source_id: "99999#{1000 + i}",
+          organization_form_code: [ "AS", "ASA", "DA", "ANS" ][i % 4]
+        )
+      end
+
       allow(Company).to receive(:needing_service).with(service_name).and_return(
         double(count: 10)
-      )
-      allow(Company).to receive(:needs_financial_update).and_return(
-        double(count: 15)
       )
     end
 
@@ -68,11 +78,21 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
     let(:queue_name) { "company_web_discovery" }
 
     before do
+      # Create test companies with revenue > 10M for web discovery
+      20.times do |i|
+        Company.create!(
+          registration_number: "NO88888#{1000 + i}",
+          company_name: "Web Test Company #{i}",
+          source_country: "NO",
+          source_registry: "brreg",
+          source_id: "88888#{1000 + i}",
+          organization_form_code: "AS",
+          operating_revenue: 15_000_000 + (i * 1_000_000)
+        )
+      end
+
       allow(Company).to receive(:needing_service).with(service_name).and_return(
         double(count: 8)
-      )
-      allow(Company).to receive(:web_discovery_potential).and_return(
-        double(count: 20)
       )
     end
 

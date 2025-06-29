@@ -16,7 +16,7 @@ class DomainMxTestingService < ApplicationService
 
   def perform
     return error_result("Service is disabled") unless service_active?
-    
+
     if domain_obj
       test_single_domain
     else
@@ -68,32 +68,32 @@ class DomainMxTestingService < ApplicationService
     audit_service_operation(@domain_obj) do |audit_log|
       result = perform_mx_test(@domain_obj.domain)
       update_domain_status(@domain_obj, result)
-      
+
       audit_log.add_metadata(
         domain_name: @domain_obj.domain,
         mx_status: @domain_obj.mx,
         test_duration_ms: result[:duration]
       )
-      
+
       success_result("MX test completed", result: result)
     end
   end
 
   def test_domains_in_batches(domains)
     results = { processed: 0, successful: 0, failed: 0, errors: 0 }
-    
+
     domains.find_each(batch_size: batch_size) do |domain|
       begin
         audit_service_operation(domain) do |audit_log|
           result = perform_mx_test(domain.domain)
           update_domain_status(domain, result)
-          
+
           audit_log.add_metadata(
             domain_name: domain.domain,
             mx_status: domain.mx,
             test_duration_ms: result[:duration]
           )
-          
+
           if result[:status] == :success
             results[:successful] += 1
             success_result("MX test completed", result: result)
@@ -108,10 +108,10 @@ class DomainMxTestingService < ApplicationService
         Rails.logger.error "Error testing domain #{domain.domain}: #{e.message}"
       end
     end
-    
-    success_result("Batch MX testing completed", 
+
+    success_result("Batch MX testing completed",
                   processed: results[:processed],
-                  successful: results[:successful], 
+                  successful: results[:successful],
                   failed: results[:failed],
                   errors: results[:errors])
   end

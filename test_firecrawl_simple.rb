@@ -9,7 +9,7 @@ begin
   response = Firecrawl.scrape("https://itavisen.no")
   puts "Response class: #{response.class}"
   puts "Response: #{response}"
-  
+
 rescue => e
   puts "Error: #{e.message}"
   puts "Error class: #{e.class}"
@@ -21,7 +21,7 @@ begin
   response = Firecrawl.scrape("https://itavisen.no", ENV['FIRECRAWL_API_KEY'])
   puts "Response class: #{response.class}"
   puts "Response: #{response}"
-  
+
 rescue => e
   puts "Error: #{e.message}"
   puts "Error class: #{e.class}"

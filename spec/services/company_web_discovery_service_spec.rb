@@ -282,7 +282,7 @@ RSpec.describe CompanyWebDiscoveryService do
 
     it 'generates queries with cleaned company name' do
       queries = service.send(:generate_search_queries)
-      
+
       expect(queries).to include('ELKJØP official website')
       expect(queries).to include('ELKJØP Norway')
       expect(queries).to include('ELKJØP Norge')
@@ -291,25 +291,25 @@ RSpec.describe CompanyWebDiscoveryService do
 
     it 'includes original company name as fallback' do
       queries = service.send(:generate_search_queries)
-      
+
       expect(queries).to include('ELKJØP NORDIC AS official website')
     end
 
     it 'includes industry-specific queries' do
       queries = service.send(:generate_search_queries)
-      
+
       expect(queries).to include('ELKJØP Electronics retail')
     end
 
     it 'includes location-specific queries' do
       queries = service.send(:generate_search_queries)
-      
+
       expect(queries).to include('ELKJØP Oslo')
     end
 
     it 'removes duplicate queries' do
       queries = service.send(:generate_search_queries)
-      
+
       expect(queries.uniq).to eq(queries)
     end
   end

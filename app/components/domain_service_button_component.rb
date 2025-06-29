@@ -54,7 +54,7 @@ class DomainServiceButtonComponent < ViewComponent::Base
 
   def test_status
     value = domain.send(service_config[:column])
-    
+
     # Handle JSONB column for web content
     if service_config[:column] == :web_content_data
       case value
@@ -270,22 +270,22 @@ class DomainServiceButtonComponent < ViewComponent::Base
   def extract_ip_from_metadata(metadata)
     # Extract IP from different possible metadata formats
     return nil unless metadata.is_a?(Hash)
-    
+
     # Look for common IP patterns in metadata values
     metadata.values.each do |value|
       next unless value.is_a?(String)
-      
+
       # Match IPv4 pattern
       if value.match?(/\A\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\z/)
         return value
       end
-      
+
       # Match IPv6 pattern (basic)
       if value.match?(/\A[0-9a-fA-F:]+\z/) && value.include?(":")
         return value
       end
     end
-    
+
     nil
   end
 end

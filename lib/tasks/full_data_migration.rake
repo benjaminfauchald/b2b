@@ -52,11 +52,11 @@ namespace :data do
 
   def migrate_users(remote_conn, batch_size)
     puts "\nMigrating Users..."
-    
+
     # Progress tracking
     progress_file = Rails.root.join("tmp", "user_migration_progress.txt")
     start_from = 0
-    
+
     if File.exist?(progress_file)
       start_from = File.read(progress_file).strip.to_i
       puts "Resuming from user ID: #{start_from}"
@@ -100,7 +100,7 @@ namespace :data do
 
             # Map user attributes
             user_attrs = {}
-            
+
             # Copy all fields that exist in both remote and local User model
             remote_record.each do |key, value|
               if User.column_names.include?(key) && key != "id"
@@ -162,11 +162,11 @@ namespace :data do
 
   def migrate_domains(remote_conn, batch_size)
     puts "\nMigrating Domains..."
-    
+
     # Progress tracking
     progress_file = Rails.root.join("tmp", "domain_migration_progress.txt")
     start_from = 0
-    
+
     if File.exist?(progress_file)
       start_from = File.read(progress_file).strip.to_i
       puts "Resuming from domain ID: #{start_from}"
@@ -218,12 +218,12 @@ namespace :data do
 
             # Map domain attributes
             domain_attrs = {}
-            
+
             # Copy all fields that exist in both remote and local Domain model
             remote_record.each do |key, value|
               if Domain.column_names.include?(key) && key != "id" && key != "company_id"
                 case key
-                when "created_at", "updated_at", "dns_tested_at", "web_content_extracted_at", 
+                when "created_at", "updated_at", "dns_tested_at", "web_content_extracted_at",
                      "ssl_checked_at", "last_tested_at", "whois_checked_at", "mail_server_checked_at",
                      "queue_processing_started_at", "queue_processing_completed_at"
                   domain_attrs[key] = Time.parse(value) if value.present?
@@ -294,11 +294,11 @@ namespace :data do
 
   def migrate_service_audit_logs(remote_conn, batch_size)
     puts "\nMigrating Service Audit Logs..."
-    
+
     # Progress tracking
     progress_file = Rails.root.join("tmp", "service_audit_log_migration_progress.txt")
     start_from = 0
-    
+
     if File.exist?(progress_file)
       start_from = File.read(progress_file).strip.to_i
       puts "Resuming from service audit log ID: #{start_from}"
@@ -326,7 +326,7 @@ namespace :data do
     loop do
       query = <<-SQL
         SELECT sal.*,
-               CASE 
+               CASE#{' '}
                  WHEN sal.auditable_type = 'Domain' THEN d.domain_name
                  WHEN sal.auditable_type = 'Company' THEN c.registration_number
                END as auditable_identifier
@@ -348,10 +348,10 @@ namespace :data do
 
             # Map service audit log attributes
             log_attrs = {}
-            
+
             # Copy all fields that exist in both remote and local ServiceAuditLog model
             remote_record.each do |key, value|
-              if ServiceAuditLog.column_names.include?(key) && 
+              if ServiceAuditLog.column_names.include?(key) &&
                  key != "id" && key != "auditable_id" && key != "auditable_identifier"
                 case key
                 when "created_at", "updated_at", "started_at", "completed_at"
@@ -364,7 +364,7 @@ namespace :data do
                     log_attrs[key] = JSON.parse(value) if value.present?
                   rescue JSON::ParserError
                     Rails.logger.warn "Invalid JSON for #{key}: #{value}"
-                    log_attrs[key] = key == "metadata" ? {"status" => "migrated"} : ["unspecified"]
+                    log_attrs[key] = key == "metadata" ? { "status" => "migrated" } : [ "unspecified" ]
                   end
                 else
                   log_attrs[key] = value
@@ -375,7 +375,7 @@ namespace :data do
             # Map auditable polymorphic association
             auditable_type = remote_record["auditable_type"]
             auditable_identifier = remote_record["auditable_identifier"]
-            
+
             if auditable_type.present? && auditable_identifier.present?
               case auditable_type
               when "Domain"
@@ -409,8 +409,8 @@ namespace :data do
             end
 
             # Ensure required fields have defaults
-            log_attrs["metadata"] ||= {"status" => "migrated"}
-            log_attrs["columns_affected"] ||= ["unspecified"]
+            log_attrs["metadata"] ||= { "status" => "migrated" }
+            log_attrs["columns_affected"] ||= [ "unspecified" ]
 
             # Create service audit log
             log = ServiceAuditLog.create!(log_attrs)
