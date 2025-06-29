@@ -1,5 +1,5 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" 
-     data-controller="service-stats" 
+     data-controller="service-stats scroll-preserve" 
      data-service-stats-url-value="<%= service_stats_companies_path %>"
      data-service-stats-interval-value="1000">
   <!-- Page Header -->
@@ -90,8 +90,8 @@
   </turbo-frame>
 
   <!-- Search and Filter Bar -->
-  <div class="mb-6">
-    <%= form_with url: companies_path, method: :get, class: "sm:flex sm:items-center sm:space-x-4" do |f| %>
+  <div class="mb-6" id="company-filter">
+    <%= form_with url: companies_path, method: :get, class: "sm:flex sm:items-center sm:space-x-4", data: { turbo_frame: "_top", turbo_action: "replace" } do |f| %>
       <div class="flex-1">
         <%= f.text_field :search, 
             value: params[:search],
@@ -108,11 +108,9 @@
               ["With LinkedIn", "with_linkedin"]
             ], params[:filter]),
             {},
-            class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" %>
-      </div>
-      
-      <div class="mt-3 sm:mt-0">
-        <%= f.submit "Filter", class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+            class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md",
+            data: { action: "change->scroll-preserve#savePosition" },
+            onchange: "window.scrollPosition = window.scrollY; this.form.requestSubmit()" %>
       </div>
     <% end %>
   </div>
@@ -131,3 +129,13 @@
     <%== pagy_nav(@pagy) if @pagy.pages > 1 %>
   </div>
 </div>
+
+<script>
+  // Restore scroll position after page load
+  document.addEventListener('turbo:load', function() {
+    if (window.scrollPosition) {
+      window.scrollTo(0, window.scrollPosition);
+      window.scrollPosition = null;
+    }
+  });
+</script>
