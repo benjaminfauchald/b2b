@@ -65,8 +65,53 @@ namespace :test do
       File.delete(pid_file)
     end
 
-    # Step 3: Start Rails server in background
-    puts "\n3️⃣ Starting Rails server..."
+    # Step 3: Check if Redis is running (required for Sidekiq)
+    puts "\n3️⃣ Checking Redis status..."
+    redis_running = system("redis-cli ping > /dev/null 2>&1")
+    if redis_running
+      puts "✅ Redis is running"
+    else
+      puts "❌ Redis is not running! Starting Redis..."
+      system("brew services start redis")
+      sleep 2
+      redis_running = system("redis-cli ping > /dev/null 2>&1")
+      if redis_running
+        puts "✅ Redis started successfully"
+      else
+        puts "❌ Failed to start Redis. Sidekiq will not work properly."
+      end
+    end
+
+    # Step 4: Start Sidekiq in background
+    puts "\n4️⃣ Starting Sidekiq..."
+    
+    # Kill any existing Sidekiq processes
+    sidekiq_pids = `pgrep -f "sidekiq"`.strip.split("\n")
+    if sidekiq_pids.any? && !sidekiq_pids.first.empty?
+      puts "🛑 Found existing Sidekiq processes: #{sidekiq_pids.join(', ')}"
+      puts "   Killing them..."
+      sidekiq_pids.each do |pid|
+        system("kill -9 #{pid} 2>/dev/null")
+      end
+      sleep 2
+      puts "✅ Existing Sidekiq processes killed"
+    end
+
+    # Start Sidekiq in background
+    puts "🚀 Starting Sidekiq..."
+    system("nohup bundle exec sidekiq > log/sidekiq.log 2>&1 &")
+    sleep 3
+
+    # Verify Sidekiq started
+    sidekiq_pid = `pgrep -f "sidekiq"`.strip
+    if sidekiq_pid && !sidekiq_pid.empty?
+      puts "✅ Sidekiq started successfully (PID: #{sidekiq_pid})"
+    else
+      puts "❌ Failed to start Sidekiq. Check log/sidekiq.log for details"
+    end
+
+    # Step 5: Start Rails server
+    puts "\n5️⃣ Starting Rails server..."
 
     # Create log directory if it doesn't exist
     FileUtils.mkdir_p("log")
@@ -104,8 +149,8 @@ namespace :test do
       puts "✅ Rails server started successfully (PID: #{rails_pids.join(', ')})"
     end
 
-    # Step 4: Test that Rails index page loads
-    puts "\n4️⃣ Testing Rails index page..."
+    # Step 6: Test that Rails index page loads
+    puts "\n6️⃣ Testing Rails index page..."
 
     require "net/http"
     require "uri"
@@ -162,6 +207,7 @@ namespace :test do
     puts "   Ngrok:  https://local.connectica.no"
     puts "\n📝 View logs:"
     puts "   Rails: tail -f log/rails_server.log"
+    puts "   Sidekiq: tail -f log/sidekiq.log"
     puts "   Ngrok: tail -f log/ngrok.log"
     puts "\n🛑 To stop everything: rake dev:stop"
     puts "=" * 60

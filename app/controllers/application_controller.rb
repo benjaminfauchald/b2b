@@ -23,6 +23,7 @@ class ApplicationController < ActionController::Base
   def git_version
     `git describe --tags --always 2>/dev/null`.strip.presence || "unknown"
   end
+  helper_method :git_version
 
   def git_commit
     `git rev-parse HEAD 2>/dev/null`.strip.presence || "unknown"

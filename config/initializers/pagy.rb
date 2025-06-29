@@ -7,10 +7,15 @@ require "pagy"
 
 # Instance variables
 # See https://ddnexus.github.io/pagy/docs/api/pagy#instance-variables
-Pagy::DEFAULT[:limit] = 20                                  # default items per page
-Pagy::DEFAULT[:size]  = 9                                   # default nav bar links
-# Pagy::DEFAULT[:ends]  = true                              # default for showing/hiding first and last links
-# Pagy::DEFAULT[:cycle] = false                             # default for cycling through the pages
+# Only configure if not already configured (prevents test environment issues)
+unless Pagy::DEFAULT.frozen?
+  Pagy::DEFAULT.merge!(
+    limit: 20,                                  # default items per page
+    size: 9                                     # default nav bar links
+    # ends: true                              # default for showing/hiding first and last links
+    # cycle: false                             # default for cycling through the pages
+  )
+end
 
 # Other Variables
 # See https://ddnexus.github.io/pagy/docs/api/pagy#other-variables
@@ -118,4 +123,4 @@ Pagy::DEFAULT[:size]  = 9                                   # default nav bar li
 # require 'pagy/extras/i18n'
 
 # When you are done setting your own default freeze it, so it will not get changed accidentally
-Pagy::DEFAULT.freeze
+# Pagy::DEFAULT.freeze  # Commented out for Pagy 8.0 compatibility
