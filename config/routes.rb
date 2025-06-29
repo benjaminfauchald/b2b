@@ -58,12 +58,12 @@ Rails.application.routes.draw do
       post :queue_profile_extraction
       post :queue_email_extraction
       post :queue_social_media_extraction
+      post :queue_single_profile_extraction
       get :service_stats
     end
 
     member do
       # Individual person service triggers
-      post :queue_single_profile_extraction
       post :queue_single_email_extraction
       post :queue_single_social_media_extraction
     end

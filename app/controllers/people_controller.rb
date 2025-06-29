@@ -295,7 +295,7 @@ class PeopleController < ApplicationController
               queue_depth: queue_stats["person_social_media_extraction"] || 0
             }
           ),
-          turbo_stream.replace("person_queue_statistics",
+          turbo_stream.replace("people_queue_statistics",
             partial: "people/queue_statistics",
             locals: { queue_stats: queue_stats }
           )
@@ -304,48 +304,49 @@ class PeopleController < ApplicationController
     end
   end
 
-  # POST /people/:id/queue_single_profile_extraction
+  # POST /people/queue_single_profile_extraction
+  # This is called from company pages to extract profiles for a specific company
   def queue_single_profile_extraction
     unless ServiceConfiguration.active?("person_profile_extraction")
       render json: { success: false, message: "Profile extraction service is disabled" }
       return
     end
 
-    begin
-      # Create service audit log for queueing action
-      audit_log = ServiceAuditLog.create!(
-        auditable: @person,
-        service_name: "person_profile_extraction",
-        operation_type: "queue_individual",
-        status: "pending",
-        table_name: @person.class.table_name,
-        record_id: @person.id.to_s,
-        columns_affected: [ "profile_data" ],
-        metadata: {
-          action: "manual_queue",
-          user_id: current_user.id,
-          timestamp: Time.current
-        }
-      )
+    company_id = params[:company_id]
+    unless company_id.present?
+      render json: { success: false, message: "Company ID is required" }
+      return
+    end
 
-      job_id = PersonProfileExtractionWorker.perform_async(@person.company_id)
+    company = Company.find_by(id: company_id)
+    unless company
+      render json: { success: false, message: "Company not found" }
+      return
+    end
+
+    unless company.best_linkedin_url.present?
+      render json: { success: false, message: "Company has no valid LinkedIn URL" }
+      return
+    end
+
+    begin
+      job_id = PersonProfileExtractionWorker.perform_async(company.id)
 
       # Invalidate cache immediately when queue changes
       Rails.cache.delete("person_service_stats_data")
 
       render json: {
         success: true,
-        message: "Person queued for profile extraction",
-        person_id: @person.id,
+        message: "Profile extraction queued for #{company.company_name}",
+        company_id: company.id,
         service: "profile_extraction",
         job_id: job_id,
-        worker: "PersonProfileExtractionWorker",
-        audit_log_id: audit_log.id
+        worker: "PersonProfileExtractionWorker"
       }
     rescue => e
       render json: {
         success: false,
-        message: "Failed to queue person for profile extraction: #{e.message}"
+        message: "Failed to queue profile extraction: #{e.message}"
       }
     end
   end
@@ -464,7 +465,7 @@ class PeopleController < ApplicationController
               queue_depth: queue_stats["person_profile_extraction"] || 0
             }
           ),
-          turbo_stream.replace("queue_statistics",
+          turbo_stream.replace("people_queue_statistics",
             partial: "people/queue_statistics",
             locals: { queue_stats: queue_stats }
           )
@@ -511,10 +512,20 @@ class PeopleController < ApplicationController
       end
     end
 
-    # Get overall Sidekiq stats
+    # Get people-specific stats
     begin
       sidekiq_stats = Sidekiq::Stats.new
-      stats[:total_processed] = sidekiq_stats.processed
+      
+      # Count total people services processed from ServiceAuditLog
+      # Note: person_profile_extraction operates on Companies (extracting their people)
+      # while email/social extraction might operate on Person records
+      people_services = ["person_profile_extraction", "person_email_extraction", "person_social_media_extraction"]
+      
+      stats[:total_processed] = ServiceAuditLog.where(
+        service_name: people_services,
+        status: ServiceAuditLog::STATUS_SUCCESS
+      ).count
+      
       stats[:total_failed] = sidekiq_stats.failed
       stats[:total_enqueued] = sidekiq_stats.enqueued
       stats[:workers_busy] = sidekiq_stats.workers_size

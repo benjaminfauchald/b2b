@@ -7,12 +7,13 @@
         # 1. Have been successfully processed by web discovery service, OR
         # 2. Already have a website in the database
         companies_with_websites = Company
+          .by_country(@selected_country)
           .where("operating_revenue > ?", 10_000_000)
           .where("website IS NOT NULL AND website != ''")
           .count
         
         # Total companies with revenue > 10M
-        total_high_revenue = Company.where("operating_revenue > ?", 10_000_000).count
+        total_high_revenue = Company.by_country(@selected_country).where("operating_revenue > ?", 10_000_000).count
         
         completion_percentage = total_high_revenue > 0 ? (companies_with_websites.to_f / total_high_revenue.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round

@@ -36,6 +36,7 @@ class CompaniesController < ApplicationController
     @service_audit_logs = @company.service_audit_logs
                                 .order(created_at: :desc)
                                 .limit(10)
+    @people = @company.people.order(created_at: :desc)
   end
 
   def financial_data
@@ -356,7 +357,7 @@ class CompaniesController < ApplicationController
         queue_stats = get_queue_stats
         
         render turbo_stream: [
-          turbo_stream.replace("company_financial_data_stats",
+          turbo_stream.replace("company_financials_stats",
             partial: "companies/service_stats",
             locals: {
               service_name: "company_financial_data",
@@ -382,7 +383,7 @@ class CompaniesController < ApplicationController
               queue_depth: queue_stats["company_linkedin_discovery"] || 0
             }
           ),
-          turbo_stream.replace("queue_statistics",
+          turbo_stream.replace("company_queue_statistics",
             partial: "companies/queue_statistics",
             locals: { queue_stats: queue_stats }
           )
@@ -643,15 +644,17 @@ class CompaniesController < ApplicationController
       # Count total services processed from ServiceAuditLog for company services
       company_services = ["company_financials", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery"]
       
-      # Get company IDs for selected country
-      company_ids = Company.by_country(@selected_country).pluck(:id)
-      
-      stats[:total_processed] = ServiceAuditLog.where(
-        service_name: company_services,
-        status: ServiceAuditLog::STATUS_SUCCESS,
-        auditable_type: "Company",
-        auditable_id: company_ids
-      ).count
+      # Use JOIN instead of plucking all IDs to avoid massive IN clause
+      stats[:total_processed] = ServiceAuditLog
+        .joins("INNER JOIN companies ON companies.id = service_audit_logs.auditable_id")
+        .where(
+          service_audit_logs: {
+            auditable_type: "Company",
+            service_name: company_services,
+            status: ServiceAuditLog::STATUS_SUCCESS
+          },
+          companies: { source_country: @selected_country }
+        ).count
       stats[:total_failed] = sidekiq_stats.failed
       stats[:total_enqueued] = sidekiq_stats.enqueued
       stats[:workers_busy] = sidekiq_stats.workers_size
