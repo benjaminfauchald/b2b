@@ -16,6 +16,8 @@ Rails.application.routes.draw do
       get :import, to: "domains#import_csv"
       post :import, to: "domains#process_import"
       get :import_results, to: "domains#import_results"
+      get :import_status, to: "domains#import_status"
+      get :check_import_status, to: "domains#check_import_status"
       get :template, to: "domains#download_template"
       get :export_errors, to: "domains#export_errors"
     end
