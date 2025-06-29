@@ -35,6 +35,12 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
       allow(Company).to receive(:needs_financial_update).and_return(
         double(count: 15)
       )
+      # Mock the actual query used in the component for financial data total calculation
+      allow(Company).to receive(:where).with(
+        source_country: "NO",
+        source_registry: "brreg",
+        organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
+      ).and_return(double(count: 15))
     end
 
     it "renders the component with correct counts" do
@@ -72,6 +78,10 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
         double(count: 8)
       )
       allow(Company).to receive(:web_discovery_potential).and_return(
+        double(count: 20)
+      )
+      # Mock the actual query used in the component for web discovery total calculation
+      allow(Company).to receive(:where).with("operating_revenue > ?", 10_000_000).and_return(
         double(count: 20)
       )
     end

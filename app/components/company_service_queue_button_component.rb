@@ -3,17 +3,18 @@
 class CompanyServiceQueueButtonComponent < ViewComponent::Base
   include ActionView::Helpers::NumberHelper
 
-  def initialize(service_name:, title:, icon:, action_path:, queue_name:)
+  def initialize(service_name:, title:, icon:, action_path:, queue_name:, selected_country: nil)
     @service_name = service_name
     @title = title
     @icon = icon
     @action_path = action_path
     @queue_name = queue_name
+    @selected_country = selected_country
   end
 
   private
 
-  attr_reader :service_name, :title, :icon, :action_path, :queue_name
+  attr_reader :service_name, :title, :icon, :action_path, :queue_name, :selected_country
 
   def companies_needing_service
     number_with_delimiter(companies_needing_service_raw)
@@ -27,19 +28,19 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     else
       service_name
     end
-    Company.needing_service(actual_service_name).count
+    Company.by_country(selected_country).needing_service(actual_service_name).count
   end
 
   # For web discovery, show total potential companies that could be processed
   def web_discovery_potential
     return 0 unless service_name == "company_web_discovery"
-    number_with_delimiter(Company.web_discovery_potential.count)
+    number_with_delimiter(Company.by_country(selected_country).web_discovery_potential.count)
   end
 
   # For LinkedIn discovery, show total potential companies that could be processed
   def linkedin_discovery_potential
     return 0 unless service_name == "company_linkedin_discovery"
-    number_with_delimiter(Company.linkedin_discovery_potential.count)
+    number_with_delimiter(Company.by_country(selected_country).linkedin_discovery_potential.count)
   end
 
   # Calculate companies that have been successfully processed for this service
@@ -57,6 +58,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
         .pluck("service_audit_logs.record_id")
 
       companies_with_websites = Company
+        .by_country(selected_country)
         .where("operating_revenue > ?", 10_000_000)
         .where("website IS NOT NULL AND website != ''")
         .count
@@ -88,16 +90,16 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     total = case service_name
     when "company_web_discovery"
       # Total companies with revenue > 10M (regardless of website status)
-      Company.where("operating_revenue > ?", 10_000_000).count
+      Company.by_country(selected_country).where("operating_revenue > ?", 10_000_000).count
     when "company_financial_data", "company_financials"
       # Total eligible companies for financial data (AS, ASA, DA, ANS)
       Company.where(
-        source_country: "NO",
+        source_country: selected_country,
         source_registry: "brreg",
         organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
       ).count
     when "company_linkedin_discovery"
-      Company.linkedin_discovery_potential.count
+      Company.by_country(selected_country).linkedin_discovery_potential.count
     else
       return 0
     end

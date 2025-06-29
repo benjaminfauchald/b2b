@@ -45,17 +45,17 @@
           <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
             <%= number_with_delimiter(companies_completed) %> of <%= 
               if web_discovery_service?
-                number_with_delimiter(Company.where("operating_revenue > ?", 10_000_000).count)
+                number_with_delimiter(Company.by_country(selected_country).where("operating_revenue > ?", 10_000_000).count)
               elsif linkedin_discovery_service?
-                number_with_delimiter(Company.linkedin_discovery_potential.count)
+                number_with_delimiter(Company.by_country(selected_country).linkedin_discovery_potential.count)
               elsif financial_data_service? || service_name == "company_financials"
                 number_with_delimiter(Company.where(
-                  source_country: "NO",
+                  source_country: selected_country,
                   source_registry: "brreg",
                   organization_form_code: ["AS", "ASA", "DA", "ANS"]
                 ).count)
               else
-                number_with_delimiter(Company.needs_financial_update.count)
+                number_with_delimiter(Company.by_country(selected_country).needs_financial_update.count)
               end
             %> companies processed
           </p>

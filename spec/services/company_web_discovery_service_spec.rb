@@ -23,7 +23,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             # Stub Google Custom Search API
@@ -98,7 +98,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_error
@@ -125,7 +125,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_rate_limit
@@ -145,7 +145,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_with_invalid_urls

@@ -133,7 +133,7 @@ class CompaniesController < ApplicationController
     end
 
     # Invalidate cache immediately when queue changes
-    Rails.cache.delete("service_stats_data")
+    Rails.cache.delete("service_stats_data_#{@selected_country}")
 
     render json: {
       success: true,
@@ -196,7 +196,7 @@ class CompaniesController < ApplicationController
     end
 
     # Invalidate cache immediately when queue changes
-    Rails.cache.delete("service_stats_data")
+    Rails.cache.delete("service_stats_data_#{@selected_country}")
 
     render json: {
       success: true,
@@ -259,7 +259,7 @@ class CompaniesController < ApplicationController
     end
 
     # Invalidate cache immediately when queue changes
-    Rails.cache.delete("service_stats_data")
+    Rails.cache.delete("service_stats_data_#{@selected_country}")
 
     render json: {
       success: true,
@@ -347,10 +347,17 @@ class CompaniesController < ApplicationController
   end
 
   def service_stats
+    # Set the country from params for AJAX requests
+    if params[:country].present?
+      @selected_country = params[:country]
+    else
+      set_selected_country
+    end
+    
     respond_to do |format|
       format.turbo_stream do
-        # Cache the stats for 1 second to ensure real-time updates
-        stats_data = Rails.cache.fetch("service_stats_data", expires_in: 1.second) do
+        # Cache the stats with country-specific key for 1 second to ensure real-time updates
+        stats_data = Rails.cache.fetch("service_stats_data_#{@selected_country}", expires_in: 1.second) do
           calculate_service_stats
         end
 
@@ -362,7 +369,8 @@ class CompaniesController < ApplicationController
             locals: {
               service_name: "company_financial_data",
               companies_needing: stats_data[:financial_needing],
-              queue_depth: queue_stats["company_financial_data"] || 0
+              queue_depth: queue_stats["company_financial_data"] || 0,
+              selected_country: @selected_country
             }
           ),
           turbo_stream.replace("company_web_discovery_stats",
@@ -371,7 +379,8 @@ class CompaniesController < ApplicationController
               service_name: "company_web_discovery",
               companies_needing: stats_data[:web_discovery_needing],
               companies_potential: stats_data[:web_discovery_potential],
-              queue_depth: queue_stats["company_web_discovery"] || 0
+              queue_depth: queue_stats["company_web_discovery"] || 0,
+              selected_country: @selected_country
             }
           ),
           turbo_stream.replace("company_linkedin_discovery_stats",
@@ -380,12 +389,16 @@ class CompaniesController < ApplicationController
               service_name: "company_linkedin_discovery",
               companies_needing: stats_data[:linkedin_needing],
               companies_potential: stats_data[:linkedin_potential],
-              queue_depth: queue_stats["company_linkedin_discovery"] || 0
+              queue_depth: queue_stats["company_linkedin_discovery"] || 0,
+              selected_country: @selected_country
             }
           ),
           turbo_stream.replace("company_queue_statistics",
             partial: "companies/queue_statistics",
-            locals: { queue_stats: queue_stats }
+            locals: { 
+              queue_stats: queue_stats,
+              selected_country: @selected_country
+            }
           )
         ]
       end

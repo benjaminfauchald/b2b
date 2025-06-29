@@ -1,7 +1,7 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" 
      id="companies-page"
      data-controller="service-stats scroll-preserve" 
-     data-service-stats-url-value="<%= service_stats_companies_path %>"
+     data-service-stats-url-value="<%= service_stats_companies_path(country: @selected_country) %>"
      data-service-stats-interval-value="1000">
   <!-- Page Header -->
   <div class="mb-8">
@@ -32,7 +32,8 @@
         title: "Financial Data",
         icon: "currency-dollar",
         action_path: queue_financial_data_companies_path,
-        queue_name: "company_financial_data"
+        queue_name: "company_financial_data",
+        selected_country: @selected_country
       ) %>
       
       <%= render CompanyServiceQueueButtonComponent.new(
@@ -40,7 +41,8 @@
         title: "Web Discovery",
         icon: "globe-alt",
         action_path: queue_web_discovery_companies_path,
-        queue_name: "company_web_discovery"
+        queue_name: "company_web_discovery",
+        selected_country: @selected_country
       ) %>
       
       <%= render CompanyServiceQueueButtonComponent.new(
@@ -48,7 +50,8 @@
         title: "LinkedIn Discovery",
         icon: "user-group",
         action_path: queue_linkedin_discovery_companies_path,
-        queue_name: "company_linkedin_discovery"
+        queue_name: "company_linkedin_discovery",
+        selected_country: @selected_country
       ) %>
     </div>
   </div>

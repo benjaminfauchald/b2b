@@ -88,9 +88,22 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
   end
 
   def linkedin_summary
-    return "No data" unless company.linkedin_url.present?
+    return "No data" unless company.linkedin_url.present? || company.linkedin_ai_url.present?
 
-    "Profile found"
+    if company.linkedin_url.present?
+      "Profile confirmed"
+    elsif company.linkedin_ai_url.present?
+      parts = []
+      parts << "AI discovered"
+      parts << "#{company.linkedin_ai_confidence}% confidence" if company.linkedin_ai_confidence.present?
+      
+      if company.linkedin_alternatives.present? && company.linkedin_alternatives.is_a?(Array)
+        alternative_count = company.linkedin_alternatives.size - 1
+        parts << "#{alternative_count} alternatives" if alternative_count > 0
+      end
+      
+      parts.join(" • ")
+    end
   end
 
   def employees_summary

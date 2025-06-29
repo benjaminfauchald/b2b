@@ -7,13 +7,13 @@
         # 1. Have been successfully processed by web discovery service, OR
         # 2. Already have a website in the database
         companies_with_websites = Company
-          .by_country(@selected_country)
+          .by_country(selected_country)
           .where("operating_revenue > ?", 10_000_000)
           .where("website IS NOT NULL AND website != ''")
           .count
         
         # Total companies with revenue > 10M
-        total_high_revenue = Company.by_country(@selected_country).where("operating_revenue > ?", 10_000_000).count
+        total_high_revenue = Company.by_country(selected_country).where("operating_revenue > ?", 10_000_000).count
         
         completion_percentage = total_high_revenue > 0 ? (companies_with_websites.to_f / total_high_revenue.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
@@ -33,20 +33,22 @@
     <!-- Financial Data Completion percentage display -->
     <div class="mb-3">
       <%
-        # Calculate companies that have actually been successfully processed by financial data service
-        companies_completed = ServiceAuditLog
-          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-          .where(service_name: "company_financial_data", status: "success")
-          .where("companies.source_country = 'NO'")
-          .where("companies.source_registry = 'brreg'") 
-          .where("companies.ordinary_result IS NULL")
-          .where("companies.organization_form_code IN ('AS', 'ASA', 'DA', 'ANS')")
+        # Get all companies that match the financial data criteria for this country
+        total_financial_candidates = Company
+          .by_country(selected_country)
+          .where(source_registry: "brreg")
+          .where(organization_form_code: ["AS", "ASA", "DA", "ANS"])
           .count
         
-        # Get total potential companies for financial data
-        financial_potential = Company.needs_financial_update.count
+        # Calculate companies that have actually been successfully processed by financial data service
+        companies_completed = Company
+          .by_country(selected_country)
+          .where(source_registry: "brreg")
+          .where(organization_form_code: ["AS", "ASA", "DA", "ANS"])
+          .where.not(ordinary_result: nil)
+          .count
         
-        completion_percentage = financial_potential > 0 ? (companies_completed.to_f / financial_potential.to_f) * 100 : 0
+        completion_percentage = total_financial_candidates > 0 ? (companies_completed.to_f / total_financial_candidates.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
       %>
       <div class="flex items-center justify-between mb-1">
@@ -57,7 +59,7 @@
         <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
       </div>
       <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(financial_potential) %> companies processed
+        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(total_financial_candidates) %> companies processed
       </p>
     </div>
   <% elsif service_name == "company_linkedin_discovery" && defined?(companies_potential) %>
@@ -66,8 +68,13 @@
       <%
         # Calculate companies that have actually been successfully processed by LinkedIn discovery service
         companies_completed = ServiceAuditLog
-          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-          .where(service_name: "company_linkedin_discovery", status: "success")
+          .joins("JOIN companies ON companies.id = service_audit_logs.auditable_id")
+          .where(
+            auditable_type: "Company",
+            service_name: "company_linkedin_discovery", 
+            status: ServiceAuditLog::STATUS_SUCCESS
+          )
+          .where("companies.source_country = ?", selected_country)
           .where("companies.operating_revenue > ?", 10_000_000)
           .count
         
