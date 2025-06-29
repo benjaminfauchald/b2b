@@ -34,7 +34,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
         service_name: "company_linkedin_discovery",
         icon: "user-group",
         last_updated: company.linkedin_last_processed_at,
-        has_data: company.linkedin_url.present?,
+        has_data: company.linkedin_url.present? || company.linkedin_ai_url.present?,
         data_summary: linkedin_summary,
         color: "indigo"
       },
