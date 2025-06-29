@@ -20,7 +20,14 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   end
   
   def companies_needing_service_raw
-    Company.needing_service(service_name).count
+    # Map service names to handle legacy naming
+    actual_service_name = case service_name
+    when "company_financials"
+      "company_financial_data"  # The scope expects this name
+    else
+      service_name
+    end
+    Company.needing_service(actual_service_name).count
   end
 
   # For web discovery, show total potential companies that could be processed
@@ -46,16 +53,13 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
         .where("companies.operating_revenue > ?", 10_000_000)
         .where("companies.website IS NULL OR companies.website = ''")
         .count
-    when "company_financial_data"
+    when "company_financial_data", "company_financials"
       # Count companies that have actually been successfully processed by financial data service
+      # Use the correct service name: company_financials
       ServiceAuditLog
-        .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-        .where(service_name: "company_financial_data", status: "success")
-        .where("companies.source_country = 'NO'")
-        .where("companies.source_registry = 'brreg'") 
-        .where("companies.ordinary_result IS NULL")
-        .where("companies.organization_form_code IN ('AS', 'ASA', 'DA', 'ANS')")
-        .count
+        .where(service_name: "company_financials", status: "success")
+        .distinct
+        .count(:auditable_id)
     when "company_linkedin_discovery"
       # Count companies that have actually been successfully processed by LinkedIn discovery service
       ServiceAuditLog
@@ -66,25 +70,30 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
-    number_with_delimiter(count)
+    count  # Return as integer, not formatted
   end
 
   # Calculate completion percentage
   def completion_percentage
     total = case service_name
     when "company_web_discovery"
-      web_discovery_potential
-    when "company_financial_data"
-      Company.needs_financial_update.count
+      Company.web_discovery_potential.count
+    when "company_financial_data", "company_financials"
+      # Total eligible companies for financial data (AS, ASA, DA, ANS)
+      Company.where(
+        source_country: "NO",
+        source_registry: "brreg",
+        organization_form_code: ["AS", "ASA", "DA", "ANS"]
+      ).count
     when "company_linkedin_discovery"
-      linkedin_discovery_potential
+      Company.linkedin_discovery_potential.count
     else
       return 0
     end
     
     return 0 if total == 0
     
-    completed = companies_completed
+    completed = companies_completed  # Now returns integer directly
     percentage = (completed.to_f / total.to_f) * 100
     
     # Round to 1 decimal place for small percentages, 0 decimals for large ones
@@ -102,7 +111,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
 
   # Check if this is the financial data service
   def financial_data_service?
-    service_name == "company_financial_data"
+    service_name == "company_financial_data" || service_name == "company_financials"
   end
 
   # Check if this is the LinkedIn discovery service
