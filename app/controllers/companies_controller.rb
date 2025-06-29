@@ -2,11 +2,13 @@
 
 class CompaniesController < ApplicationController
   before_action :authenticate_user!
+  before_action :set_selected_country
   before_action :set_company, only: %i[show edit update destroy queue_single_financial_data queue_single_web_discovery queue_single_linkedin_discovery queue_single_employee_discovery]
-  skip_before_action :verify_authenticity_token, only: [ :queue_financial_data, :queue_web_discovery, :queue_linkedin_discovery, :queue_employee_discovery, :queue_single_financial_data, :queue_single_web_discovery, :queue_single_linkedin_discovery, :queue_single_employee_discovery ]
+  skip_before_action :verify_authenticity_token, only: [ :queue_financial_data, :queue_web_discovery, :queue_linkedin_discovery, :queue_employee_discovery, :queue_single_financial_data, :queue_single_web_discovery, :queue_single_linkedin_discovery, :queue_single_employee_discovery, :set_country ]
 
   def index
-    companies_scope = Company.includes(:service_audit_logs)
+    companies_scope = Company.by_country(@selected_country)
+                            .includes(:service_audit_logs)
                             .order(created_at: :desc)
 
     if params[:search].present?
@@ -26,6 +28,7 @@ class CompaniesController < ApplicationController
 
     @pagy, @companies = pagy(companies_scope)
     @queue_stats = get_queue_stats
+    @available_countries = Company.distinct.pluck(:source_country).compact.sort
   end
 
   def show
@@ -98,7 +101,7 @@ class CompaniesController < ApplicationController
     end
 
     # Get available companies that need processing
-    available_companies = Company.needing_service("company_financial_data")
+    available_companies = Company.by_country(@selected_country).needing_service("company_financial_data")
     available_count = available_companies.count
 
     # Check if we have enough companies to queue
@@ -161,7 +164,7 @@ class CompaniesController < ApplicationController
     end
 
     # Get available companies that need processing
-    available_companies = Company.needing_service("company_web_discovery")
+    available_companies = Company.by_country(@selected_country).needing_service("company_web_discovery")
     available_count = available_companies.count
 
     # Check if we have enough companies to queue
@@ -224,7 +227,7 @@ class CompaniesController < ApplicationController
     end
 
     # Get available companies that need processing
-    available_companies = Company.needing_service("company_linkedin_discovery")
+    available_companies = Company.by_country(@selected_country).needing_service("company_linkedin_discovery")
     available_count = available_companies.count
 
     # Check if we have enough companies to queue
@@ -287,7 +290,7 @@ class CompaniesController < ApplicationController
     end
 
     # Get available companies that need processing
-    available_companies = Company.needing_service("company_employee_discovery")
+    available_companies = Company.by_country(@selected_country).needing_service("company_employee_discovery")
     available_count = available_companies.count
 
     # Check if we have enough companies to queue
@@ -335,6 +338,13 @@ class CompaniesController < ApplicationController
   end
 
   # GET /companies/service_stats
+  def set_country
+    if params[:country].present? && Company.exists?(source_country: params[:country])
+      session[:selected_country] = params[:country]
+    end
+    redirect_to companies_path
+  end
+
   def service_stats
     respond_to do |format|
       format.turbo_stream do
@@ -567,17 +577,31 @@ class CompaniesController < ApplicationController
 
   private
 
+  def set_selected_country
+    # Get available countries
+    available_countries = Company.distinct.pluck(:source_country).compact.sort
+    
+    # Set selected country from session, params, or default to first available
+    @selected_country = session[:selected_country] || params[:country]
+    
+    # Validate and set default if needed
+    if @selected_country.blank? || !available_countries.include?(@selected_country)
+      @selected_country = available_countries.first
+      session[:selected_country] = @selected_country
+    end
+  end
+
   def set_company
     @company = Company.find(params[:id])
   end
 
   def calculate_service_stats
     {
-      financial_needing: Company.needing_service("company_financial_data").count,
-      web_discovery_needing: Company.needing_service("company_web_discovery").count,
-      web_discovery_potential: Company.where("operating_revenue > ?", 10_000_000).count,
-      linkedin_needing: Company.needing_service("company_linkedin_discovery").count,
-      linkedin_potential: Company.linkedin_discovery_potential.count
+      financial_needing: Company.by_country(@selected_country).needing_service("company_financial_data").count,
+      web_discovery_needing: Company.by_country(@selected_country).needing_service("company_web_discovery").count,
+      web_discovery_potential: Company.by_country(@selected_country).where("operating_revenue > ?", 10_000_000).count,
+      linkedin_needing: Company.by_country(@selected_country).needing_service("company_linkedin_discovery").count,
+      linkedin_potential: Company.by_country(@selected_country).linkedin_discovery_potential.count
     }
   end
 
@@ -618,10 +642,15 @@ class CompaniesController < ApplicationController
       sidekiq_stats = Sidekiq::Stats.new
       # Count total services processed from ServiceAuditLog for company services
       company_services = ["company_financials", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery"]
+      
+      # Get company IDs for selected country
+      company_ids = Company.by_country(@selected_country).pluck(:id)
+      
       stats[:total_processed] = ServiceAuditLog.where(
         service_name: company_services,
         status: ServiceAuditLog::STATUS_SUCCESS,
-        auditable_type: "Company"
+        auditable_type: "Company",
+        auditable_id: company_ids
       ).count
       stats[:total_failed] = sidekiq_stats.failed
       stats[:total_enqueued] = sidekiq_stats.enqueued

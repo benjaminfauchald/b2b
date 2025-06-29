@@ -20,6 +20,9 @@ require 'webmock/rspec'
 require_relative 'support/latest_service_run_stub'
 require 'sidekiq/testing'
 
+# Load support files
+Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
+
 # Configure WebMock
 WebMock.disable_net_connect!(allow_localhost: true)
 

@@ -1,0 +1,16 @@
+<% if available_countries.size > 1 %>
+  <%= form_with url: set_country_companies_path, method: :post, class: "inline-block", data: { turbo_frame: "_top" } do |f| %>
+    <%= f.select :country,
+        options_for_select(
+          available_countries.map { |code| ["#{country_flag(code)} #{country_name(code)}", code] },
+          selected_country
+        ),
+        {},
+        class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md",
+        onchange: "this.form.requestSubmit()" %>
+  <% end %>
+<% else %>
+  <div class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+    <%= country_flag(available_countries.first) %> <%= country_name(available_countries.first) %>
+  </div>
+<% end %>

@@ -9,6 +9,9 @@ class Company < ApplicationRecord
   # Validations
   validates :registration_number, presence: true, uniqueness: true
 
+  # Country filtering scope
+  scope :by_country, ->(country_code) { where(source_country: country_code) if country_code.present? }
+
   # Scopes for financial data
   scope :with_financial_data, -> { where.not(ordinary_result: nil, annual_result: nil) }
   scope :without_financial_data, -> { where(ordinary_result: nil, annual_result: nil) }

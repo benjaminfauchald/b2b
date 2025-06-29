@@ -39,6 +39,7 @@ Rails.application.routes.draw do
       post :queue_employee_discovery
       get :enhancement_queue_status
       get :service_stats
+      post :set_country
     end
 
     member do
