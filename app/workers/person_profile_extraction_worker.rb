@@ -6,14 +6,16 @@ class PersonProfileExtractionWorker
   def perform(company_id)
     Rails.logger.info "🚀 PersonProfileExtractionWorker: Starting profile extraction for company #{company_id}"
     
-    service = PersonProfileExtractionService.new(company_id: company_id)
+    # Use the new async service
+    service = PersonProfileExtractionServiceV2.new(company_id: company_id)
     result = service.call
     
     if result.success?
-      Rails.logger.info "✅ PersonProfileExtractionWorker: Successfully extracted profiles for company #{company_id}: #{result.message}"
+      Rails.logger.info "✅ PersonProfileExtractionWorker: Profile extraction launched for company #{company_id}: #{result.message}"
+      # The service now handles async monitoring, so we just return success
     else
-      Rails.logger.error "❌ PersonProfileExtractionWorker: Failed to extract profiles for company #{company_id}: #{result.error}"
-      raise "Profile extraction failed: #{result.error}"
+      Rails.logger.error "❌ PersonProfileExtractionWorker: Failed to launch profile extraction for company #{company_id}: #{result.error}"
+      raise "Profile extraction launch failed: #{result.error}"
     end
   rescue => e
     Rails.logger.error "❌ PersonProfileExtractionWorker: Critical error for company #{company_id}: #{e.message}"

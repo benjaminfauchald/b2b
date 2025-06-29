@@ -1,0 +1,950 @@
+company_0:
+  registration_number: "TEST634497"
+  company_name: "Grant, Runolfsdottir and Powlowski AS"
+  email: null
+  phone: null
+  website: null
+  postal_address: "8016 Sunni Greens"
+  postal_city: "ØSTERÅS"
+  postal_code: "1361"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "AS"
+  operating_revenue: 0
+  ordinary_result: -37800
+  annual_result: -37800
+  employee_count: null
+  primary_industry_code: "70.22"
+  primary_industry_description: "Bedriftsrådgivning og annen administrativ rådgivning"
+
+company_1:
+  registration_number: "TEST634518"
+  company_name: "Hegmann Inc ESEK"
+  email: "dannie@stehr.example"
+  phone: null
+  website: null
+  postal_address: "592 Dione Springs"
+  postal_city: "OSLO"
+  postal_code: "179"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ESEK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "97.0"
+  primary_industry_description: "Lønnet arbeid i private husholdninger"
+
+company_2:
+  registration_number: "TEST634519"
+  company_name: "Hintz and Sons FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "97203 Meta Junction"
+  postal_city: "KVINESDAL"
+  postal_code: "4480"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_3:
+  registration_number: "TEST634520"
+  company_name: "Wilkinson-Boyle FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "9870 Meredith Prairie"
+  postal_city: "NAMSOS"
+  postal_code: "7805"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "93.12"
+  primary_industry_description: "Idrettslag og -klubber"
+
+company_4:
+  registration_number: "TEST634521"
+  company_name: "Wilkinson LLC ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "88125 Hai Corner"
+  postal_city: "FINNSNES"
+  postal_code: "9307"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "43.221"
+  primary_industry_description: "Rørleggerarbeid"
+
+company_5:
+  registration_number: "TEST634522"
+  company_name: "Bruen Inc FLI"
+  email: "almeda_wunsch@leannon.example"
+  phone: null
+  website: "http://ratke.example/jeramy"
+  postal_address: "26177 Glady Field"
+  postal_city: "TRONDHEIM"
+  postal_code: "7030"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_6:
+  registration_number: "TEST634523"
+  company_name: "Schinner, Wuckert and Jakubowski FLI"
+  email: "caryl@grant.test"
+  phone: null
+  website: null
+  postal_address: "63294 Joye Haven"
+  postal_city: "VOSS"
+  postal_code: "5700"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "93.292"
+  primary_industry_description: "Fritidsetablissement"
+
+company_7:
+  registration_number: "TEST634524"
+  company_name: "Quigley-Cormier FLI"
+  email: "shannon@feeney.test"
+  phone: null
+  website: "http://swift-ebert.example/jake"
+  postal_address: null
+  postal_city: null
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_8:
+  registration_number: "TEST634525"
+  company_name: "Greenholt-Bahringer ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "41886 Harold Summit"
+  postal_city: "TISTEDAL"
+  postal_code: "1792"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "33.12"
+  primary_industry_description: "Reparasjon av maskiner"
+
+company_9:
+  registration_number: "TEST634526"
+  company_name: "Roberts, Pouros and Daugherty ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "712 Padberg Rapids"
+  postal_city: "TØNSBERG"
+  postal_code: "3114"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "86.909"
+  primary_industry_description: "Andre helsetjenester"
+
+company_10:
+  registration_number: "TEST634527"
+  company_name: "MacGyver-Crist UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "1846 Emory Mountain"
+  postal_city: "DK-3370 MELBY"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_11:
+  registration_number: "TEST634528"
+  company_name: "Dibbert Group UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "632 Auer Meadows"
+  postal_city: "LANARKSHIRE G65 0NH SCOTLAND"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_12:
+  registration_number: "TEST634529"
+  company_name: "Conn and Sons ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "508 Ismael Villages"
+  postal_city: "TRESFJORD"
+  postal_code: "6391"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "1.46"
+  primary_industry_description: "Svinehold"
+
+company_13:
+  registration_number: "TEST634531"
+  company_name: "Jaskolski, Monahan and Kohler UTLA"
+  email: null
+  phone: "180 243 8857"
+  website: null
+  postal_address: "50469 Volkman Rapid"
+  postal_city: "DE-66793 SAARWELLINGEN"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_14:
+  registration_number: "TEST634532"
+  company_name: "Parisian-Hyatt UTLA"
+  email: null
+  phone: null
+  website: "http://beer.example/chanel.wehner"
+  postal_address: "59866 Vincent Rapids"
+  postal_city: "DK 8600 Silkeborg"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_15:
+  registration_number: "TEST634533"
+  company_name: "Reynolds, Gusikowski and Schuppe ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "771 Beahan Oval"
+  postal_city: "OSLO"
+  postal_code: "656"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "74.102"
+  primary_industry_description: "Grafisk og visuell kommunikasjonsdesign"
+
+company_16:
+  registration_number: "TEST634534"
+  company_name: "Robel LLC ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "52844 Nickole Squares"
+  postal_city: "ASKER"
+  postal_code: "1384"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "1.49"
+  primary_industry_description: "Husdyrhold ellers"
+
+company_17:
+  registration_number: "TEST634535"
+  company_name: "Bayer-Nicolas ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "1043 Blanda Manors"
+  postal_city: "DRAMMEN"
+  postal_code: "3029"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "82.202"
+  primary_industry_description: "Telefonsalg"
+
+company_18:
+  registration_number: "TEST634536"
+  company_name: "Windler, Fadel and Ondricka UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "4212 Aleta Mission"
+  postal_city: "SE-39477 Kalmar"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_19:
+  registration_number: "TEST634537"
+  company_name: "Dietrich, Abshire and Franecki FLI"
+  email: "todd@schumm.example"
+  phone: null
+  website: null
+  postal_address: "7605 Corkery Valleys"
+  postal_city: "HØNEFOSS"
+  postal_code: "3518"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_20:
+  registration_number: "TEST634538"
+  company_name: "Bradtke-O'Conner ENK"
+  email: "betsey@ward.test"
+  phone: null
+  website: null
+  postal_address: "321 Page Mills"
+  postal_city: "SANDNES"
+  postal_code: "4321"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "96.09"
+  primary_industry_description: "Personlig tjenesteyting ikke nevnt annet sted"
+
+company_21:
+  registration_number: "TEST634539"
+  company_name: "Schmitt, Hoeger and Hane STI"
+  email: "bonnie.smitham@davis.test"
+  phone: "4551525636"
+  website: "http://king.example/deeann"
+  postal_address: "717 Beatty Cape"
+  postal_city: "OSLO"
+  postal_code: "380"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "STI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.992"
+  primary_industry_description: "Fond/legater som støtter veldedige og allmennyttige formål"
+
+company_22:
+  registration_number: "TEST634540"
+  company_name: "Stroman Group FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "4696 Rogahn Turnpike"
+  postal_city: "ÅS"
+  postal_code: "1435"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "88.999"
+  primary_industry_description: "Andre sosialtjenester uten botilbud"
+
+company_23:
+  registration_number: "TEST634541"
+  company_name: "Huels, Brekke and Bernhard FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "7223 Miller Fall"
+  postal_city: "SANDE I SUNNFJORD"
+  postal_code: "6973"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_24:
+  registration_number: "TEST634542"
+  company_name: "Carter, Greenfelder and Kirlin SAM"
+  email: null
+  phone: null
+  website: null
+  postal_address: "183 Beahan Shoal"
+  postal_city: "ÅFJORD"
+  postal_code: "7170"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "SAM"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "97.0"
+  primary_industry_description: "Lønnet arbeid i private husholdninger"
+
+company_25:
+  registration_number: "TEST634543"
+  company_name: "Kulas-Rath FLI"
+  email: "genaro@jakubowski.test"
+  phone: null
+  website: "http://kris-carter.example/taylor"
+  postal_address: null
+  postal_city: null
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "88.995"
+  primary_industry_description: "Sosiale velferdsorganisasjoner"
+
+company_26:
+  registration_number: "TEST634561"
+  company_name: "Kihn Inc FLI"
+  email: "glen@walker-bednar.test"
+  phone: null
+  website: null
+  postal_address: "760 Jerrica Harbor"
+  postal_city: "NAMSOS"
+  postal_code: "7800"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_27:
+  registration_number: "TEST634562"
+  company_name: "Lockman-Schneider ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "5808 Morar Trail"
+  postal_city: "TOLVSRØD"
+  postal_code: "3154"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "62.01"
+  primary_industry_description: "Programmeringstjenester"
+
+company_28:
+  registration_number: "TEST634564"
+  company_name: "Walsh-Stiedemann NUF"
+  email: "scotty.bashirian@mclaughlin.test"
+  phone: null
+  website: null
+  postal_address: "65649 Wilford Pine"
+  postal_city: "OSLO"
+  postal_code: "666"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "72.19"
+  primary_industry_description: "Annen forskning og annet utviklingsarbeid innen naturvitenskap og teknikk"
+
+company_29:
+  registration_number: "TEST634565"
+  company_name: "Bartoletti-Heller NUF"
+  email: null
+  phone: null
+  website: null
+  postal_address: "29911 Coy Prairie"
+  postal_city: "WEST MIDLANDS B69 2BN"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "46.63"
+  primary_industry_description: "Engroshandel med maskiner og utstyr til bergverksdrift, olje- og gassutvinning og bygge- og anleggsvirksomhet"
+
+company_30:
+  registration_number: "TEST634568"
+  company_name: "Koss, Wilkinson and Leffler ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "509 Kim Meadows"
+  postal_city: "SKI"
+  postal_code: "1400"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "86.909"
+  primary_industry_description: "Andre helsetjenester"
+
+company_31:
+  registration_number: "TEST634569"
+  company_name: "Toy LLC FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "90911 Feil Views"
+  postal_city: "ETNE"
+  postal_code: "5590"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_32:
+  registration_number: "TEST634570"
+  company_name: "Reichert and Sons ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "390 Aurore Divide"
+  postal_city: "HEGGEDAL"
+  postal_code: "1389"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "45.2"
+  primary_industry_description: "Vedlikehold og reparasjon av motorvogner, unntatt motorsykler"
+
+company_33:
+  registration_number: "TEST634572"
+  company_name: "Nader, Muller and Beatty NUF"
+  email: null
+  phone: null
+  website: null
+  postal_address: "6165 Barrows Camp"
+  postal_city: "SE-182 61 DJURSHOLM"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "86.222"
+  primary_industry_description: "Legetjenester innen psykisk helsevern"
+
+company_34:
+  registration_number: "TEST634573"
+  company_name: "Haley-Gleichner ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "96635 Bennett Via"
+  postal_city: "OSLO"
+  postal_code: "266"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "88.999"
+  primary_industry_description: "Andre sosialtjenester uten botilbud"
+
+company_35:
+  registration_number: "TEST634574"
+  company_name: "McLaughlin and Sons ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "879 Crystal Prairie"
+  postal_city: "DILLING"
+  postal_code: "1570"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "45.2"
+  primary_industry_description: "Vedlikehold og reparasjon av motorvogner, unntatt motorsykler"
+
+company_36:
+  registration_number: "TEST634576"
+  company_name: "Altenwerth-Pouros NUF"
+  email: null
+  phone: null
+  website: null
+  postal_address: "3813 Daugherty Locks"
+  postal_city: "TORP"
+  postal_code: "1658"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "41.2"
+  primary_industry_description: "Oppføring av bygninger"
+
+company_37:
+  registration_number: "TEST634577"
+  company_name: "Prosacco, Daugherty and Schinner ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "155 Deon Mountain"
+  postal_city: "VINJE"
+  postal_code: "3890"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "2.4"
+  primary_industry_description: "Tjenester tilknyttet skogbruk"
+
+company_38:
+  registration_number: "TEST634579"
+  company_name: "Brakus-Stroman UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "925 Ratke Station"
+  postal_city: "EC4WA 3TW LONDON"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_39:
+  registration_number: "TEST634580"
+  company_name: "Terry-Shields FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "280 Erdman Lock"
+  postal_city: "GOL"
+  postal_code: "3550"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_40:
+  registration_number: "TEST634581"
+  company_name: "Feest, Rath and Russel NUF"
+  email: null
+  phone: null
+  website: null
+  postal_address: "44645 Keebler Rapids"
+  postal_city: "OSLO"
+  postal_code: "278"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "72.19"
+  primary_industry_description: "Annen forskning og annet utviklingsarbeid innen naturvitenskap og teknikk"
+
+company_41:
+  registration_number: "TEST634584"
+  company_name: "O'Reilly, Hoppe and Kuhlman FLI"
+  email: "wilma.christiansen@fay.example"
+  phone: null
+  website: "http://barton.test/otis"
+  postal_address: "839 Krajcik Corner"
+  postal_city: "SØRUMSAND"
+  postal_code: "1920"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_42:
+  registration_number: "TEST634585"
+  company_name: "Dicki, Schinner and Bode NUF"
+  email: null
+  phone: null
+  website: null
+  postal_address: "5837 Denisse Ramp"
+  postal_city: "SE-784 68 BORLÄNGE"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "NUF"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "78.2"
+  primary_industry_description: "Utleie av arbeidskraft"
+
+company_43:
+  registration_number: "TEST634586"
+  company_name: "Lang, Spencer and Fadel ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "2321 Sonny Harbor"
+  postal_city: "OSLO"
+  postal_code: "585"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "41.2"
+  primary_industry_description: "Oppføring av bygninger"
+
+company_44:
+  registration_number: "TEST634587"
+  company_name: "Marks, Beier and Cremin UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "2286 Daphine Locks"
+  postal_city: "FI-76100 PIEKSÄMÄKI"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+
+company_45:
+  registration_number: "TEST634589"
+  company_name: "Larson, O'Connell and Wisoky FLI"
+  email: null
+  phone: null
+  website: null
+  postal_address: "88488 Shanae Mill"
+  postal_city: "SANDEFJORD"
+  postal_code: "3226"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_46:
+  registration_number: "TEST634590"
+  company_name: "Legros LLC ENK"
+  email: "bradly@nolan.example"
+  phone: null
+  website: null
+  postal_address: "8053 Willms Squares"
+  postal_city: "INDERØY"
+  postal_code: "7670"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "43.12"
+  primary_industry_description: "Grunnarbeid"
+
+company_47:
+  registration_number: "TEST634591"
+  company_name: "Mante-Tillman FLI"
+  email: "angelo.prosacco@schmitt.test"
+  phone: null
+  website: null
+  postal_address: "8341 Sharell View"
+  postal_city: "FREDRIKSTAD"
+  postal_code: "1607"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "FLI"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "94.991"
+  primary_industry_description: "Aktiviteter i andre interesseorganisasjoner ikke nevnt annet sted"
+
+company_48:
+  registration_number: "TEST634592"
+  company_name: "Tromp LLC ENK"
+  email: null
+  phone: null
+  website: null
+  postal_address: "788 Steuber Ridge"
+  postal_city: "TILLER"
+  postal_code: "7092"
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "ENK"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: "85.599"
+  primary_industry_description: "Annen undervisning ikke nevnt annet sted"
+
+company_49:
+  registration_number: "TEST634593"
+  company_name: "Auer LLC UTLA"
+  email: null
+  phone: null
+  website: null
+  postal_address: "6720 Bosco Fords"
+  postal_city: "SW1Y 5EA LONDON"
+  postal_code: null
+  source_country: "NO"
+  source_registry: "brreg"
+  organization_form_code: "UTLA"
+  operating_revenue: null
+  ordinary_result: null
+  annual_result: null
+  employee_count: null
+  primary_industry_code: null
+  primary_industry_description: null
+

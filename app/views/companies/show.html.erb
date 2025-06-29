@@ -129,7 +129,7 @@
   <!-- Service Testing Buttons -->
   <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
     <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Enhancement Services</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div>
         <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Financial Data</h4>
         <%= render CompanyServiceButtonComponent.new(company: @company, service: :financial_data) %>
@@ -141,6 +141,10 @@
       <div>
         <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn Discovery</h4>
         <%= render CompanyServiceButtonComponent.new(company: @company, service: :linkedin_discovery) %>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Profile Extraction</h4>
+        <%= render CompanyProfileExtractionButtonComponent.new(company: @company) %>
       </div>
     </div>
   </div>
@@ -156,6 +160,11 @@
     <div id="company_financial_data_<%= @company.id %>">
       <%= render CompanyFinancialDataComponent.new(company: @company) %>
     </div>
+  </div>
+
+  <!-- LinkedIn Profiles -->
+  <div class="mt-6">
+    <%= render CompanyLinkedinProfilesComponent.new(company: @company) %>
   </div>
 
   <!-- Service Audit Logs -->

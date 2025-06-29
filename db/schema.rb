@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_29_161736) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -358,7 +358,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
     t.index ["registration_number"], name: "index_companies_on_registration_number_unique", unique: true
+    t.index ["source_country", "operating_revenue"], name: "index_companies_on_source_country_and_operating_revenue"
     t.index ["source_country", "source_registry"], name: "index_companies_on_source_country_and_source_registry"
+    t.index ["source_country", "website"], name: "index_companies_on_source_country_and_website"
+    t.index ["source_country"], name: "index_companies_on_source_country"
     t.index ["web_discovery_updated_at"], name: "index_companies_on_web_discovery_updated_at"
     t.index ["web_pages"], name: "index_companies_on_web_pages", using: :gin
   end
@@ -415,6 +418,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
     t.datetime "updated_at", null: false
     t.jsonb "profile_data"
     t.jsonb "email_data"
+    t.index ["profile_url"], name: "index_people_on_profile_url", unique: true
   end
 
   create_table "service_audit_logs", force: :cascade do |t|

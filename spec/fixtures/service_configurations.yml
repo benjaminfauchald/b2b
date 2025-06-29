@@ -1,0 +1,27 @@
+company_linkedin_discovery_config:
+  service_name: "company_linkedin_discovery"
+  refresh_interval_hours: 720
+  depends_on_services: []
+  active: true
+  batch_size: 100
+  retry_attempts: 3
+  settings: {}
+
+company_web_discovery_config:
+  service_name: "company_web_discovery"
+  refresh_interval_hours: 720
+  depends_on_services: []
+  active: true
+  batch_size: 1000
+  retry_attempts: 3
+  settings: {}
+
+person_profile_extraction_config:
+  service_name: "person_profile_extraction"
+  refresh_interval_hours: 720
+  depends_on_services: []
+  active: true
+  batch_size: 10
+  retry_attempts: 3
+  settings: {"description":"Extract LinkedIn profiles for company employees","uses_phantombuster":true,"confidence_threshold":50}
+

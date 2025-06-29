@@ -5,6 +5,7 @@ class Company < ApplicationRecord
 
   # Associations
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
+  has_many :people, dependent: :destroy
 
   # Validations
   validates :registration_number, presence: true, uniqueness: true
@@ -18,21 +19,32 @@ class Company < ApplicationRecord
   scope :needs_financial_update, -> {
     service_config = ServiceConfiguration.find_by(service_name: "company_financial_data")
     refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
-    subquery = ServiceAuditLog
-      .where(service_name: "company_financial_data", status: ServiceAuditLog.statuses[:success])
+    
+    # Get IDs of companies with recent successful audits
+    recent_success_ids = ServiceAuditLog
+      .where(
+        auditable_type: "Company",
+        service_name: "company_financial_data", 
+        status: ServiceAuditLog.statuses[:success]
+      )
       .where("completed_at > ?", refresh_threshold)
       .select(:auditable_id)
       .distinct
+      .pluck(:auditable_id)
 
-    where(
-      source_country: "NO",
+    # Return companies that match criteria and don't have recent successful audits
+    query = where(
       source_registry: "brreg",
       ordinary_result: nil,
       organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
-    ).where(
-      "companies.id NOT IN (?)",
-      subquery
     )
+    
+    # Only exclude if there are actually IDs to exclude
+    if recent_success_ids.any?
+      query = query.where.not(id: recent_success_ids)
+    end
+    
+    query
   }
 
   # Scopes for web discovery

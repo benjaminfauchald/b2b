@@ -45,8 +45,7 @@ module ServiceAuditable
     # For Company financial data, check business logic criteria first
     if self.class == Company && service_name == "company_financial_data"
       # Only process companies that match the business criteria
-      return false unless source_country == "NO" && 
-                         source_registry == "brreg" && 
+      return false unless source_registry == "brreg" && 
                          ordinary_result.nil? && 
                          ["AS", "ASA", "DA", "ANS"].include?(organization_form_code)
     end
@@ -153,18 +152,19 @@ module ServiceAuditable
       return none unless service_config&.active?
 
       # Special handling for company services - use targeted scopes
+      # When called on a scoped relation, merge the conditions
       if self == Company && service_name == "company_web_discovery"
-        return needing_web_discovery
+        return all.merge(needing_web_discovery)
       elsif self == Company && service_name == "company_financial_data"
-        return needs_financial_update
+        return all.merge(needs_financial_update)
       elsif self == Company && service_name == "company_linkedin_discovery"
-        return needing_linkedin_discovery
+        return all.merge(needing_linkedin_discovery)
       elsif self == Person && service_name == "person_profile_extraction"
-        return needs_profile_extraction
+        return all.merge(needs_profile_extraction)
       elsif self == Person && service_name == "person_email_extraction"
-        return needs_email_extraction
+        return all.merge(needs_email_extraction)
       elsif self == Person && service_name == "person_social_media_extraction"
-        return needs_social_media_extraction
+        return all.merge(needs_social_media_extraction)
       end
 
       # Use a simpler subquery approach that mirrors the instance method logic

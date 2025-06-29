@@ -2,7 +2,7 @@
 
 module RuboCop
   module Cop
-    module SCT
+    module Sct
       # Cop to enforce SCT pattern compliance in ApplicationService subclasses
       #
       # @example
