@@ -244,7 +244,10 @@ class CompanyLinkedinDiscoveryService < ApplicationService
   end
 
   def calculate_confidence_score(data)
-    return 70 unless openai_configured?
+    unless openai_configured?
+      Rails.logger.warn "OpenAI not configured, using basic confidence scoring"
+      return basic_confidence_score(data)
+    end
 
     begin
       client = OpenAI::Client.new(access_token: ENV["OPENAI_API_KEY"])
@@ -253,7 +256,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
       response = client.chat(
         parameters: {
-          model: "gpt-3.5-turbo",
+          model: "gpt-4",
           messages: [ { role: "user", content: prompt } ],
           temperature: 0.1,
           max_tokens: 200
@@ -354,16 +357,30 @@ class CompanyLinkedinDiscoveryService < ApplicationService
   end
 
   def update_company_linkedin_data(discovered_profiles)
-    # Take the highest confidence LinkedIn URL as the main LinkedIn profile
+    # Store ALL discovered LinkedIn profiles, regardless of confidence
     if discovered_profiles.any?
       best_match = discovered_profiles.first
-      if best_match[:confidence] >= 70
-        @company.linkedin_url = best_match[:url]
-        @company.linkedin_ai_confidence = best_match[:confidence]
+      
+      # Always store the best match in linkedin_ai_url with its confidence
+      @company.linkedin_ai_url = best_match[:url]
+      @company.linkedin_ai_confidence = best_match[:confidence]
+      
+      # Store all discovered profiles in linkedin_alternatives as JSON
+      @company.linkedin_alternatives = discovered_profiles.map do |profile|
+        {
+          url: profile[:url],
+          confidence: profile[:confidence],
+          title: profile[:title],
+          profile_type: profile[:profile_type]
+        }
       end
+      
+      # Mark as processed
+      @company.linkedin_processed = true
+      @company.linkedin_last_processed_at = Time.current
     end
 
-    # Save the company updates (only existing columns)
+    # Save the company updates
     @company.save!
   end
 

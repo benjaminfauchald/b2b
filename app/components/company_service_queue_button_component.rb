@@ -46,13 +46,13 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   def companies_completed
     count = case service_name
     when "company_web_discovery"
-      # Count companies that have actually been successfully processed by web discovery service
+      # Count all companies with revenue > 10M that have been successfully processed
       ServiceAuditLog
         .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
         .where(service_name: "company_web_discovery", status: "success")
         .where("companies.operating_revenue > ?", 10_000_000)
-        .where("companies.website IS NULL OR companies.website = ''")
-        .count
+        .distinct
+        .count("service_audit_logs.record_id")
     when "company_financial_data", "company_financials"
       # Count companies that have actually been successfully processed by financial data service
       # Use the correct service name: company_financials
@@ -77,7 +77,8 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   def completion_percentage
     total = case service_name
     when "company_web_discovery"
-      Company.web_discovery_potential.count
+      # Total companies with revenue > 10M (regardless of website status)
+      Company.where("operating_revenue > ?", 10_000_000).count
     when "company_financial_data", "company_financials"
       # Total eligible companies for financial data (AS, ASA, DA, ANS)
       Company.where(

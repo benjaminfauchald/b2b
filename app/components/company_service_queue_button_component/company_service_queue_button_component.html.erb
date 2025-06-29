@@ -45,7 +45,7 @@
           <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
             <%= number_with_delimiter(companies_completed) %> of <%= 
               if web_discovery_service?
-                number_with_delimiter(Company.web_discovery_potential.count)
+                number_with_delimiter(Company.where("operating_revenue > ?", 10_000_000).count)
               elsif linkedin_discovery_service?
                 number_with_delimiter(Company.linkedin_discovery_potential.count)
               elsif financial_data_service? || service_name == "company_financials"
