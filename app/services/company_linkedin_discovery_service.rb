@@ -250,13 +250,22 @@ class CompanyLinkedinDiscoveryService < ApplicationService
     end
 
     begin
-      client = OpenAI::Client.new(access_token: ENV["OPENAI_API_KEY"])
+      # Use Azure OpenAI configuration
+      client = OpenAI::Client.new(
+        access_token: ENV["AZURE_OPENAI_API_KEY"],
+        uri_base: ENV["AZURE_OPENAI_ENDPOINT"],
+        request_timeout: 30,
+        extra_headers: {
+          "api-key" => ENV["AZURE_OPENAI_API_KEY"]
+        }
+      )
 
       prompt = build_validation_prompt(data)
 
+      # Azure OpenAI uses deployment names instead of model names
       response = client.chat(
         parameters: {
-          model: "gpt-4",
+          model: ENV["AZURE_OPENAI_API_DEPLOYMENT"] || "gpt-4.1",
           messages: [ { role: "user", content: prompt } ],
           temperature: 0.1,
           max_tokens: 200
@@ -266,7 +275,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
       content = response.dig("choices", 0, "message", "content") || ""
       parse_confidence_from_response(content)
     rescue StandardError => e
-      Rails.logger.error "OpenAI validation error: #{e.message}"
+      Rails.logger.error "Azure OpenAI validation error: #{e.message}"
       # Fallback to basic scoring
       basic_confidence_score(data)
     end
@@ -353,7 +362,9 @@ class CompanyLinkedinDiscoveryService < ApplicationService
   end
 
   def openai_configured?
-    ENV["OPENAI_API_KEY"].present?
+    # Check for either standard OpenAI or Azure OpenAI configuration
+    ENV["OPENAI_API_KEY"].present? || 
+    (ENV["AZURE_OPENAI_API_KEY"].present? && ENV["AZURE_OPENAI_ENDPOINT"].present?)
   end
 
   def update_company_linkedin_data(discovered_profiles)

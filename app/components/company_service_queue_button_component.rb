@@ -46,13 +46,23 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   def companies_completed
     count = case service_name
     when "company_web_discovery"
-      # Count all companies with revenue > 10M that have been successfully processed
-      ServiceAuditLog
+      # Count companies with revenue > 10M that either:
+      # 1. Have been successfully processed by web discovery service, OR
+      # 2. Already have a website in the database
+      processed_by_service = ServiceAuditLog
         .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
         .where(service_name: "company_web_discovery", status: "success")
         .where("companies.operating_revenue > ?", 10_000_000)
         .distinct
-        .count("service_audit_logs.record_id")
+        .pluck("service_audit_logs.record_id")
+      
+      companies_with_websites = Company
+        .where("operating_revenue > ?", 10_000_000)
+        .where("website IS NOT NULL AND website != ''")
+        .count
+      
+      # Return total unique count (some companies might have websites AND be in audit log)
+      companies_with_websites
     when "company_financial_data", "company_financials"
       # Count companies that have actually been successfully processed by financial data service
       # Use the correct service name: company_financials

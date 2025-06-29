@@ -575,7 +575,7 @@ class CompaniesController < ApplicationController
     {
       financial_needing: Company.needing_service("company_financial_data").count,
       web_discovery_needing: Company.needing_service("company_web_discovery").count,
-      web_discovery_potential: Company.web_discovery_potential.count,
+      web_discovery_potential: Company.where("operating_revenue > ?", 10_000_000).count,
       linkedin_needing: Company.needing_service("company_linkedin_discovery").count,
       linkedin_potential: Company.linkedin_discovery_potential.count
     }

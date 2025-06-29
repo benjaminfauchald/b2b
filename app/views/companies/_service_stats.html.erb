@@ -3,15 +3,18 @@
     <!-- Web Discovery Completion percentage display -->
     <div class="mb-3">
       <%
-        # Calculate companies that have actually been successfully processed by web discovery service
-        companies_completed = ServiceAuditLog
-          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-          .where(service_name: "company_web_discovery", status: "success")
-          .where("companies.operating_revenue > ?", 10_000_000)
-          .where("companies.website IS NULL OR companies.website = ''")
+        # Count companies with revenue > 10M that either:
+        # 1. Have been successfully processed by web discovery service, OR
+        # 2. Already have a website in the database
+        companies_with_websites = Company
+          .where("operating_revenue > ?", 10_000_000)
+          .where("website IS NOT NULL AND website != ''")
           .count
         
-        completion_percentage = companies_potential > 0 ? (companies_completed.to_f / companies_potential.to_f) * 100 : 0
+        # Total companies with revenue > 10M
+        total_high_revenue = Company.where("operating_revenue > ?", 10_000_000).count
+        
+        completion_percentage = total_high_revenue > 0 ? (companies_with_websites.to_f / total_high_revenue.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
       %>
       <div class="flex items-center justify-between mb-1">
@@ -22,7 +25,7 @@
         <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
       </div>
       <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(companies_potential) %> companies processed
+        <%= number_with_delimiter(companies_with_websites) %> of <%= number_with_delimiter(total_high_revenue) %> companies processed
       </p>
     </div>
   <% elsif service_name == "company_financial_data" %>
