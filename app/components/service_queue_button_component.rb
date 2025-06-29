@@ -16,7 +16,7 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   def domains_needing_service
     helpers.number_with_delimiter(domains_needing_service_raw)
   end
-  
+
   def domains_needing_service_raw
     Domain.needing_service(service_name).count
   end
@@ -72,7 +72,7 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   def total_domains_for_service
     helpers.number_with_delimiter(total_domains_for_service_raw)
   end
-  
+
   def total_domains_for_service_raw
     case service_name
     when "domain_testing"
@@ -91,11 +91,11 @@ class ServiceQueueButtonComponent < ViewComponent::Base
   def success_percentage
     total = total_domains_for_service_raw
     return 0 if total.zero?
-    
+
     successful = domains_tested_successfully_raw
     ((successful.to_f / total) * 100).round(1)
   end
-  
+
   def domains_tested_successfully_raw
     case service_name
     when "domain_testing"
@@ -125,7 +125,7 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
-    
+
     invalid = case service_name
     when "domain_testing"
       Domain.dns_inactive.count
@@ -139,22 +139,22 @@ class ServiceQueueButtonComponent < ViewComponent::Base
     else
       0
     end
-    
+
     helpers.number_with_delimiter(successful + invalid)
   end
 
   def completion_percentage
     total = total_domains_for_service_raw
     return 0 if total.zero?
-    
+
     tested = tested_domains_count_raw
     ((tested.to_f / total) * 100).round(1)
   end
-  
+
   def tested_domains_count_raw
     domains_tested_successfully_raw + domains_tested_invalid_raw
   end
-  
+
   def domains_tested_invalid_raw
     case service_name
     when "domain_testing"

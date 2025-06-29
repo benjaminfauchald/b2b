@@ -124,7 +124,7 @@ class CompanyWebDiscoveryService < ApplicationService
         Rails.logger.info "🚫 URL #{index + 1}/#{unique_results.size}: #{result[:url]} -> invalid/unreachable"
       end
     end
-    
+
     validation_time = (Time.current - validation_start).round(2)
     Rails.logger.info "🔍 Validation completed in #{validation_time}s, #{validated_results.size} valid results"
 
@@ -132,7 +132,7 @@ class CompanyWebDiscoveryService < ApplicationService
     sorted_results = validated_results.sort_by { |r| -r[:confidence] }
     total_time = (Time.current - start_time).round(2)
     Rails.logger.info "🎯 Web discovery completed in #{total_time}s, best result: #{sorted_results.first&.dig(:url)} (confidence: #{sorted_results.first&.dig(:confidence)})"
-    
+
     sorted_results
   end
 
@@ -400,7 +400,7 @@ class CompanyWebDiscoveryService < ApplicationService
     score = 50
     company_name = @company.company_name.downcase
     clean_name = clean_company_name(@company.company_name).downcase
-    
+
     # Check URL with both original and cleaned names
     url_lower = data[:url].downcase
     if url_lower.include?(clean_name.gsub(/\s+/, "")) || url_lower.include?(company_name.gsub(/\s+/, ""))
@@ -469,18 +469,18 @@ class CompanyWebDiscoveryService < ApplicationService
   def clean_url_to_base_domain(url)
     begin
       uri = URI.parse(url)
-      
+
       # Return original if scheme or host is missing
       return url unless uri.scheme && uri.host
-      
+
       # Extract base domain
       base_url = "#{uri.scheme}://#{uri.host}"
-      
+
       # Add www if the original had it and the base doesn't
-      if uri.host && !uri.host.start_with?('www.') && url.include?('://www.')
+      if uri.host && !uri.host.start_with?("www.") && url.include?("://www.")
         base_url = "#{uri.scheme}://www.#{uri.host}"
       end
-      
+
       base_url
     rescue URI::InvalidURIError => e
       Rails.logger.warn "Could not parse URL #{url}: #{e.message}"

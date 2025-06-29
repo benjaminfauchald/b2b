@@ -5,7 +5,7 @@ module ViewComponentHelpers
   include ActionView::Helpers::UrlHelper
   include ActionView::Helpers::FormHelper
   include ActionView::Helpers::FormTagHelper
-  
+
   def with_controller_class(klass)
     old_controller = @controller
     @controller = klass.new
@@ -25,7 +25,7 @@ end
 
 RSpec.configure do |config|
   config.include ViewComponentHelpers, type: :component
-  
+
   config.before(:each, type: :component) do
     # Set up a default controller for component tests
     @controller = ApplicationController.new

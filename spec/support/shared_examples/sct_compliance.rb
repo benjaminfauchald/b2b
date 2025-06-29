@@ -67,7 +67,7 @@ RSpec.shared_examples 'SCT compliant service' do |service_class, service_name, o
     context 'result objects' do
       it 'success_result returns proper OpenStruct' do
         result = service_instance.send(:success_result, 'Test message', data: 'test')
-        
+
         expect(result).to be_a(OpenStruct)
         expect(result.success?).to be true
         expect(result.message).to eq('Test message')
@@ -77,7 +77,7 @@ RSpec.shared_examples 'SCT compliant service' do |service_class, service_name, o
 
       it 'error_result returns proper OpenStruct' do
         result = service_instance.send(:error_result, 'Test error', data: 'test')
-        
+
         expect(result).to be_a(OpenStruct)
         expect(result.success?).to be false
         expect(result.message).to be_nil
@@ -109,7 +109,7 @@ RSpec.shared_examples 'SCT compliant service' do |service_class, service_name, o
 
       it 'handles inactive service gracefully' do
         result = service_instance.perform
-        
+
         expect(result.success?).to be false
         expect(result.error).to include('disabled')
       end
@@ -133,7 +133,7 @@ RSpec.shared_examples 'SCT audit compliant service' do |service_name, auditable_
       audit_log = ServiceAuditLog.last
       expect(audit_log.service_name).to eq(service_name)
       expect(audit_log.auditable).to eq(entity)
-      expect(audit_log.status).to be_in(['success', 'failed'])
+      expect(audit_log.status).to be_in([ 'success', 'failed' ])
       expect(audit_log.execution_time_ms).to be_present
     end
 

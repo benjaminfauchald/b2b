@@ -21,9 +21,9 @@ class CompaniesController < ApplicationController
     if params[:filter] == "with_financials"
       companies_scope = companies_scope.with_financial_data
     elsif params[:filter] == "with_website"
-      companies_scope = companies_scope.where.not(website: [nil, ""])
+      companies_scope = companies_scope.where.not(website: [ nil, "" ])
     elsif params[:filter] == "with_linkedin"
-      companies_scope = companies_scope.where.not(linkedin_url: [nil, ""]).or(companies_scope.where.not(linkedin_ai_url: [nil, ""]))
+      companies_scope = companies_scope.where.not(linkedin_url: [ nil, "" ]).or(companies_scope.where.not(linkedin_ai_url: [ nil, "" ]))
     end
 
     @pagy, @companies = pagy(companies_scope)
@@ -353,9 +353,9 @@ class CompaniesController < ApplicationController
         stats_data = Rails.cache.fetch("service_stats_data", expires_in: 1.second) do
           calculate_service_stats
         end
-        
+
         queue_stats = get_queue_stats
-        
+
         render turbo_stream: [
           turbo_stream.replace("company_financials_stats",
             partial: "companies/service_stats",
@@ -581,10 +581,10 @@ class CompaniesController < ApplicationController
   def set_selected_country
     # Get available countries
     available_countries = Company.distinct.pluck(:source_country).compact.sort
-    
+
     # Set selected country from session, params, or default to first available
     @selected_country = session[:selected_country] || params[:country]
-    
+
     # Validate and set default if needed
     if @selected_country.blank? || !available_countries.include?(@selected_country)
       @selected_country = available_countries.first
@@ -642,8 +642,8 @@ class CompaniesController < ApplicationController
     begin
       sidekiq_stats = Sidekiq::Stats.new
       # Count total services processed from ServiceAuditLog for company services
-      company_services = ["company_financials", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery"]
-      
+      company_services = [ "company_financials", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery" ]
+
       # Use JOIN instead of plucking all IDs to avoid massive IN clause
       stats[:total_processed] = ServiceAuditLog
         .joins("INNER JOIN companies ON companies.id = service_audit_logs.auditable_id")

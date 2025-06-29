@@ -97,16 +97,16 @@ class CompanyFinancialDataService < ApplicationService
       case response.code.to_i
       when 200
         data = JSON.parse(response.body, symbolize_names: true)
-        
+
         # Handle Array response - extract most recent financial data
         if data.is_a?(Array)
           if data.empty?
             return { success: true, data: nil, no_data_available: true }
           end
-          
+
           # Get the most recent financial record
           latest_record = data.max_by { |record| record[:regnskapsperiode]&.dig(:fraDato) || "0000-01-01" }
-          
+
           # Transform API response to expected format
           transformed_data = {
             revenue: latest_record.dig(:resultatregnskapResultat, :driftsresultat, :driftsinntekter, :sumDriftsinntekter) ||
@@ -127,7 +127,7 @@ class CompanyFinancialDataService < ApplicationService
                                   latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :langsiktigGjeld, :sum),
             year: latest_record.dig(:regnskapsperiode, :fraDato)&.slice(0, 4)&.to_i
           }
-          
+
           { success: true, data: transformed_data }
         else
           { success: true, data: data }
@@ -141,9 +141,9 @@ class CompanyFinancialDataService < ApplicationService
       when 500
         # Handle specific 500 errors
         error_body = JSON.parse(response.body) rescue {}
-        error_message = error_body['message'] || response.message
-        
-        if error_message&.include?('oppstillingsplan som ikke er stottet')
+        error_message = error_body["message"] || response.message
+
+        if error_message&.include?("oppstillingsplan som ikke er stottet")
           # Unsupported account layout plan - treat as no data available
           { success: true, data: nil, no_data_available: true, unsupported_format: true }
         else

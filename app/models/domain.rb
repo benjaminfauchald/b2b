@@ -20,7 +20,7 @@ class Domain < ApplicationRecord
   scope :mx_inactive, -> { where(mx: false) }
   scope :mx_untested, -> { where(mx: nil) }
   scope :mx_tested, -> { where.not(mx: nil) }
-  
+
   # Scopes for web content extraction
   scope :with_a_record, -> { where(www: true).where.not(a_record_ip: nil) }
   scope :with_a_records, -> { with_a_record }
@@ -28,7 +28,7 @@ class Domain < ApplicationRecord
   scope :needing_web_content, -> { with_a_record.where(web_content_data: nil) }
   scope :needing_web_content_extraction, -> { needing_web_content }
   scope :web_content_extracted, -> { where.not(web_content_data: nil) }
-  scope :web_content_failed, -> { 
+  scope :web_content_failed, -> {
     with_a_record.where(web_content_data: nil)
                  .joins(:service_audit_logs)
                  .where(service_audit_logs: { service_name: "domain_web_content_extraction", status: "failed" })
@@ -57,26 +57,26 @@ class Domain < ApplicationRecord
   def needs_dns_testing?
     dns.nil? || needs_service?("domain_testing")
   end
-  
+
   def needs_web_content_extraction?
     www == true && a_record_ip.present? && (web_content_data.nil? || needs_service?("domain_web_content_extraction"))
   end
-  
+
   def web_content_extracted_at
     service_audit_logs
       .where(service_name: "domain_web_content_extraction", status: "success")
       .order(completed_at: :desc)
       .first&.completed_at
   end
-  
+
   def web_content_extraction_status
     most_recent = service_audit_logs
                    .where(service_name: "domain_web_content_extraction")
                    .order(created_at: :desc)
                    .first
-    
+
     return :never_attempted unless most_recent
-    
+
     case most_recent.status
     when "success"
       :success

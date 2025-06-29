@@ -13,34 +13,34 @@ class TestDataBuilder
       website: "https://testcompany.no",
       linkedin_url: "https://linkedin.com/company/testcompany"
     )
-    
+
     # Add service audit logs
     ServiceAuditLog.create!(
       auditable: company,
       service_name: "company_financials",
       status: ServiceAuditLog::STATUS_SUCCESS,
       operation_type: "update",
-      columns_affected: ["ordinary_result", "annual_result"],
+      columns_affected: [ "ordinary_result", "annual_result" ],
       started_at: 1.hour.ago,
       completed_at: 50.minutes.ago
     )
-    
+
     ServiceAuditLog.create!(
       auditable: company,
       service_name: "company_web_discovery",
       status: ServiceAuditLog::STATUS_SUCCESS,
       operation_type: "discover",
-      metadata: { pages_found: 5, confidence_scores: [80, 75, 70, 65, 60] },
+      metadata: { pages_found: 5, confidence_scores: [ 80, 75, 70, 65, 60 ] },
       started_at: 2.hours.ago,
       completed_at: 1.hour.ago
     )
-    
+
     company
   end
-  
+
   def self.build_web_discovery_test_set
     companies = []
-    
+
     # Company with high revenue, no website
     companies << Company.create!(
       registration_number: "WD001",
@@ -49,7 +49,7 @@ class TestDataBuilder
       operating_revenue: 50_000_000,
       website: nil
     )
-    
+
     # Company with low revenue, no website (should not be included)
     companies << Company.create!(
       registration_number: "WD002",
@@ -58,7 +58,7 @@ class TestDataBuilder
       operating_revenue: 5_000_000,
       website: nil
     )
-    
+
     # Company with high revenue and website
     companies << Company.create!(
       registration_number: "WD003",
@@ -67,14 +67,14 @@ class TestDataBuilder
       operating_revenue: 75_000_000,
       website: "https://example.no"
     )
-    
+
     companies
   end
-  
+
   def self.build_country_filtering_test_set
     countries = %w[NO SE DK FI]
     companies = []
-    
+
     countries.each do |country|
       3.times do |i|
         companies << Company.create!(
@@ -85,7 +85,7 @@ class TestDataBuilder
         )
       end
     end
-    
+
     companies
   end
 end

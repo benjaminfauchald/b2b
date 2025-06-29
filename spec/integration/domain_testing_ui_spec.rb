@@ -38,7 +38,7 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
           completed_at: Time.current,
           table_name: 'domains',
           record_id: domain.id.to_s,
-          columns_affected: ['dns'],
+          columns_affected: [ 'dns' ],
           metadata: { 'result' => 'success' }
         )
         OpenStruct.new(success?: true)
@@ -50,7 +50,7 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
       # Verify domain was updated
       domain.reload
       expect(domain.dns).to eq(true)
-      
+
       # Verify audit log was created
       audit_log = domain.service_audit_logs.last
       expect(audit_log).to be_present
@@ -71,7 +71,7 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
           completed_at: Time.current,
           table_name: 'domains',
           record_id: domain.id.to_s,
-          columns_affected: ['dns'],
+          columns_affected: [ 'dns' ],
           metadata: { 'result' => 'DNS inactive' }
         )
         OpenStruct.new(success?: true)
@@ -88,16 +88,16 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
     it "prevents multiple simultaneous tests" do
       # Ensure we're in fake mode
       expect(Sidekiq::Testing.fake?).to be true
-      
+
       # Add a job to the queue
       DomainDnsTestingWorker.perform_async(domain.id)
-      
+
       # Check that job is in queue
       expect(DomainDnsTestingWorker.jobs.size).to eq(1)
-      
+
       # Try to add another job for same domain
       DomainDnsTestingWorker.perform_async(domain.id)
-      
+
       # Should have 2 jobs (no deduplication at worker level)
       expect(DomainDnsTestingWorker.jobs.size).to eq(2)
     end
@@ -117,7 +117,7 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
           completed_at: Time.current,
           table_name: 'domains',
           record_id: test_domain.id.to_s,
-          columns_affected: ['dns'],
+          columns_affected: [ 'dns' ],
           metadata: { 'result' => 'success' }
         )
         OpenStruct.new(success?: true)
@@ -134,7 +134,7 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
           completed_at: Time.current,
           table_name: 'domains',
           record_id: test_domain.id.to_s,
-          columns_affected: ['mx'],
+          columns_affected: [ 'mx' ],
           metadata: { 'result' => 'success' }
         )
         OpenStruct.new(success?: true)
@@ -174,10 +174,10 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
 
       # Ensure we're in fake mode
       expect(Sidekiq::Testing.fake?).to be true
-      
+
       # Queue the job
       job_id = DomainDnsTestingWorker.perform_async(domain.id)
-      
+
       # Verify job was queued
       expect(job_id).to be_present
       expect(DomainDnsTestingWorker.jobs.size).to eq(1)
@@ -191,10 +191,10 @@ RSpec.describe "Domain Testing UI Integration", type: :integration do
       allow_any_instance_of(DomainTestingService).to receive(:call).and_return(
         OpenStruct.new(success?: false, error: "Service is disabled")
       )
-      
+
       # The worker should still run but service returns error
       DomainDnsTestingWorker.new.perform(domain.id)
-      
+
       # Domain should not be updated
       domain.reload
       expect(domain.dns).to be_nil

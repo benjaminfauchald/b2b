@@ -19,7 +19,7 @@ class DomainImportService < ApplicationService
 
   def perform
     Rails.logger.info "🔍 IMPORT DEBUG: Starting perform method"
-    
+
     return error_result("Service is disabled") unless service_active?
     return error_result("No file provided") unless @file.present?
     return error_result("No user provided") unless @user.present?
@@ -29,17 +29,17 @@ class DomainImportService < ApplicationService
     audit_service_operation(@user) do |audit_log|
       Rails.logger.info "🚀 Starting domain import for user #{@user.id}"
       Rails.logger.info "🔍 IMPORT DEBUG: File details - name: #{@file.original_filename}, size: #{@file.size}"
-      
+
       begin
         Rails.logger.info "🔍 IMPORT DEBUG: About to validate file"
         validate_file!
-        
+
         Rails.logger.info "🔍 IMPORT DEBUG: About to process CSV file"
         process_csv_file
-        
+
         Rails.logger.info "🔍 IMPORT DEBUG: About to finalize result"
         @result.finalize!
-        
+
         Rails.logger.info "🔍 IMPORT DEBUG: About to add audit metadata"
         audit_log.add_metadata(
           user_id: @user.id,
@@ -49,26 +49,26 @@ class DomainImportService < ApplicationService
           domains_failed: @result.failed_domains.count,
           domains_duplicated: @result.duplicate_domains.count
         )
-        
+
         Rails.logger.info "🔍 IMPORT DEBUG: About to return success result"
-        success_result("Domain import completed", 
+        success_result("Domain import completed",
                       imported: @result.imported_domains.count,
                       failed: @result.failed_domains.count,
                       duplicates: @result.duplicate_domains.count,
                       result: @result)
-                      
+
       rescue StandardError => e
         Rails.logger.error "❌ Domain import failed: #{e.message}"
         Rails.logger.error "❌ Backtrace: #{e.backtrace.join("\n")}"
         @result.set_error_message(e.message)
         @result.finalize!
-        
+
         audit_log.add_metadata(
           user_id: @user.id,
           filename: @file.original_filename,
           error: e.message
         )
-        
+
         error_result("Domain import failed: #{e.message}", result: @result)
       end
     end
@@ -103,7 +103,7 @@ class DomainImportService < ApplicationService
 
   def process_csv_file
     Rails.logger.info "🔍 IMPORT DEBUG: Entering process_csv_file method"
-    
+
     # Debug: Check file contents
     Rails.logger.info "\n=== CSV IMPORT DEBUG ==="
     Rails.logger.info "🔍 File path: #{file.path}"
@@ -125,7 +125,7 @@ class DomainImportService < ApplicationService
     # Check if file has headers or is headerless
     first_line = File.open(file.path, &:readline).strip rescue ""
     Rails.logger.info "🔍 IMPORT DEBUG: First line read: '#{first_line}'"
-    
+
     # File has headers if it contains "domain" in first line
     # Otherwise assume it's headerless (just domain names)
     has_headers = first_line.downcase.include?("domain")
@@ -145,19 +145,19 @@ class DomainImportService < ApplicationService
       # Multi-column CSV with SmarterCSV
       process_standard_csv(has_headers)
     end
-    
+
     Rails.logger.info "🔍 IMPORT DEBUG: Finished process_csv_file method"
   end
 
   def validate_csv_structure!
     Rails.logger.info "🔍 IMPORT DEBUG: Entering validate_csv_structure! method"
-    
+
     # Read just the header to validate structure
     begin
       Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process for validation"
       first_chunk = SmarterCSV.process(file.path, { chunk_size: 1 })
       Rails.logger.info "🔍 IMPORT DEBUG: SmarterCSV.process returned: #{first_chunk.inspect}"
-      
+
       if first_chunk.nil? || first_chunk.empty?
         Rails.logger.error "🔍 IMPORT DEBUG: first_chunk is nil or empty"
         raise ArgumentError, "CSV file is empty or contains no data rows"
@@ -166,19 +166,19 @@ class DomainImportService < ApplicationService
       Rails.logger.info "🔍 IMPORT DEBUG: About to call first_chunk.first"
       first_row = first_chunk.first
       Rails.logger.info "🔍 IMPORT DEBUG: first_row: #{first_row.inspect}"
-      
+
       if first_row.nil?
         Rails.logger.error "🔍 IMPORT DEBUG: first_row is nil!"
         raise ArgumentError, "CSV file first row is nil"
       end
-      
+
       Rails.logger.info "🔍 IMPORT DEBUG: About to get keys from first_row"
       keys = first_row.keys
       Rails.logger.info "🔍 IMPORT DEBUG: keys: #{keys.inspect}"
-      
+
       headers = keys&.map(&:to_s) || []
       Rails.logger.info "🔍 IMPORT DEBUG: headers: #{headers.inspect}"
-      
+
       missing_columns = REQUIRED_COLUMNS - headers
       Rails.logger.info "🔍 IMPORT DEBUG: missing_columns: #{missing_columns.inspect}"
 
@@ -186,7 +186,7 @@ class DomainImportService < ApplicationService
         Rails.logger.error "🔍 IMPORT DEBUG: Missing required columns: #{missing_columns.join(', ')}"
         raise ArgumentError, "Missing required column#{missing_columns.size > 1 ? 's' : ''}: #{missing_columns.join(', ')}"
       end
-      
+
       Rails.logger.info "🔍 IMPORT DEBUG: validate_csv_structure! completed successfully"
     rescue => e
       Rails.logger.error "🔍 IMPORT DEBUG: Exception in validate_csv_structure!: #{e.message}"
@@ -270,35 +270,35 @@ class DomainImportService < ApplicationService
     return false if cleaned_domain.include?("..")  # No consecutive dots
     return false unless cleaned_domain.include?(".")  # Must have at least one dot
     return false if cleaned_domain.start_with?(".") || cleaned_domain.end_with?(".")  # No leading/trailing dots
-    
+
     # Split into parts and validate each
     parts = cleaned_domain.split(".")
     return false if parts.any?(&:blank?)  # No empty parts
     return false if parts.length < 2  # Must have at least domain + TLD
-    
+
     # Validate each part
     parts.each do |part|
       return false if part.length > 63  # Max label length
       return false unless part.match?(/\A[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\z/) || part.match?(/\A[a-zA-Z0-9]\z/)
     end
-    
+
     # TLD validation - must be at least 2 characters and alphabetic
     tld = parts.last
     return false unless tld.match?(/\A[a-zA-Z]{2,}\z/)
-    
+
     true
   end
 
   def process_simple_domain_list
     Rails.logger.info "🔍 IMPORT DEBUG: Entering process_simple_domain_list method"
-    
+
     row_count = 0
     File.foreach(file.path).with_index do |line, index|
       Rails.logger.info "🔍 IMPORT DEBUG: Processing line #{index}: '#{line.strip}'"
-      
+
       line = line.strip
       next if line.empty?
-      
+
       # Skip lines that look like headers
       next if line.downcase == "domain" || line.downcase == "domains"
 
@@ -309,7 +309,7 @@ class DomainImportService < ApplicationService
       row_data = { domain: line }
 
       Rails.logger.info "🔍 Processing row #{row_number}: #{row_data.inspect}"
-      
+
       begin
         process_single_row(row_data, row_number)
         Rails.logger.info "🔍 IMPORT DEBUG: Successfully processed row #{row_number}"
@@ -351,7 +351,7 @@ class DomainImportService < ApplicationService
 
   def process_standard_csv(has_headers)
     Rails.logger.info "🔍 IMPORT DEBUG: Entering process_standard_csv method with has_headers: #{has_headers}"
-    
+
     csv_options = {
       chunk_size: 100,
       headers_in_file: has_headers,
@@ -380,7 +380,7 @@ class DomainImportService < ApplicationService
 
       row_count = 0
       Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process"
-      
+
       SmarterCSV.process(file.path, csv_options) do |chunk|
         Rails.logger.info "🔍 Processing chunk with #{chunk.size} rows"
 
@@ -388,7 +388,7 @@ class DomainImportService < ApplicationService
           row_count += 1
           Rails.logger.info "🔍 Processing row #{index}: #{row_data.inspect}"
           row_number = calculate_row_number(chunk, index)
-          
+
           begin
             process_single_row(row_data, row_number)
           rescue => e

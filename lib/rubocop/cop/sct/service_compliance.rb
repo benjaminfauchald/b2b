@@ -38,14 +38,14 @@ module RuboCop
       #     end
       #   end
       class ServiceCompliance < Base
-        MSG_MISSING_PERFORM = 'ApplicationService subclasses must implement #perform method'
-        MSG_MISSING_SERVICE_ACTIVE = 'ApplicationService subclasses must implement #service_active? method'
-        MSG_MISSING_SUCCESS_RESULT = 'ApplicationService subclasses must implement #success_result method'
-        MSG_MISSING_ERROR_RESULT = 'ApplicationService subclasses must implement #error_result method'
-        MSG_MISSING_SUPER_CALL = 'ApplicationService subclasses must call super() in initialize with service_name and action'
-        MSG_SHOULD_USE_AUDIT_OPERATION = 'Consider using audit_service_operation for proper audit tracking'
-        MSG_AVOID_MANUAL_AUDIT_LOG = 'Avoid manual ServiceAuditLog.create! - use audit_service_operation instead'
-        MSG_MISSING_SERVICE_CONFIG_CHECK = 'Service should check service_active? before performing operations'
+        MSG_MISSING_PERFORM = "ApplicationService subclasses must implement #perform method"
+        MSG_MISSING_SERVICE_ACTIVE = "ApplicationService subclasses must implement #service_active? method"
+        MSG_MISSING_SUCCESS_RESULT = "ApplicationService subclasses must implement #success_result method"
+        MSG_MISSING_ERROR_RESULT = "ApplicationService subclasses must implement #error_result method"
+        MSG_MISSING_SUPER_CALL = "ApplicationService subclasses must call super() in initialize with service_name and action"
+        MSG_SHOULD_USE_AUDIT_OPERATION = "Consider using audit_service_operation for proper audit tracking"
+        MSG_AVOID_MANUAL_AUDIT_LOG = "Avoid manual ServiceAuditLog.create! - use audit_service_operation instead"
+        MSG_MISSING_SERVICE_CONFIG_CHECK = "Service should check service_active? before performing operations"
 
         def_node_matcher :application_service_subclass?, <<~PATTERN
           (class
@@ -101,7 +101,7 @@ module RuboCop
 
         def check_required_methods(node)
           methods = extract_method_names(node)
-          
+
           add_offense(node, message: MSG_MISSING_PERFORM) unless methods.include?(:perform)
           add_offense(node, message: MSG_MISSING_SERVICE_ACTIVE) unless methods.include?(:service_active?)
           add_offense(node, message: MSG_MISSING_SUCCESS_RESULT) unless methods.include?(:success_result)

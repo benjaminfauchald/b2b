@@ -12,11 +12,11 @@ class TestController < ApplicationController
   def run_web_discovery
     company_id = params[:company_id]
     company = Company.find(company_id)
-    
+
     # Run the web discovery service
     service = CompanyWebDiscoveryService.new(company_id: company_id)
     result = service.perform
-    
+
     render json: {
       success: result.success?,
       message: result.success? ? result.message : result.error,
@@ -40,11 +40,11 @@ class TestController < ApplicationController
   def run_linkedin_discovery
     company_id = params[:company_id]
     company = Company.find(company_id)
-    
+
     # Run the LinkedIn discovery service
     service = CompanyLinkedinDiscoveryService.new(company_id: company_id)
     result = service.perform
-    
+
     render json: {
       success: result.success?,
       message: result.success? ? result.message : result.error,

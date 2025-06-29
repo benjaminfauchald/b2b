@@ -16,7 +16,7 @@ class DomainARecordTestingService < ApplicationService
 
   def perform
     return error_result("Service is disabled") unless service_active?
-    
+
     if domain
       test_single_domain
     else
@@ -97,14 +97,14 @@ class DomainARecordTestingService < ApplicationService
     audit_service_operation(domain) do |audit_log|
       result = perform_a_record_test
       update_domain_status(domain, result)
-      
+
       audit_log.add_metadata(
         domain_name: domain.domain,
         www_status: domain.www,
         test_result: result[:status],
         a_record: result[:a_record]
       )
-      
+
       success_result("A record test completed", result: result)
     end
   end
@@ -112,7 +112,7 @@ class DomainARecordTestingService < ApplicationService
   def perform_a_record_test
     perform_a_record_test_for_domain(domain)
   end
-  
+
   def perform_a_record_test_for_domain(test_domain)
     begin
       Timeout.timeout(DNS_TIMEOUT) do
@@ -152,14 +152,14 @@ class DomainARecordTestingService < ApplicationService
         audit_service_operation(domain) do |audit_log|
           result = perform_a_record_test_for_domain(domain)
           update_domain_status(domain, result)
-          
+
           audit_log.add_metadata(
             domain_name: domain.domain,
             www_status: domain.www,
             test_result: result[:status],
             a_record: result[:a_record]
           )
-          
+
           case result[:status]
           when :success
             results[:successful] += 1
@@ -177,9 +177,9 @@ class DomainARecordTestingService < ApplicationService
       end
     end
 
-    success_result("Batch A record testing completed", 
+    success_result("Batch A record testing completed",
                   processed: results[:processed],
-                  successful: results[:successful], 
+                  successful: results[:successful],
                   failed: results[:failed],
                   errors: results[:errors])
   end

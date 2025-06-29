@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Company, type: :model do
   describe "Profile Extraction Scopes" do
     let!(:company_with_manual_linkedin) do
-      create(:company, 
+      create(:company,
         linkedin_url: "https://linkedin.com/company/manual-company",
         linkedin_ai_url: nil,
         linkedin_ai_confidence: nil
@@ -66,7 +66,7 @@ RSpec.describe Company, type: :model do
       it 'orders by operating revenue descending' do
         company_with_manual_linkedin.update(operating_revenue: 1_000_000)
         company_with_high_confidence_ai.update(operating_revenue: 5_000_000)
-        
+
         candidates = Company.profile_extraction_candidates
         revenues = candidates.pluck(:operating_revenue).compact
         expect(revenues).to eq(revenues.sort.reverse)
@@ -75,8 +75,8 @@ RSpec.describe Company, type: :model do
 
     describe '.needing_profile_extraction' do
       let!(:service_config) do
-        create(:service_configuration, 
-          service_name: "person_profile_extraction", 
+        create(:service_configuration,
+          service_name: "person_profile_extraction",
           active: true,
           refresh_interval_hours: 24
         )
@@ -86,7 +86,7 @@ RSpec.describe Company, type: :model do
         it 'includes all profile extraction candidates' do
           candidates = Company.profile_extraction_candidates
           needing = Company.needing_profile_extraction
-          
+
           expect(needing).to include(company_with_manual_linkedin)
           expect(needing).to include(company_with_high_confidence_ai)
           expect(needing).to include(company_with_both_urls)
@@ -144,7 +144,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: "https://linkedin.com/company/ai",
           linkedin_ai_confidence: 95
         )
-        
+
         expect(company.best_linkedin_url).to eq("https://linkedin.com/company/manual")
       end
 
@@ -154,7 +154,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: "https://linkedin.com/company/ai",
           linkedin_ai_confidence: 85
         )
-        
+
         expect(company.best_linkedin_url).to eq("https://linkedin.com/company/ai")
       end
 
@@ -164,7 +164,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: "https://linkedin.com/company/ai",
           linkedin_ai_confidence: 75
         )
-        
+
         expect(company.best_linkedin_url).to be_nil
       end
 
@@ -174,7 +174,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: nil,
           linkedin_ai_confidence: nil
         )
-        
+
         expect(company.best_linkedin_url).to be_nil
       end
 
@@ -184,7 +184,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: "",
           linkedin_ai_confidence: 90
         )
-        
+
         expect(company.best_linkedin_url).to be_nil
       end
     end
@@ -196,7 +196,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: nil,
           linkedin_ai_confidence: nil
         )
-        
+
         expect(company.ready_for_profile_extraction?).to be true
       end
 
@@ -206,7 +206,7 @@ RSpec.describe Company, type: :model do
           linkedin_ai_url: nil,
           linkedin_ai_confidence: nil
         )
-        
+
         expect(company.ready_for_profile_extraction?).to be false
       end
     end

@@ -1,6 +1,6 @@
 # Ensure dependencies are available in worker context
-require 'google/apis/customsearch_v1'
-require 'openai'
+require "google/apis/customsearch_v1"
+require "openai"
 
 class CompanyWebDiscoveryWorker
   include Sidekiq::Worker
@@ -8,7 +8,6 @@ class CompanyWebDiscoveryWorker
   sidekiq_options queue: "company_web_discovery", retry: 3
 
   def perform(company_id)
-    
     company = Company.find_by(id: company_id)
     return unless company
 

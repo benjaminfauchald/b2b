@@ -263,9 +263,9 @@ class PeopleController < ApplicationController
         stats_data = Rails.cache.fetch("person_service_stats_data", expires_in: 1.second) do
           calculate_service_stats
         end
-        
+
         queue_stats = get_queue_stats
-        
+
         render turbo_stream: [
           turbo_stream.replace("person_profile_extraction_stats",
             partial: "people/service_stats",
@@ -281,7 +281,7 @@ class PeopleController < ApplicationController
             partial: "people/service_stats",
             locals: {
               service_name: "person_email_extraction",
-              service_title: "Email Extraction", 
+              service_title: "Email Extraction",
               persons_needing: stats_data[:email_needing],
               queue_depth: queue_stats["person_email_extraction"] || 0
             }
@@ -451,9 +451,9 @@ class PeopleController < ApplicationController
         stats_data = Rails.cache.fetch("person_service_stats_data", expires_in: 1.second) do
           calculate_service_stats
         end
-        
+
         queue_stats = get_queue_stats
-        
+
         render turbo_stream: [
           turbo_stream.replace("person_profile_extraction_stats",
             partial: "people/service_stats",
@@ -491,7 +491,7 @@ class PeopleController < ApplicationController
 
   def person_params
     params.require(:person).permit(
-      :name, :profile_url, :title, :company_name, :location, 
+      :name, :profile_url, :title, :company_name, :location,
       :email, :phone, :connection_degree, :phantom_run_id,
       :company_id
     )
@@ -515,17 +515,17 @@ class PeopleController < ApplicationController
     # Get people-specific stats
     begin
       sidekiq_stats = Sidekiq::Stats.new
-      
+
       # Count total people services processed from ServiceAuditLog
       # Note: person_profile_extraction operates on Companies (extracting their people)
       # while email/social extraction might operate on Person records
-      people_services = ["person_profile_extraction", "person_email_extraction", "person_social_media_extraction"]
-      
+      people_services = [ "person_profile_extraction", "person_email_extraction", "person_social_media_extraction" ]
+
       stats[:total_processed] = ServiceAuditLog.where(
         service_name: people_services,
         status: ServiceAuditLog::STATUS_SUCCESS
       ).count
-      
+
       stats[:total_failed] = sidekiq_stats.failed
       stats[:total_enqueued] = sidekiq_stats.enqueued
       stats[:workers_busy] = sidekiq_stats.workers_size

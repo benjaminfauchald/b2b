@@ -18,7 +18,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
   def companies_needing_service
     number_with_delimiter(companies_needing_service_raw)
   end
-  
+
   def companies_needing_service_raw
     # Map service names to handle legacy naming
     actual_service_name = case service_name
@@ -55,12 +55,12 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
         .where("companies.operating_revenue > ?", 10_000_000)
         .distinct
         .pluck("service_audit_logs.record_id")
-      
+
       companies_with_websites = Company
         .where("operating_revenue > ?", 10_000_000)
         .where("website IS NOT NULL AND website != ''")
         .count
-      
+
       # Return total unique count (some companies might have websites AND be in audit log)
       companies_with_websites
     when "company_financial_data", "company_financials"
@@ -94,19 +94,19 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
       Company.where(
         source_country: "NO",
         source_registry: "brreg",
-        organization_form_code: ["AS", "ASA", "DA", "ANS"]
+        organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
       ).count
     when "company_linkedin_discovery"
       Company.linkedin_discovery_potential.count
     else
       return 0
     end
-    
+
     return 0 if total == 0
-    
+
     completed = companies_completed  # Now returns integer directly
     percentage = (completed.to_f / total.to_f) * 100
-    
+
     # Round to 1 decimal place for small percentages, 0 decimals for large ones
     if percentage < 1
       percentage.round(1)

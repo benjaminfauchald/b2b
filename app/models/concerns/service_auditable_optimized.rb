@@ -9,7 +9,7 @@ module ServiceAuditableOptimized
 
       # Use EXISTS subquery instead of NOT IN for better performance
       refresh_threshold = service_config.refresh_interval_hours.hours.ago
-      
+
       where(<<-SQL)
         NOT EXISTS (
           SELECT 1 FROM service_audit_logs sal

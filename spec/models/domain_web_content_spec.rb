@@ -36,7 +36,7 @@ RSpec.describe Domain, type: :model do
           "url" => "https://example.com",
           "extracted_at" => "2025-06-26T10:30:00Z",
           "markdown" => "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
-          "links" => ["https://www.iana.org/domains/example"],
+          "links" => [ "https://www.iana.org/domains/example" ],
           "metadata" => {
             "status_code" => 200,
             "response_time_ms" => 150,
@@ -53,8 +53,8 @@ RSpec.describe Domain, type: :model do
 
       it "allows nested JSON structures" do
         nested_data = {
-          "content" => { "body" => "text", "images" => ["img1.jpg", "img2.png"] },
-          "seo" => { "title" => "SEO Title", "keywords" => ["example", "domain"] }
+          "content" => { "body" => "text", "images" => [ "img1.jpg", "img2.png" ] },
+          "seo" => { "title" => "SEO Title", "keywords" => [ "example", "domain" ] }
         }
         domain.update(web_content_data: nested_data)
         expect(domain.reload.web_content_data).to eq(nested_data)
@@ -76,12 +76,12 @@ RSpec.describe Domain, type: :model do
           "number" => 42,
           "boolean" => true,
           "null" => nil,
-          "array" => [1, 2, 3],
+          "array" => [ 1, 2, 3 ],
           "hash" => { "nested" => "value" }
         }
         domain.update(web_content_data: data_with_types)
         reloaded = domain.reload.web_content_data
-        
+
         expect(reloaded["string"]).to be_a(String)
         expect(reloaded["number"]).to be_a(Integer)
         expect(reloaded["boolean"]).to be_a(TrueClass)
@@ -110,29 +110,29 @@ RSpec.describe Domain, type: :model do
 
         it "returns true when web content exists but is old" do
           domain.update(www: true, a_record_ip: "192.168.1.1", web_content_data: { "title" => "Test" })
-          
+
           # Create old successful audit log (over 30 days ago)
           create(:service_audit_log,
             auditable: domain,
-            service_name: "domain_web_content_extraction", 
+            service_name: "domain_web_content_extraction",
             status: "success",
             completed_at: 31.days.ago
           )
-          
+
           expect(domain.needs_web_content_extraction?).to be true
         end
 
         it "returns false when web content was recently extracted" do
           domain.update(www: true, a_record_ip: "192.168.1.1", web_content_data: { "title" => "Test" })
-          
+
           # Create recent successful audit log
           create(:service_audit_log,
             auditable: domain,
             service_name: "domain_web_content_extraction",
-            status: "success", 
+            status: "success",
             completed_at: 1.day.ago
           )
-          
+
           expect(domain.needs_web_content_extraction?).to be false
         end
       end
@@ -150,7 +150,7 @@ RSpec.describe Domain, type: :model do
             status: "success",
             completed_at: extraction_time
           )
-          
+
           expect(domain.web_content_extracted_at).to be_within(1.second).of(extraction_time)
         end
 
@@ -162,7 +162,7 @@ RSpec.describe Domain, type: :model do
             status: "failed",
             completed_at: 1.day.ago
           )
-          
+
           # Successful attempt
           success_time = 3.days.ago
           create(:service_audit_log,
@@ -171,7 +171,7 @@ RSpec.describe Domain, type: :model do
             status: "success",
             completed_at: success_time
           )
-          
+
           expect(domain.web_content_extracted_at).to be_within(1.second).of(success_time)
         end
       end
@@ -188,7 +188,7 @@ RSpec.describe Domain, type: :model do
             status: "success",
             completed_at: 1.day.ago
           )
-          
+
           expect(domain.web_content_extraction_status).to eq(:success)
         end
 
@@ -199,7 +199,7 @@ RSpec.describe Domain, type: :model do
             status: "failed",
             completed_at: 1.day.ago
           )
-          
+
           expect(domain.web_content_extraction_status).to eq(:failed)
         end
 
@@ -210,7 +210,7 @@ RSpec.describe Domain, type: :model do
             status: "pending",
             started_at: 5.minutes.ago
           )
-          
+
           expect(domain.web_content_extraction_status).to eq(:pending)
         end
       end
@@ -237,7 +237,7 @@ RSpec.describe Domain, type: :model do
             status: "success",
             completed_at: 31.days.ago
           )
-          
+
           result = Domain.needing_web_content_extraction
           expect(result).to include(domain_with_content)
         end
@@ -250,7 +250,7 @@ RSpec.describe Domain, type: :model do
             status: "success",
             completed_at: 1.day.ago
           )
-          
+
           result = Domain.needing_web_content_extraction
           expect(result).not_to include(domain_with_content)
         end

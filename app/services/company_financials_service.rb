@@ -36,17 +36,17 @@ class CompanyFinancialsService < ApplicationService
 
     audit_service_operation(@company) do |audit_log|
       Rails.logger.info "🚀 Starting financial data update for #{@company.company_name} (#{@org_number})"
-      
+
       result = fetch_and_update_financials
-      
+
       if result[:success]
         audit_log.add_metadata(
           changed_fields: result[:changed_fields],
           financials: result[:financials],
           organization_number: @org_number
         )
-        
-        success_result("Financial data updated successfully", 
+
+        success_result("Financial data updated successfully",
                       changed_fields: result[:changed_fields],
                       financials: result[:financials])
       else
@@ -398,7 +398,7 @@ class CompanyFinancialsService < ApplicationService
       if changed_fields.any?
         @company.update!(update_attrs)
         Rails.logger.info "✅ Updated financial data for #{@org_number}. Changed fields: #{changed_fields.join(', ')}"
-        
+
         # Broadcast the update via ActionCable
         broadcast_financial_update(changed_fields, financials)
       else
@@ -437,12 +437,12 @@ class CompanyFinancialsService < ApplicationService
 
   def broadcast_financial_update(changed_fields, financials)
     return unless defined?(CompanyFinancialsChannel)
-    
+
     begin
       Rails.logger.info "📺 Broadcasting financial update for company #{@company.id}"
-      
+
       CompanyFinancialsChannel.broadcast_financial_update(@company, {
-        status: 'success',
+        status: "success",
         changed_fields: changed_fields,
         financials: financials,
         company_id: @company.id,

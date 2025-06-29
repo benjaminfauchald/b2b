@@ -57,12 +57,12 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
     else
       return 0
     end
-    
+
     return 0 if total == 0
-    
+
     completed = companies_completed
     percentage = (completed.to_f / total.to_f) * 100
-    
+
     # Round to 1 decimal place for small percentages, 0 decimals for large ones
     if percentage < 1
       percentage.round(1)

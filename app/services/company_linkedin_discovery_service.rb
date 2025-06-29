@@ -183,10 +183,10 @@ class CompanyLinkedinDiscoveryService < ApplicationService
       uri = URI.parse(url)
       return false unless uri.scheme =~ /^https?$/
       return false unless uri.host&.include?("linkedin.com")
-      
+
       # Check if it's a company page (not personal profile)
-      return url.include?("/company/") || url.include?("/in/") || url.include?("/showcase/")
-      
+      url.include?("/company/") || url.include?("/in/") || url.include?("/showcase/")
+
     rescue StandardError => e
       Rails.logger.debug "LinkedIn URL validation failed for #{url}: #{e.message}"
       false
@@ -199,10 +199,10 @@ class CompanyLinkedinDiscoveryService < ApplicationService
     begin
       # For LinkedIn, we primarily rely on URL pattern matching and title/snippet analysis
       # since LinkedIn blocks most scraping attempts
-      
+
       # Extract LinkedIn profile type
       profile_type = extract_linkedin_profile_type(url)
-      
+
       # Check if content matches company using AI
       confidence = calculate_confidence_score(
         url: url,
@@ -363,7 +363,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
   def openai_configured?
     # Check for either standard OpenAI or Azure OpenAI configuration
-    ENV["OPENAI_API_KEY"].present? || 
+    ENV["OPENAI_API_KEY"].present? ||
     (ENV["AZURE_OPENAI_API_KEY"].present? && ENV["AZURE_OPENAI_ENDPOINT"].present?)
   end
 
@@ -371,11 +371,11 @@ class CompanyLinkedinDiscoveryService < ApplicationService
     # Store ALL discovered LinkedIn profiles, regardless of confidence
     if discovered_profiles.any?
       best_match = discovered_profiles.first
-      
+
       # Always store the best match in linkedin_ai_url with its confidence
       @company.linkedin_ai_url = best_match[:url]
       @company.linkedin_ai_confidence = best_match[:confidence]
-      
+
       # Store all discovered profiles in linkedin_alternatives as JSON
       @company.linkedin_alternatives = discovered_profiles.map do |profile|
         {
@@ -385,7 +385,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
           profile_type: profile[:profile_type]
         }
       end
-      
+
       # Mark as processed
       @company.linkedin_processed = true
       @company.linkedin_last_processed_at = Time.current

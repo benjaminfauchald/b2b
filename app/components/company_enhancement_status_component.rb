@@ -69,7 +69,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
     begin
       # Parse JSON if it's a string, or use directly if it's already parsed
       parsed_pages = company.web_pages.is_a?(String) ? JSON.parse(company.web_pages) : company.web_pages
-      
+
       # Handle different possible structures
       if parsed_pages.is_a?(Array)
         "#{parsed_pages.size} pages found"
@@ -99,7 +99,7 @@ class CompanyEnhancementStatusComponent < ViewComponent::Base
     begin
       # Parse JSON if it's a string, or use directly if it's already parsed
       parsed_employees = company.employees_data.is_a?(String) ? JSON.parse(company.employees_data) : company.employees_data
-      
+
       # Handle different possible structures
       if parsed_employees.is_a?(Array)
         "#{parsed_employees.size} employees found"
