@@ -8,10 +8,28 @@ RSpec.describe "Country Filtering", type: :request do
     allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
 
-    # Create test data
-    create_list(:company, 5, source_country: "NO", company_name: "Norwegian Company")
-    create_list(:company, 3, source_country: "SE", company_name: "Swedish Company")
-    create_list(:company, 2, source_country: "DK", company_name: "Danish Company")
+    # Create test data - companies that meet financial data criteria
+    create_list(:company, 5, 
+      source_country: "NO", 
+      company_name: "Norwegian Company",
+      source_registry: "brreg",
+      ordinary_result: nil,
+      organization_form_code: "AS"
+    )
+    create_list(:company, 3, 
+      source_country: "SE", 
+      company_name: "Swedish Company",
+      source_registry: "brreg",
+      ordinary_result: nil,
+      organization_form_code: "AS"
+    )
+    create_list(:company, 2, 
+      source_country: "DK", 
+      company_name: "Danish Company",
+      source_registry: "brreg",
+      ordinary_result: nil,
+      organization_form_code: "AS"
+    )
 
     # Create service audit logs for different countries
     Company.where(source_country: "NO").limit(2).each do |company|
@@ -73,19 +91,21 @@ RSpec.describe "Country Filtering", type: :request do
 
   describe "Queue operations" do
     before do
-      allow(ServiceConfiguration).to receive(:active?).and_return(true)
+      # Create service configuration
+      create(:service_configuration, service_name: "company_financial_data", active: true)
+      allow(ServiceConfiguration).to receive(:active?).with("company_financial_data").and_return(true)
       post set_country_companies_path, params: { country: "NO" }
     end
 
     it "only affects companies from selected country" do
       # Mock worker to not actually process
-      allow(CompanyFinancialsWorker).to receive(:perform_async)
+      allow(CompanyFinancialDataWorker).to receive(:perform_async)
 
-      post queue_financial_data_companies_path, params: { count: 10 }, as: :json
+      post queue_financial_data_companies_path, params: { count: 5 }, as: :json
 
       response_data = JSON.parse(response.body)
       expect(response_data["success"]).to be true
-      expect(response_data["queued_count"]).to be <= 5 # Only Norwegian companies
+      expect(response_data["queued_count"]).to eq(5) # Only Norwegian companies
     end
   end
 

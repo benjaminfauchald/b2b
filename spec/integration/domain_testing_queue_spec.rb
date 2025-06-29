@@ -30,10 +30,10 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
 
     context 'when queueing domains for DNS testing' do
       it 'correctly calculates domains needing testing' do
-        # The needing_service scope looks at audit logs, not dns field
-        # So all 60 domains will need testing initially
+        # The needing_service scope for domain_testing only looks at domains with dns: nil
+        # So only the 50 untested domains will need testing
         count = Domain.needing_service('domain_testing').count
-        expect(count).to eq(60)
+        expect(count).to eq(50)
       end
 
       it 'queues correct number of domains' do
@@ -51,8 +51,8 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
       end
 
       it 'updates domains_needing count after queueing' do
-        # Initial count - all 60 domains need testing
-        expect(Domain.needing_service('domain_testing').count).to eq(60)
+        # Initial count - only untested domains (50) need testing
+        expect(Domain.needing_service('domain_testing').count).to eq(50)
 
         # Mock the service to create audit logs
         allow_any_instance_of(DomainTestingService).to receive(:call) do |service|
@@ -80,8 +80,8 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
           end
         end
 
-        # Count should decrease by 10
-        expect(Domain.needing_service('domain_testing').count).to eq(50)
+        # Count should decrease by 10 (from 50 to 40)
+        expect(Domain.needing_service('domain_testing').count).to eq(40)
       end
     end
 
@@ -214,6 +214,9 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
     end
 
     it 'includes domains_needing counts' do
+      # Clear existing domains from before block
+      Domain.delete_all
+      
       # Create domains in various states
       create_list(:domain, 10, dns: nil) # Need DNS testing
       create_list(:domain, 5, dns: true, mx: nil) # Need MX testing
@@ -222,9 +225,8 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
 
       stats = controller.send(:get_queue_stats)
 
-      # All created domains need testing since they have no audit logs
-      total_domains = Domain.count
-      expect(stats[:domains_needing][:domain_testing]).to eq(total_domains)
+      # Only domains with dns: nil need DNS testing (domain_testing service)
+      expect(stats[:domains_needing][:domain_testing]).to eq(10)
       expect(stats[:domains_needing][:domain_mx_testing]).to eq(5)
       expect(stats[:domains_needing][:domain_a_record_testing]).to eq(3)
       expect(stats[:domains_needing][:domain_web_content_extraction]).to eq(2)
