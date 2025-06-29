@@ -616,7 +616,13 @@ class CompaniesController < ApplicationController
     # Get overall Sidekiq stats
     begin
       sidekiq_stats = Sidekiq::Stats.new
-      stats[:total_processed] = sidekiq_stats.processed
+      # Count total services processed from ServiceAuditLog for company services
+      company_services = ["company_financials", "company_web_discovery", "company_linkedin_discovery", "company_employee_discovery"]
+      stats[:total_processed] = ServiceAuditLog.where(
+        service_name: company_services,
+        status: ServiceAuditLog::STATUS_SUCCESS,
+        auditable_type: "Company"
+      ).count
       stats[:total_failed] = sidekiq_stats.failed
       stats[:total_enqueued] = sidekiq_stats.enqueued
       stats[:workers_busy] = sidekiq_stats.workers_size

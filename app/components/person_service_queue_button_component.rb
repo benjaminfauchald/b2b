@@ -41,7 +41,7 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
         .where(auditable_type: "Company")
         .where(
           "(companies.linkedin_url IS NOT NULL AND companies.linkedin_url != '') OR " \
-          "(companies.linkedin_ai_url IS NOT NULL AND companies.linkedin_ai_url != '' AND companies.linkedin_ai_confidence >= 80)"
+          "(companies.linkedin_ai_url IS NOT NULL AND companies.linkedin_ai_url != '' AND companies.linkedin_ai_confidence >= 50)"
         )
         .count
     else

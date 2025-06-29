@@ -91,11 +91,11 @@ class Company < ApplicationRecord
 
   # Scopes for Profile Extraction
   # Companies that are ready for LinkedIn profile extraction
-  # Includes companies with either linkedin_url OR linkedin_ai_url with high confidence (>= 80%)
+  # Includes companies with either linkedin_url OR linkedin_ai_url with confidence >= 50%
   scope :profile_extraction_candidates, -> {
     where(
       "(linkedin_url IS NOT NULL AND linkedin_url != '') OR " \
-      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 80)"
+      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 50)"
     ).order(operating_revenue: :desc)
   }
 
@@ -173,7 +173,7 @@ class Company < ApplicationRecord
   def best_linkedin_url
     if linkedin_url.present?
       linkedin_url
-    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 80
+    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 50
       linkedin_ai_url
     else
       nil
