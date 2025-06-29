@@ -1,12 +1,13 @@
 class SsoLoginComponent < ViewComponent::Base
-  def initialize(providers: [ :google_oauth2, :github ], **options)
+  def initialize(providers: [ :google_oauth2, :github ], action: "Sign in", **options)
     @providers = Array(providers)
+    @action = action
     @options = options
   end
 
   private
 
-  attr_reader :providers, :options
+  attr_reader :providers, :action, :options
 
   def container_classes
     base_classes = [
@@ -44,7 +45,7 @@ class SsoLoginComponent < ViewComponent::Base
       config = provider_configs[provider.to_sym]
       next unless config
 
-      config
+      config.merge(button_text: "#{action} with #{config[:name]}")
     end.compact
   end
 

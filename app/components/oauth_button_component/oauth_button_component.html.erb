@@ -7,10 +7,10 @@
       controller: "oauth-button",
       action: "click->oauth-button#handleClick"
     },
-    "aria-label": "Sign in with #{name}" do %>
+    "aria-label": button_text do %>
   <span data-oauth-button-target="content" class="flex items-center">
     <%= icon_svg %>
-    <span>Sign in with <%= name %></span>
+    <span><%= button_text %></span>
   </span>
   
   <span data-oauth-button-target="loading" class="hidden flex items-center">

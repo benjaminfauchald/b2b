@@ -1,15 +1,16 @@
 class OauthButtonComponent < ViewComponent::Base
-  def initialize(provider:, name:, icon:, color: nil, **options)
+  def initialize(provider:, name:, icon:, color: nil, button_text: nil, **options)
     @provider = provider
     @name = name
     @icon = icon
     @color = color || default_color
+    @button_text = button_text || "Sign in with #{name}"
     @options = options
   end
 
   private
 
-  attr_reader :provider, :name, :icon, :color, :options
+  attr_reader :provider, :name, :icon, :color, :button_text, :options
 
   def oauth_url
     "/users/auth/#{provider}"
@@ -21,16 +22,15 @@ class OauthButtonComponent < ViewComponent::Base
       "flex",
       "items-center",
       "justify-center",
-      "px-4",
+      "px-5",
       "py-2.5",
       "text-sm",
       "font-medium",
       "text-white",
-      "rounded-md",
-      "transition-colors",
+      "rounded-lg",
+      "transition-all",
       "duration-200",
-      "focus:ring-2",
-      "focus:ring-offset-2",
+      "focus:ring-4",
       "focus:outline-none",
       "disabled:opacity-50",
       "disabled:cursor-not-allowed"
@@ -48,11 +48,11 @@ class OauthButtonComponent < ViewComponent::Base
   def default_color
     case provider.to_s
     when "google_oauth2", "google"
-      "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+      "bg-red-600 hover:bg-red-700 focus:ring-red-300 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"
     when "github"
-      "bg-gray-800 hover:bg-gray-900 focus:ring-gray-500"
+      "bg-gray-800 hover:bg-gray-900 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-600"
     else
-      "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+      "bg-blue-700 hover:bg-blue-800 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
     end
   end
 

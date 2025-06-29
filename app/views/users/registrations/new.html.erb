@@ -23,18 +23,15 @@
       <%= render "users/shared/error_messages", resource: resource %>
 
       <!-- SSO Login Options -->
-      <%= render SsoLoginComponent.new %>
+      <%= render SsoLoginComponent.new(action: "Create account") %>
 
       <!-- Divider -->
-      <div class="relative my-6">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
-        </div>
-        <div class="relative flex justify-center text-sm">
-          <span class="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-            Or create account with email
-          </span>
-        </div>
+      <div class="relative flex items-center my-6">
+        <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+        <span class="flex-shrink mx-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          Or create account with email
+        </span>
+        <div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
       </div>
 
       <!-- Registration Form -->
@@ -85,7 +82,7 @@
 
         <div>
           <%= f.submit "Create account", 
-              class: "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors" %>
+              class: "w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 transition-all duration-200" %>
         </div>
       <% end %>
 
