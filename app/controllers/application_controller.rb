@@ -21,7 +21,13 @@ class ApplicationController < ActionController::Base
   private
 
   def git_version
-    `git describe --tags --always 2>/dev/null`.strip.presence || "unknown"
+    full_version = `git describe --tags --always 2>/dev/null`.strip.presence || "unknown"
+    # Extract just the semantic version (e.g., v1.3.8 from v1.3.8-2-g65d93b22)
+    if full_version.match(/^v?(\d+\.\d+\.\d+)/)
+      $1
+    else
+      full_version
+    end
   end
   helper_method :git_version
 
