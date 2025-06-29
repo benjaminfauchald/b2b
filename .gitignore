@@ -98,3 +98,8 @@ vendor/bundle/
 .deploy
 
 /config/credentials/test.key
+
+# Prevent duplicate files with version numbers
+* 2.*
+* [0-9].*
+*\ *

@@ -43,7 +43,7 @@ class CompanyFinancialsWorker
       queue_latency_ms: enqueued_at ? ((@start_time - Time.at(enqueued_at)) * 1000).round : nil
     })
 
-    CompanyFinancialsService.new(@company).call
+    CompanyFinancialsService.new(company: @company).call
 
     log_to_sct("WORKER_COMPLETE", [], "SUCCESS",
       ((Time.current - @start_time) * 1000).round,

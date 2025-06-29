@@ -1,0 +1,212 @@
+<% content_for :title, "Import Status" %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-transparent dark:bg-transparent">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="sm:flex sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Import Status</h1>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+          Your large CSV file is being processed in the background
+        </p>
+      </div>
+      <div class="mt-4 sm:mt-0">
+        <%= link_to domains_path, 
+            class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600" do %>
+          <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          Back to Domains
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-gray-900/10 rounded-lg p-6 mb-8">
+    <div class="flex items-center">
+      <!-- Loading Spinner -->
+      <div id="loading-spinner" class="inline-block">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+      
+      <div class="flex-1">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Processing Import</h3>
+        <p id="status-message" class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          Checking import status...
+        </p>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Import ID: <%= @import_id %>
+        </p>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Started: <%= @import_started_at.is_a?(Time) ? @import_started_at.strftime("%Y-%m-%d %H:%M:%S") : @import_started_at %>
+        </p>
+      </div>
+    </div>
+
+    <!-- Progress Bar Container -->
+    <div class="mt-6">
+      <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+        <div id="progress-bar" class="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Information Card -->
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+    <div class="flex">
+      <svg class="w-5 h-5 text-blue-400 dark:text-blue-300 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+      </svg>
+      <div class="flex-1">
+        <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Background Processing</h3>
+        <div class="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+          <p>Large CSV files are processed in the background to prevent timeouts.</p>
+          <p>This page will automatically update when processing is complete.</p>
+          <p>You can safely close this page and return later to check the results.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Additional content area for dynamic loading (ensure proper dark mode) -->
+<div id="dynamic-content-area" class="bg-transparent dark:bg-transparent"></div>
+
+<style>
+/* Ensure any dynamically loaded content respects dark mode */
+.dark #dynamic-content-area * {
+  background-color: transparent !important;
+}
+
+/* Override any potential white backgrounds in dark mode */
+.dark body, .dark body *, .dark div, .dark section {
+  background-color: inherit;
+}
+
+/* Specific override for any skeleton loaders or white boxes */
+.dark .bg-white:not([class*="dark:"]) {
+  background-color: rgb(31 41 55) !important; /* gray-800 */
+}
+</style>
+
+<script>
+let checkInterval;
+let retryCount = 0;
+const maxRetries = 180; // 15 minutes with 5-second intervals
+
+function updateProgress(percentage) {
+  document.getElementById('progress-bar').style.width = percentage + '%';
+}
+
+function updateStatus(message) {
+  document.getElementById('status-message').textContent = message;
+}
+
+function checkImportStatus() {
+  retryCount++;
+  
+  if (retryCount > maxRetries) {
+    updateStatus('Status check timed out. Please refresh the page or check back later.');
+    clearInterval(checkInterval);
+    return;
+  }
+
+  fetch('<%= check_import_status_domains_path %>', {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Import status:', data);
+    
+    switch(data.status) {
+      case 'queued':
+        updateStatus(data.message || 'Import queued for processing...');
+        updateProgress(5);
+        break;
+        
+      case 'processing':
+        let message = data.message || 'Import in progress...';
+        let progress = 50; // Default progress
+        
+        // Use real progress data if available
+        if (data.progress && data.progress.percentage !== undefined) {
+          progress = Math.max(5, Math.min(95, data.progress.percentage)); // Keep between 5-95%
+          
+          // Enhanced status message with details
+          if (data.progress.current_line && data.progress.total_lines) {
+            message = `Processing line ${data.progress.current_line.toLocaleString()} of ${data.progress.total_lines.toLocaleString()} (${progress.toFixed(1)}%)`;
+            
+            // Add import stats if available
+            if (data.progress.imported !== undefined) {
+              message += ` - ${data.progress.imported} imported, ${data.progress.failed || 0} failed`;
+              if (data.progress.duplicates > 0) {
+                message += `, ${data.progress.duplicates} duplicates`;
+              }
+            }
+          }
+        }
+        
+        updateStatus(message);
+        updateProgress(progress);
+        break;
+        
+      case 'completed':
+        updateStatus('Import completed successfully! Redirecting...');
+        updateProgress(100);
+        clearInterval(checkInterval);
+        
+        setTimeout(() => {
+          window.location.href = data.redirect_url;
+        }, 2000);
+        break;
+        
+      case 'failed':
+        updateStatus('Import failed: ' + (data.error || 'Unknown error'));
+        updateProgress(100);
+        clearInterval(checkInterval);
+        
+        setTimeout(() => {
+          window.location.href = data.redirect_url;
+        }, 3000);
+        break;
+        
+      case 'no_import':
+        updateStatus('No import in progress');
+        clearInterval(checkInterval);
+        
+        setTimeout(() => {
+          window.location.href = '<%= import_domains_path %>';
+        }, 2000);
+        break;
+        
+      default:
+        updateStatus('Unknown status: ' + data.status);
+    }
+  })
+  .catch(error => {
+    console.error('Error checking import status:', error);
+    updateStatus('Error checking status. Retrying...');
+  });
+}
+
+// Start checking status immediately and then every 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+  checkImportStatus();
+  checkInterval = setInterval(checkImportStatus, 5000);
+});
+
+// Clean up interval when page is unloaded
+window.addEventListener('beforeunload', function() {
+  if (checkInterval) {
+    clearInterval(checkInterval);
+  }
+});
+</script>

@@ -15,7 +15,12 @@ RSpec.describe ImportResultsComponent, type: :component do
         { domain: 'test.org', row: 3 }
       ],
       failed_domains: [],
-      processing_time: 2.5
+      processing_time: 2.5,
+      summary_message: '5 domains imported successfully',
+      domains_per_second: 2.0,
+      has_csv_errors?: false,
+      csv_errors: [],
+      duplicate_count: 0
     )
   end
 
@@ -35,7 +40,12 @@ RSpec.describe ImportResultsComponent, type: :component do
         { domain: '', row: 4, errors: [ "Domain can't be blank" ] },
         { domain: 'invalid..domain', row: 6, errors: [ 'Domain is invalid' ] }
       ],
-      processing_time: 3.2
+      processing_time: 3.2,
+      summary_message: '3 domains imported, 2 failed',
+      domains_per_second: 1.6,
+      has_csv_errors?: false,
+      csv_errors: [],
+      duplicate_count: 0
     )
   end
 
@@ -51,7 +61,12 @@ RSpec.describe ImportResultsComponent, type: :component do
         { domain: 'duplicate.com', row: 2, errors: [ 'Domain has already been taken' ] }
       ],
       processing_time: 1.1,
-      error_message: 'Multiple validation errors occurred'
+      error_message: 'Multiple validation errors occurred',
+      summary_message: 'Import failed - 5 domains failed validation',
+      domains_per_second: 4.5,
+      has_csv_errors?: false,
+      csv_errors: [],
+      duplicate_count: 0
     )
   end
 

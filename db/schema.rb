@@ -374,7 +374,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
     t.string "a_record_ip"
     t.jsonb "web_content_data"
     t.index ["a_record_ip"], name: "index_domains_on_a_record_ip"
+    t.index ["dns", "mx"], name: "index_domains_on_dns_and_mx"
+    t.index ["dns", "www"], name: "index_domains_on_dns_and_www"
+    t.index ["dns"], name: "index_domains_on_dns"
+    t.index ["id"], name: "index_domains_needing_dns", where: "(dns IS NULL)"
+    t.index ["id"], name: "index_domains_needing_mx", where: "((dns = true) AND (mx IS NULL))"
+    t.index ["id"], name: "index_domains_needing_web_content", where: "((www = true) AND (a_record_ip IS NOT NULL) AND (web_content_data IS NULL))"
+    t.index ["id"], name: "index_domains_needing_www", where: "((dns = true) AND (www IS NULL))"
+    t.index ["mx"], name: "index_domains_on_mx"
     t.index ["web_content_data"], name: "index_domains_on_web_content_data", using: :gin
+    t.index ["www", "a_record_ip"], name: "index_domains_on_www_and_a_record_ip"
+    t.index ["www"], name: "index_domains_on_www"
   end
 
   create_table "domains_se_raw", id: false, force: :cascade do |t|
@@ -429,6 +439,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_26_125914) do
     t.string "record_id"
     t.index ["auditable_type", "auditable_id", "service_name"], name: "index_service_audit_logs_on_auditable_and_service"
     t.index ["auditable_type", "auditable_id"], name: "index_service_audit_logs_on_auditable"
+    t.index ["auditable_type", "service_name", "status", "completed_at"], name: "index_sal_type_service_status_completed"
+    t.index ["completed_at"], name: "index_service_audit_logs_on_completed_at"
     t.index ["created_at"], name: "index_service_audit_logs_on_created_at"
     t.index ["metadata"], name: "index_service_audit_logs_on_metadata", using: :gin
     t.index ["record_id"], name: "index_service_audit_logs_on_record_id"

@@ -1,0 +1,207 @@
+{
+  "test_run": "2025-06-27T08:53:05.095Z",
+  "domains_created": 50,
+  "snapshots": [
+    {
+      "time": "2025-06-27T08:51:48.575Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    },
+    {
+      "time": "2025-06-27T08:52:03.770Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    },
+    {
+      "time": "2025-06-27T08:52:19.010Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    },
+    {
+      "time": "2025-06-27T08:52:34.400Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    },
+    {
+      "time": "2025-06-27T08:52:49.591Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    },
+    {
+      "time": "2025-06-27T08:53:04.901Z",
+      "ui": {
+        "dns_queue": "0",
+        "mx_queue": "0",
+        "a_record_queue": "0",
+        "web_content_queue": "0",
+        "total_processed": "14,369",
+        "dns_not_tested": "42,300",
+        "dns_queue_in_button": "0"
+      },
+      "sidekiq": {},
+      "domains_needing": {
+        "dns_needed": 42300,
+        "mx_needed": 100,
+        "a_record_needed": 112,
+        "web_content_needed": 337
+      },
+      "processed_domains": {
+        "total": 50,
+        "dns_tested": 0,
+        "dns_active": 0,
+        "mx_tested": 0,
+        "www_tested": 0
+      },
+      "audit_logs_count": 3
+    }
+  ],
+  "audit_logs_summary": {
+    "total_unique": 3,
+    "success": 3,
+    "failed": 0,
+    "sample_logs": [
+      {
+        "id": 5373,
+        "service_name": "domain_testing",
+        "operation_type": "test_dns",
+        "status": "success",
+        "auditable_type": "Domain",
+        "auditable_id": 1921,
+        "created_at": "2025-06-27T07:16:24Z",
+        "execution_time_ms": 1133
+      },
+      {
+        "id": 5370,
+        "service_name": "domain_testing",
+        "operation_type": "test_dns",
+        "status": "success",
+        "auditable_type": "Domain",
+        "auditable_id": 1920,
+        "created_at": "2025-06-27T07:16:23Z",
+        "execution_time_ms": 1096
+      },
+      {
+        "id": 5369,
+        "service_name": "domain_testing",
+        "operation_type": "test_dns",
+        "status": "success",
+        "auditable_type": "Domain",
+        "auditable_id": 1919,
+        "created_at": "2025-06-27T07:16:22Z",
+        "execution_time_ms": 451
+      }
+    ]
+  },
+  "consistency_issues": 0,
+  "test_passed": true
+}

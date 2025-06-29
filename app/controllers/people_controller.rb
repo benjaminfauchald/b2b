@@ -458,6 +458,7 @@ class PeopleController < ApplicationController
             partial: "people/service_stats",
             locals: {
               service_name: "person_profile_extraction",
+              service_title: "Profile Extraction",
               companies_needing: stats_data[:profile_needing],
               companies_potential: stats_data[:profile_potential],
               queue_depth: queue_stats["person_profile_extraction"] || 0

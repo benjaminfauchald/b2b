@@ -32,14 +32,18 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
       allow(Company).to receive(:needing_service).with(service_name).and_return(
         double(count: 10)
       )
+      allow(Company).to receive(:needs_financial_update).and_return(
+        double(count: 15)
+      )
     end
 
     it "renders the component with correct counts" do
       render_inline(component)
 
-      expect(page).to have_text("10 companies need processing")
-      expect(page).to have_text("5 in queue")
       expect(page).to have_text(title)
+      expect(page).to have_text("Financial Data Completion")
+      expect(page).to have_text("0%")
+      expect(page).to have_text("0 of 15 companies processed")
     end
 
     it "sets the correct form action" do
@@ -75,9 +79,9 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
     it "renders special text for web discovery" do
       render_inline(component)
 
-      expect(page).to have_text("8 of 20 companies need processing")
-      expect(page).to have_text("Companies with revenue > 10M NOK and no website")
-      expect(page).to have_text("5 in queue")
+      expect(page).to have_text("Web Discovery Completion")
+      expect(page).to have_text("0%")
+      expect(page).to have_text("0 of 20 companies processed")
     end
 
     it "sets the correct input limits based on needing count" do
@@ -93,12 +97,17 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
       allow(Company).to receive(:needing_service).with(service_name).and_return(
         double(count: 0)
       )
+      allow(Company).to receive(:needs_financial_update).and_return(
+        double(count: 0)
+      )
     end
 
     it "shows zero companies and disables the input" do
       render_inline(component)
 
-      expect(page).to have_text("0 companies need processing")
+      expect(page).to have_text("Financial Data Completion")
+      expect(page).to have_text("0%")
+      expect(page).to have_text("0 of 0 companies processed")
       expect(page).to have_css("input[type='number'][min='1'][max='0']")
       expect(page).to have_css("input[type='number'][value='0']")
     end

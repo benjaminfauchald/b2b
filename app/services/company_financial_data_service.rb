@@ -28,10 +28,12 @@ class CompanyFinancialDataService < ApplicationService
       if response[:success]
         if response[:no_data_available]
           # No financial data available for this company
-          audit_log.add_metadata(
-            api_response_code: 404,
+          metadata = {
+            api_response_code: response[:unsupported_format] ? 500 : 404,
             no_data_available: true
-          )
+          }
+          metadata[:unsupported_format] = true if response[:unsupported_format]
+          audit_log.add_metadata(metadata)
           success_result("No financial data available for this company")
         else
           # Validate the financial data structure
@@ -107,14 +109,22 @@ class CompanyFinancialDataService < ApplicationService
           
           # Transform API response to expected format
           transformed_data = {
-            revenue: latest_record.dig(:resultatregnskapResult, :driftsresultat, :driftsinntekter, :sum),
-            profit: latest_record.dig(:resultatregnskapResult, :driftsresultat, :driftsresultat),
-            equity: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :egenkapital, :sum),
-            total_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :sum),
-            current_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :omloepsmidler, :sum),
-            fixed_assets: latest_record.dig(:balanseregnskapResult, :eiendeler, :anleggsmidler, :sum),
-            current_liabilities: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :kortsiktigGjeld, :sum),
-            long_term_liabilities: latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :langsiktigGjeld, :sum),
+            revenue: latest_record.dig(:resultatregnskapResultat, :driftsresultat, :driftsinntekter, :sumDriftsinntekter) ||
+                    latest_record.dig(:resultatregnskapResult, :driftsresultat, :driftsinntekter, :sum),
+            profit: latest_record.dig(:resultatregnskapResultat, :aarsresultat) ||
+                   latest_record.dig(:resultatregnskapResult, :aarsresultat),
+            equity: latest_record.dig(:egenkapitalGjeld, :egenkapital, :sumEgenkapital) ||
+                   latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :egenkapital, :sum),
+            total_assets: latest_record.dig(:eiendeler, :sumEiendeler) ||
+                         latest_record.dig(:balanseregnskapResult, :eiendeler, :sum),
+            current_assets: latest_record.dig(:eiendeler, :omloepsmidler, :sumOmloepsmidler) ||
+                           latest_record.dig(:balanseregnskapResult, :eiendeler, :omloepsmidler, :sum),
+            fixed_assets: latest_record.dig(:eiendeler, :anleggsmidler, :sumAnleggsmidler) ||
+                         latest_record.dig(:balanseregnskapResult, :eiendeler, :anleggsmidler, :sum),
+            current_liabilities: latest_record.dig(:egenkapitalGjeld, :gjeldOversikt, :kortsiktigGjeld, :sumKortsiktigGjeld) ||
+                                latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :kortsiktigGjeld, :sum),
+            long_term_liabilities: latest_record.dig(:egenkapitalGjeld, :gjeldOversikt, :langsiktigGjeld, :sumLangsiktigGjeld) ||
+                                  latest_record.dig(:balanseregnskapResult, :egenkapitalGjeld, :gjeld, :langsiktigGjeld, :sum),
             year: latest_record.dig(:regnskapsperiode, :fraDato)&.slice(0, 4)&.to_i
           }
           
@@ -128,6 +138,17 @@ class CompanyFinancialDataService < ApplicationService
       when 429
         retry_after = response["Retry-After"]&.to_i || 3600
         { success: false, rate_limited: true, retry_after: retry_after }
+      when 500
+        # Handle specific 500 errors
+        error_body = JSON.parse(response.body) rescue {}
+        error_message = error_body['message'] || response.message
+        
+        if error_message&.include?('oppstillingsplan som ikke er stottet')
+          # Unsupported account layout plan - treat as no data available
+          { success: true, data: nil, no_data_available: true, unsupported_format: true }
+        else
+          { success: false, error: "API error: #{response.code} - #{error_message}" }
+        end
       else
         { success: false, error: "API error: #{response.code} - #{response.message}" }
       end

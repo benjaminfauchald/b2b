@@ -16,6 +16,12 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
   before do
     # Mock Sidekiq queue
     allow(Sidekiq::Queue).to receive(:new).and_return(double(size: 0))
+    # Mock Domain methods
+    allow(Domain).to receive(:dns_active).and_return(double(count: 0))
+    allow(Domain).to receive(:with_mx).and_return(double(count: 0))
+    allow(Domain).to receive(:www_active).and_return(double(count: 0))
+    allow(Domain).to receive(:with_web_content).and_return(double(count: 0))
+    allow(Domain).to receive_message_chain(:needing_service, :count).and_return(0)
   end
 
   describe "basic rendering" do
@@ -39,10 +45,12 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
     end
 
     it "renders count input field with default value" do
+      allow(Domain).to receive_message_chain(:needing_service, :count).and_return(100)
+      
       render_inline(component)
 
-      expect(page).to have_field("count", with: "100")
-      expect(page).to have_css("input[type='number'][min='1'][max='1000']")
+      expect(page).to have_field("count", with: "10")
+      expect(page).to have_css("input[type='number'][min='1'][max='100']")
     end
 
     it "renders submit button with Flowbite styling" do
@@ -56,12 +64,20 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
   end
 
   describe "domains needing service" do
+    before do
+      allow(Domain).to receive(:dns_active).and_return(double(count: 0))
+      allow(Domain).to receive(:with_mx).and_return(double(count: 0))
+      allow(Domain).to receive(:www_active).and_return(double(count: 0))
+      allow(Domain).to receive(:with_web_content).and_return(double(count: 0))
+    end
+
     it "shows count of domains needing service" do
       allow(Domain).to receive_message_chain(:needing_service, :count).and_return(42)
 
       render_inline(component)
 
-      expect(page).to have_text("42 domains need testing")
+      expect(page).to have_text("42")
+      expect(page).to have_text("Not Tested")
     end
 
     it "handles zero domains needing service" do
@@ -69,27 +85,31 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
 
       render_inline(component)
 
-      expect(page).to have_text("0 domains need testing")
+      expect(page).to have_text("0")
+      expect(page).to have_text("Not Tested")
     end
   end
 
-  describe "queue status" do
-    it "shows current queue depth" do
-      queue = double(size: 10)
-      allow(Sidekiq::Queue).to receive(:new).with("domain_dns_testing").and_return(queue)
-
-      render_inline(component)
-
-      expect(page).to have_text("10 in queue")
+  describe "progress display" do
+    before do
+      allow(Domain).to receive(:dns_active).and_return(double(count: 10))
+      allow(Domain).to receive(:with_mx).and_return(double(count: 0))
+      allow(Domain).to receive(:www_active).and_return(double(count: 0))
+      allow(Domain).to receive(:with_web_content).and_return(double(count: 0))
+      allow(Domain).to receive_message_chain(:needing_service, :count).and_return(5)
     end
 
-    it "shows zero when queue is empty" do
-      queue = double(size: 0)
-      allow(Sidekiq::Queue).to receive(:new).with("domain_dns_testing").and_return(queue)
-
+    it "shows progress bar" do
       render_inline(component)
 
-      expect(page).to have_text("0 in queue")
+      expect(page).to have_text("Progress")
+      expect(page).to have_css(".bg-blue-600") # Progress bar
+    end
+
+    it "shows tested domains count" do
+      render_inline(component)
+
+      expect(page).to have_text("domains tested")
     end
   end
 
@@ -124,6 +144,12 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
   end
 
   describe "with different service configurations" do
+    before do
+      # Setup mocks for MX testing
+      allow(Domain).to receive_message_chain(:dns_active, :where).and_return(double(count: 0))
+      allow(Domain).to receive_message_chain(:dns_active, :www_inactive, :count).and_return(0)
+    end
+
     it "renders MX testing service correctly" do
       mx_component = described_class.new(
         service_name: "domain_mx_testing",

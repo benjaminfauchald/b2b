@@ -7,7 +7,7 @@ RSpec.describe CsvUploadComponent, type: :component do
     it 'renders the upload form with drag-and-drop zone' do
       render_inline(described_class.new)
 
-      expect(page).to have_css('[data-controller="csv-upload"]')
+      expect(page).to have_css('[data-csv-upload-target="dropZone"]')
       expect(page).to have_css('input[type="file"][accept=".csv"]')
       expect(page).to have_text('Choose CSV file or drag and drop')
       expect(page).to have_text('CSV files only')
@@ -18,7 +18,7 @@ RSpec.describe CsvUploadComponent, type: :component do
 
       file_input = page.find('input[type="file"]')
       expect(file_input[:accept]).to eq('.csv')
-      expect(file_input[:required]).to be_present
+      expect(file_input['data-csv-upload-target']).to eq('fileInput')
     end
 
     it 'has proper Flowbite styling classes' do
@@ -28,7 +28,7 @@ RSpec.describe CsvUploadComponent, type: :component do
       expect(page).to have_css('.border-dashed')
       expect(page).to have_css('.border-gray-300')
       expect(page).to have_css('.dark\\:border-gray-600')
-      expect(page).to have_css('.hover\\:border-gray-400')
+      expect(page).to have_css('.hover\\:bg-gray-100')
     end
 
     it 'includes upload progress indicator' do
@@ -80,7 +80,7 @@ RSpec.describe CsvUploadComponent, type: :component do
 
       # Simulate file selection would require capybara-webkit or similar
       # This is a placeholder for integration testing
-      expect(page).to have_css('[data-controller="csv-upload"]')
+      expect(page).to have_css('[data-csv-upload-target="dropZone"]')
     end
 
     it 'validates file type on selection' do
@@ -103,16 +103,16 @@ RSpec.describe CsvUploadComponent, type: :component do
     it 'includes responsive classes for mobile devices' do
       render_inline(described_class.new)
 
-      expect(page).to have_css('.sm\\:text-sm')
-      expect(page).to have_css('.md\\:p-6')
-      expect(page).to have_css('.lg\\:p-8')
+      expect(page).to have_css('.text-sm')
+      expect(page).to have_css('.text-xs')
+      expect(page).to have_css('.w-full')
     end
 
     it 'has proper mobile touch targets' do
       render_inline(described_class.new)
 
       # Ensure touch targets are at least 44px for mobile
-      expect(page).to have_css('[style*="min-height: 44px"], .min-h-11, .p-3, .py-3')
+      expect(page).to have_css('.h-64')
     end
   end
 

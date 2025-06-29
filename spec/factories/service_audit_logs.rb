@@ -41,6 +41,7 @@ FactoryBot.define do
       status { :failed }
       completed_at { Time.current }
       error_message { 'Some error' }
+      metadata { { 'error' => 'Some error occurred' } }
     end
 
     trait :with_metadata do

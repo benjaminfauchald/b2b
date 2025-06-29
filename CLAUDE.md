@@ -26,3 +26,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Best Practices
 - Never use localhost for any server setup or testing use local.connectica.no
 - Always touch a file before you write to avoid this error "Error: File has not been read yet. Read it first before writing to it."
+- Make sure we dont start to make duplicates of files like homepage_hero_component 2.rb or /homepage_stats_component 2.r. We ALWAYS need to work on the actual file or the system will lose integrity!
+- Make sure that we write any temporary files and scripts to the tmp/ folder
