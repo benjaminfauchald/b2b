@@ -1,42 +1,58 @@
 #!/bin/bash
 
-# Enhanced deploy script with quality checks
-# Usage: bin/deploy [patch|minor|major] "Release message"
+# Unified Deploy Script with Quality Checks
+# Usage: 
+#   bin/deploy                              # Auto-detect branch and deploy
+#   bin/deploy "Commit message"             # Quick deploy from current branch
+#   bin/deploy patch "Release message"      # Version bump deploy
+#   bin/deploy minor "Release message"      # Minor version deploy
+#   bin/deploy major "Release message"      # Major version deploy
 
 set -e
 
-BUMP_TYPE=${1:-patch}
-MESSAGE=${2:-"Deploy to production"}
+# Detect if first argument is a version bump type
+if [[ "$1" =~ ^(major|minor|patch)$ ]]; then
+    BUMP_TYPE=$1
+    MESSAGE=${2:-"Deploy to production"}
+else
+    BUMP_TYPE="patch"
+    MESSAGE=${1:-"Deploy to production"}
+fi
 
-echo "🚀 Starting deployment process with quality checks..."
+echo "🚀 Starting deployment process..."
+
+# Detect current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Determine deployment strategy
+if [ "$CURRENT_BRANCH" = "master" ]; then
+    echo "📍 Deploying from master branch (simple mode)"
+    DEPLOY_MODE="simple"
+elif [ "$CURRENT_BRANCH" = "develop" ]; then
+    echo "📍 Deploying from develop branch (full mode)"
+    DEPLOY_MODE="full"
+else
+    echo "⚠️  You're on branch: $CURRENT_BRANCH"
+    echo "   Please switch to either 'master' or 'develop' branch"
+    exit 1
+fi
 
 # Get current version
 LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
 # Calculate new version
-case $BUMP_TYPE in
-    major|minor|patch)
-        NEW_VERSION=$(echo $LATEST_TAG | awk -F. -v bump="$BUMP_TYPE" '
-            /^v[0-9]+\.[0-9]+\.[0-9]+$/ {
-                major=substr($1,2); minor=$2; patch=$3
-                if (bump == "major") { major++; minor=0; patch=0 }
-                else if (bump == "minor") { minor++; patch=0 }
-                else { patch++ }
-                print "v" major "." minor "." patch
-            }
-        ')
-        ;;
-    *)
-        echo "Usage: bin/deploy [patch|minor|major] \"Release message\""
-        exit 1
-        ;;
-esac
+NEW_VERSION=$(echo $LATEST_TAG | awk -F. -v bump="$BUMP_TYPE" '
+    /^v[0-9]+\.[0-9]+\.[0-9]+$/ {
+        major=substr($1,2); minor=$2; patch=$3
+        if (bump == "major") { major++; minor=0; patch=0 }
+        else if (bump == "minor") { minor++; patch=0 }
+        else { patch++ }
+        print "v" major "." minor "." patch
+    }
+')
 
-echo "📋 Running pre-deployment quality checks for $NEW_VERSION..."
-
-# Ensure we're on develop
-git checkout develop
-git pull origin develop
+echo "🔖 New version will be: $NEW_VERSION"
+echo "📋 Running pre-deployment quality checks..."
 
 # 1. Fix RuboCop issues
 echo "🔧 Checking and fixing RuboCop issues..."
@@ -49,16 +65,11 @@ fi
 
 # Check if RuboCop made any changes
 if ! git diff-index --quiet HEAD --; then
-    echo "📝 RuboCop made automatic fixes, committing changes..."
+    echo "📝 RuboCop made automatic fixes, staging changes..."
     git add -A
-    git commit -m "Release $NEW_VERSION: Fix RuboCop style issues before deployment
-
-- Automatic fixes applied by RuboCop
-- All style guidelines now enforced
-- Preparing for $MESSAGE"
 fi
 
-# 2. Run critical tests (domain CSV import tests specifically)
+# 2. Run critical tests (domain CSV import tests)
 echo "🧪 Running critical domain CSV import tests..."
 if bundle exec rspec spec/requests/domains_csv_import_spec.rb --fail-fast; then
     echo "✅ Critical tests passed"
@@ -67,8 +78,8 @@ else
     exit 1
 fi
 
-# 3. Run full test suite (with timeout to avoid hanging) - Optional
-echo "🧪 Running full test suite (optional - critical tests already passed)..."
+# 3. Run full test suite (optional with timeout)
+echo "🧪 Running full test suite (optional)..."
 # Use gtimeout on macOS, timeout on Linux
 if command -v gtimeout >/dev/null 2>&1; then
     TIMEOUT_CMD="gtimeout 300"
@@ -84,43 +95,67 @@ if [ -n "$TIMEOUT_CMD" ]; then
     else
         exit_code=$?
         if [ $exit_code -eq 124 ]; then
-            echo "⚠️  Test suite timed out after 5 minutes, but critical tests passed. Proceeding with deployment."
+            echo "⚠️  Test suite timed out, but critical tests passed. Continuing..."
         else
-            echo "⚠️  Some tests failed, but critical tests passed. Proceeding with deployment."
+            echo "⚠️  Some tests failed, but critical tests passed. Continuing..."
         fi
     fi
 else
-    echo "⚠️  No timeout command available. Skipping full test suite (critical tests already passed)."
+    echo "⚠️  No timeout command available. Skipping full test suite."
 fi
 
-echo "🚀 Quality checks passed! Deploying $NEW_VERSION to production..."
+# 4. Commit any changes
+if ! git diff-index --quiet HEAD --; then
+    echo "📝 Committing changes..."
+    git add -A
+    git commit -m "$MESSAGE"
+fi
 
-# Merge to master
-# Stash any test fixture changes before checkout
-git stash push -m "Temporary test fixture changes" spec/fixtures/files/domains_*.csv
-git checkout master
-git pull origin master
-git merge develop -m "Release $NEW_VERSION: $MESSAGE
+# 5. Deploy based on mode
+if [ "$DEPLOY_MODE" = "simple" ]; then
+    # Simple mode: push to master and create tag
+    echo "📤 Pushing to master..."
+    git push origin master
+    
+elif [ "$DEPLOY_MODE" = "full" ]; then
+    # Full mode: merge develop to master
+    echo "🔀 Merging develop to master..."
+    
+    # Push develop changes first
+    git push origin develop
+    
+    # Stash test fixtures if needed
+    git stash push -m "Temporary test fixture changes" spec/fixtures/files/domains_*.csv 2>/dev/null || true
+    
+    # Switch to master and merge
+    git checkout master
+    git pull origin master
+    git merge develop -m "Release $NEW_VERSION: $MESSAGE"
+    
+    # Push master
+    echo "📤 Pushing to master..."
+    git push origin master
+    
+    # Return to develop
+    git checkout develop
+    git stash pop 2>/dev/null || true
+fi
 
-Merging develop branch to master for production deployment"
-
-# Create formatted release name with version and message
+# 6. Create and push version tag
 RELEASE_NAME="Release $NEW_VERSION: $MESSAGE"
-
-# Tag and push with formatted release name
+echo "🏷️  Creating tag: $NEW_VERSION"
 git tag -a "$NEW_VERSION" -m "$RELEASE_NAME"
-git push origin master
+
+echo "🚀 Pushing tag to trigger deployment..."
 git push origin "$NEW_VERSION"
 
-# Back to develop
-git checkout develop
-
 echo ""
-echo "🎉 Deployed $NEW_VERSION successfully!"
+echo "🎉 Deployment completed successfully!"
 echo "📊 Summary:"
-echo "   ✅ RuboCop style checks passed"
-echo "   ✅ Critical domain CSV import tests passed" 
-echo "   ✅ Full test suite verification completed"
-echo "   ✅ Version $NEW_VERSION tagged and pushed"
+echo "   ✅ Version: $NEW_VERSION"
+echo "   ✅ Message: $MESSAGE"
+echo "   ✅ RuboCop: Passed"
+echo "   ✅ Critical Tests: Passed"
+echo "   ✅ Deployment: Triggered"
 echo ""
-echo "📊 Monitor deployment at: https://github.com/benjaminfauchald/b2b/actions"
+echo "📊 Monitor at: https://github.com/benjaminfauchald/b2b/actions"

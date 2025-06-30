@@ -25,37 +25,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Deployment & Quality Control
 
-### Enhanced Deployment Scripts with Quality Checks
-**ALWAYS use these scripts for deployment - they ensure code quality and test reliability:**
+### Unified Deploy Script with Quality Checks
+**ALWAYS use this script for deployment - it ensures code quality and test reliability:**
 
-#### Simple Deploy (Quick Push to Master)
+#### Smart Deploy (Auto-detects branch and mode)
 ```bash
-./bin/simple_deploy [commit_message]
+./bin/deploy                              # Deploy with default message
+./bin/deploy "Commit message"             # Deploy with custom message
+./bin/deploy patch "Release message"      # Patch version bump (1.2.3 → 1.2.4)
+./bin/deploy minor "Release message"      # Minor version bump (1.2.3 → 1.3.0)
+./bin/deploy major "Release message"      # Major version bump (1.2.3 → 2.0.0)
 ```
-- **Use when**: You're already on master branch and want to deploy current changes
+
+**How it works**:
+- **From master branch**: Simple mode - pushes directly and creates tag
+- **From develop branch**: Full mode - merges to master, then creates tag
 - **Automatic Quality Checks**:
   - ✅ Runs `bundle exec rubocop --autocorrect` and commits any style fixes
   - ✅ Runs critical domain CSV import tests (MANDATORY - deployment aborts if failing)
   - ✅ Attempts to run full test suite (optional - continues if fails/times out)
-  - ✅ Commits changes and pushes to master
+  - ✅ Creates version tag and pushes to trigger GitHub Actions deployment
 
-#### Full Versioned Deploy (Develop → Master)
-```bash
-./bin/deploy [patch|minor|major] "Release message"
-```
-- **Use when**: Deploying from develop branch with version bumping
-- **Workflow**: develop → master → tag → push
-- **Same quality checks as simple deploy plus version management**
-- **Release Name Format**: Automatically creates "Release X.Y.Z: [message]" format
-- **Examples**:
-  - `./bin/deploy patch "Fix user authentication bug"` → Creates "Release 1.2.1: Fix user authentication bug"
-  - `./bin/deploy minor "Add new CSV import features"` → Creates "Release 1.3.0: Add new CSV import features"  
-  - `./bin/deploy major "Major UI overhaul"` → Creates "Release 2.0.0: Major UI overhaul"
+**Examples**:
+- `./bin/deploy` → Creates patch release with default message
+- `./bin/deploy "Fix authentication bug"` → Creates patch release with message
+- `./bin/deploy minor "Add CSV import"` → Creates minor release v1.3.0
+- `./bin/deploy major "API v2"` → Creates major release v2.0.0
 
-#### Legacy Manual Deployment (DEPRECATED)
+#### Manual Deployment (NEVER USE)
 ❌ **DO NOT USE**: Manual git commands without quality checks
 ❌ **AVOID**: `git push origin master` without running tests
-❌ **AVOID**: Committing without RuboCop checks
+❌ **AVOID**: Creating tags manually without the deploy script
 
 ### Release Naming Convention
 **Automatic Release Naming**: The deploy script automatically creates properly formatted release names:
