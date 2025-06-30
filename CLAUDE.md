@@ -28,7 +28,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Always touch a file before you write to avoid this error "Error: File has not been read yet. Read it first before writing to it."
 - Make sure we dont start to make duplicates of files like homepage_hero_component 2.rb or /homepage_stats_component 2.r. We ALWAYS need to work on the actual file or the system will lose integrity!
 - Make sure that we write any temporary files and scripts to the tmp/ folder
-- **CRITICAL**: When changing any code or functionality, ALWAYS check if there are existing tests that need to be updated or might be broken by the changes. Search for relevant test files and verify they still pass with the new implementation.
+
+## Test Management Rules - CRITICAL ⚠️
+**MANDATORY WORKFLOW for ANY code changes:**
+
+1. **Before Making Changes**: 
+   - Search for existing tests related to the files/functionality you're about to modify
+   - Use `grep -r "YourClassName" spec/` or `./bin/claude-guard status` to find relevant tests
+   - Check test coverage for controllers, models, services, components, etc.
+
+2. **During Development**:
+   - Run relevant tests BEFORE making changes to establish baseline: `bundle exec rspec spec/path/to/relevant_spec.rb`
+   - Make your code changes
+   - Run the same tests again to check for breakage
+
+3. **Test Breakage Protocol**:
+   - **NEVER** write code that breaks existing tests without explicit user approval
+   - If tests will break due to intentional changes:
+     a. **STOP** and inform the user about which tests will break and why
+     b. Explain what the test changes would need to be
+     c. Wait for user confirmation before proceeding
+     d. Only proceed after user explicitly approves the test modifications
+
+4. **After Changes**:
+   - Run full test suite or use Guard to detect all breakages
+   - Fix any unintentional test failures immediately
+   - Update tests that were approved for modification by the user
+
+5. **Test Documentation**:
+   - When updating tests, explain why the change was necessary
+   - Ensure test descriptions still accurately reflect the expected behavior
+   - Maintain or improve test coverage
+
+**Example Test Check Commands:**
+```bash
+# Check for tests related to a specific file
+grep -r "CompaniesController" spec/
+grep -r "Person" spec/models/
+grep -r "authentication" spec/
+
+# Run specific test files
+bundle exec rspec spec/controllers/companies_controller_spec.rb
+bundle exec rspec spec/models/person_spec.rb
+
+# Check test status
+./bin/claude-guard status
+```
 
 ## Guard + Claude Integration
 - Guard is set up to automatically run tests and generate failure reports

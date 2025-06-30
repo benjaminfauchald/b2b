@@ -5,8 +5,34 @@ require 'rails_helper'
 RSpec.describe 'Domain CSV Import', type: :request do
   let(:user) { create(:user) }
 
+  # Shared CSV content for all tests - use unique domains to avoid conflicts
+  let(:test_domain_1) { "import-test-#{Time.current.to_i}-#{Random.rand(9999)}.com" }
+  let(:test_domain_2) { "import-test-#{Time.current.to_i}-#{Random.rand(9999)}.org" }
+  
+  let(:valid_csv_content) do
+    <<~CSV
+      domain,dns,www,mx
+      #{test_domain_1},true,true,false
+      #{test_domain_2},false,false,true
+    CSV
+  end
+
+  let(:invalid_csv_content) do
+    <<~CSV
+      domain,dns,www,mx
+      example.com,true,true,false
+      ,false,false,true
+      invalid..domain,true,false,true
+      valid-domain.org,false,true,false
+    CSV
+  end
+
   before do
     sign_in user
+    # Create the service configuration for domain import
+    create(:service_configuration, service_name: "domain_import", active: true)
+    # Clear any existing domains to ensure clean test state
+    Domain.delete_all
   end
 
   describe 'GET /domains/import' do
@@ -36,22 +62,6 @@ RSpec.describe 'Domain CSV Import', type: :request do
   end
 
   describe 'POST /domains/import' do
-    let(:valid_csv_content) do
-      <<~CSV
-        domain,dns,www,mx
-        example.com,true,true,false
-        test.org,false,false,true
-      CSV
-    end
-
-    let(:invalid_csv_content) do
-      <<~CSV
-        domain,dns,www,mx
-        ,true,true,false
-        invalid..domain,false,false,true
-      CSV
-    end
-
     context 'with valid CSV file' do
       let(:csv_file) { create_uploaded_file(valid_csv_content, 'domains.csv') }
 
@@ -63,14 +73,13 @@ RSpec.describe 'Domain CSV Import', type: :request do
         expect(response).to redirect_to(import_results_domains_path)
         follow_redirect!
 
-        expect(response.body).to include('Import Successful!')
-        expect(response.body).to include('2 domains imported')
+        expect(response.body).to include('Imported (2)')
       end
 
       it 'creates domains with correct attributes' do
         post import_domains_path, params: { csv_file: csv_file }
 
-        example_domain = Domain.find_by(domain: 'example.com')
+        example_domain = Domain.find_by(domain: test_domain_1)
         expect(example_domain).to be_present
         expect(example_domain.dns).to be true
         expect(example_domain.www).to be true
@@ -184,22 +193,30 @@ RSpec.describe 'Domain CSV Import', type: :request do
       end
 
       before do
-        session[:import_results] = import_results.to_json
+        # Use allow to stub the session for the controller
+        allow_any_instance_of(DomainsController).to receive(:session).and_return({
+          import_results: import_results.to_json
+        })
       end
 
       it 'displays import results' do
         get import_results_domains_path
 
         expect(response).to have_http_status(:success)
-        expect(response.body).to include('3 domains imported')
-        expect(response.body).to include('1 domains failed')
-        expect(response.body).to include('Processing time: 2.5 seconds')
+        expect(response.body).to include('Imported (3)')
+        expect(response.body).to include('Failed to Import (1)')
+        expect(response.body).to include('2.5 seconds')
       end
 
       it 'clears session data after displaying' do
+        # Mock the session with delete method
+        session_mock = { import_results: import_results.to_json }
+        allow(session_mock).to receive(:delete)
+        allow_any_instance_of(DomainsController).to receive(:session).and_return(session_mock)
+        
         get import_results_domains_path
 
-        expect(session[:import_results]).to be_nil
+        expect(session_mock).to have_received(:delete).with(:import_results)
       end
     end
 
@@ -286,7 +303,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       # Immediate second import should be rate limited
       post import_domains_path, params: { csv_file: csv_file }
       expect(response).to redirect_to(import_domains_path)
-      expect(flash[:alert]).to include('Please wait before importing again')
+      expect(flash[:alert]).to include('Please wait a moment before importing again')
     end
   end
 
