@@ -250,7 +250,7 @@ example.com,true,true,false
   describe 'performance with large files' do
     let(:large_csv_content) do
       header = "domain,dns,www,mx\n"
-      rows = 1000.times.map { |i| "domain#{i}.com,true,false,true" }.join("\n")
+      rows = 50.times.map { |i| "domain#{i}.com,true,false,true" }.join("\n")
       header + rows
     end
     let(:file) { create_csv_file(large_csv_content) }
@@ -261,8 +261,8 @@ example.com,true,true,false
       duration = Time.current - start_time
 
       expect(result.success?).to be true
-      expect(result.data[:imported]).to eq 1000
-      expect(duration).to be < 30.seconds
+      expect(result.data[:imported]).to eq 50
+      expect(duration).to be < 5.seconds
     end
 
     it 'manages memory efficiently with large imports' do

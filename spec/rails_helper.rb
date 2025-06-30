@@ -74,6 +74,12 @@ RSpec.configure do |config|
   # Include ViewComponent test helpers
   config.include ViewComponent::TestHelpers, type: :component
   config.include Capybara::RSpecMatchers, type: :component
+  config.include Rails.application.routes.url_helpers, type: :component
+  
+  # Include route helpers for request specs (and others that need them)
+  config.include Rails.application.routes.url_helpers, type: :request
+  config.include Rails.application.routes.url_helpers, type: :integration
+  config.include Rails.application.routes.url_helpers, type: :controller
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [

@@ -205,23 +205,24 @@ class DomainImportService < ApplicationService
   end
 
   def process_single_row(row_data, row_number)
-    puts "=== PROCESSING SINGLE ROW ==="
-    puts "Row data: #{row_data.inspect}"
-    puts "Row number: #{row_number}"
+    # Debug logging commented out to reduce test output noise
+    # puts "=== PROCESSING SINGLE ROW ==="
+    # puts "Row data: #{row_data.inspect}"
+    # puts "Row number: #{row_number}"
 
     domain_name = row_data[:domain].to_s.strip
-    puts "Domain name extracted: '#{domain_name}'"
+    # puts "Domain name extracted: '#{domain_name}'"
 
     # Validate domain name
     if domain_name.blank?
-      puts "Domain is blank, marking as failed"
+      # puts "Domain is blank, marking as failed"
       result.add_failed_domain(domain_name, row_number, [ "Domain can't be blank" ])
       return
     end
 
     # Clean domain name (remove trailing/leading dots and whitespace)
     cleaned_domain = domain_name.strip.chomp(".").strip
-    puts "Cleaned domain name: '#{cleaned_domain}'"
+    # puts "Cleaned domain name: '#{cleaned_domain}'"
 
     # Validate domain format using the cleaned domain
     unless valid_domain_format?(cleaned_domain)
@@ -239,7 +240,7 @@ class DomainImportService < ApplicationService
 
     # Check if domain already exists
     if Domain.exists?(domain: cleaned_domain)
-      puts "Domain already exists, marking as duplicate"
+      # puts "Domain already exists, marking as duplicate"
       result.add_duplicate_domain(domain_name, row_number)
       return
     end
@@ -346,16 +347,16 @@ class DomainImportService < ApplicationService
 
     row_count = 0
     SmarterCSV.process(file.path, csv_options) do |chunk|
-      puts "Processing headerless chunk with #{chunk.size} rows"
+      # puts "Processing headerless chunk with #{chunk.size} rows"
 
       chunk.each_with_index do |row_data, index|
         row_count += 1
-        puts "Processing row #{row_count}: #{row_data.inspect}"
+        # puts "Processing row #{row_count}: #{row_data.inspect}"
         process_single_row(row_data, row_count)
       end
     end
 
-    puts "Total rows processed: #{row_count}"
+    # puts "Total rows processed: #{row_count}"
   end
 
   def process_standard_csv(has_headers)
