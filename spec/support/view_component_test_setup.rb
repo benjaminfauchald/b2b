@@ -1,39 +1,29 @@
-# Ensure ViewComponent is properly initialized for tests
-require "view_component"
-require "view_component/test_helpers"
-require "view_component/system_test_helpers"
-require "capybara/rspec"
+# ViewComponent test setup
+# Ensure ViewComponent is properly initialized before tests run
 
-# Configure ViewComponent for test environment
+# Make sure ViewComponent is loaded
+require 'view_component'
+require 'view_component/test_helpers'
+require 'view_component/system_test_helpers'
+
+# Configure ViewComponent for tests
+ViewComponent::Base.config.view_component_path = Rails.root.join("app/components").to_s
+ViewComponent::Base.config.test_framework = :rspec
+
+# Ensure component templates can be found
+ViewComponent::Base.config.view_paths = [Rails.root.join("app/views").to_s]
+
+# Set up test controller for rendering components
+class ViewComponentTestController < ActionController::Base
+  include Rails.application.routes.url_helpers
+end
+
 RSpec.configure do |config|
-  config.before(:suite) do
-    # Ensure components path is loaded
-    components_path = Rails.root.join("app/components")
-    
-    # Add to autoload paths if not already there
-    unless Rails.application.config.eager_load_paths.include?(components_path)
-      Rails.application.config.eager_load_paths << components_path
-    end
-    
-    # Ensure ViewComponent configuration is loaded
-    ViewComponent::Base.config.view_component_path ||= components_path
-    ViewComponent::Base.config.test_framework = :rspec
-  end
-
-  # Include necessary helpers for component tests
-  config.include ViewComponent::TestHelpers, type: :component
-  config.include ViewComponent::SystemTestHelpers, type: :component
-  config.include Capybara::RSpecMatchers, type: :component
-  
-  # Ensure we have a valid controller context for component tests
   config.before(:each, type: :component) do
-    # Set up controller if not already set
-    @controller ||= ApplicationController.new
-    
-    # Set up request context
-    if @controller && !@controller.request
-      @controller.request = ActionDispatch::TestRequest.create
-      @controller.request.env["HTTP_HOST"] = "test.host"
-    end
+    # Ensure we have a controller context for rendering
+    @controller = ViewComponentTestController.new
+    @request = ActionController::TestRequest.create(@controller.class)
+    @controller.request = @request
+    @controller.response = ActionDispatch::TestResponse.new
   end
 end
