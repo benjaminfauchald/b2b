@@ -92,7 +92,7 @@ jobs:
     
     - name: Comment PR with SCT Compliance Results
       if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           const { execSync } = require('child_process');
