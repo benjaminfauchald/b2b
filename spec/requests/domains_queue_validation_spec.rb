@@ -35,14 +35,14 @@ RSpec.describe 'Domain Queue Validation', type: :request do
         5.times { |i| FactoryBot.create(:domain, domain: "example#{i}.com") }
       end
 
-      it 'prevents queueing more domains than available' do
+      it 'queues all available domains when requesting more than available' do
         post '/domains/queue_dns_testing', params: { count: 10 }, as: :json
 
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
-        expect(json['success']).to be_falsey
-        expect(json['message']).to include('Only 5 domains need DNS testing')
-        expect(json['available_count']).to eq(5)
+        expect(json['success']).to be_truthy
+        expect(json['queued_count']).to eq(5)
+        expect(json['message']).to include('available domains for DNS testing')
       end
 
       it 'allows queueing exact number of available domains' do
@@ -119,14 +119,14 @@ RSpec.describe 'Domain Queue Validation', type: :request do
         3.times { |i| FactoryBot.create(:domain, domain: "mx#{i}.com", dns: true, www: true, mx: nil) }
       end
 
-      it 'prevents queueing more domains than available' do
+      it 'queues all available domains when requesting more than available' do
         post '/domains/queue_mx_testing', params: { count: 5 }, as: :json
 
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
-        expect(json['success']).to be_falsey
-        expect(json['message']).to include('Only 3 domains need MX testing')
-        expect(json['available_count']).to eq(3)
+        expect(json['success']).to be_truthy
+        expect(json['queued_count']).to eq(3)
+        expect(json['message']).to include('available domains for MX testing')
       end
     end
   end
@@ -138,14 +138,14 @@ RSpec.describe 'Domain Queue Validation', type: :request do
         2.times { |i| FactoryBot.create(:domain, domain: "www#{i}.com", dns: true, www: nil) }
       end
 
-      it 'prevents queueing more domains than available' do
+      it 'queues all available domains when requesting more than available' do
         post '/domains/queue_a_record_testing', params: { count: 5 }, as: :json
 
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
-        expect(json['success']).to be_falsey
-        expect(json['message']).to include('Only 2 domains need A Record testing')
-        expect(json['available_count']).to eq(2)
+        expect(json['success']).to be_truthy
+        expect(json['queued_count']).to eq(2)
+        expect(json['message']).to include('available domains for A Record testing')
       end
     end
   end

@@ -171,7 +171,7 @@ RSpec.describe 'Domain Queue Testing', type: :request do
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
         expect(json["queued_count"]).to eq(3)
-        expect(json["message"]).to eq("Queued 3 domains for A Record testing")
+        expect(json["message"]).to eq("Queued all 3 available domains for A Record testing (requested: 10)")
       end
 
       it 'only queues domains with dns=true and www=nil' do
