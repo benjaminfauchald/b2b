@@ -32,7 +32,7 @@ case $BUMP_TYPE in
         ;;
 esac
 
-echo "📋 Running pre-deployment quality checks..."
+echo "📋 Running pre-deployment quality checks for $NEW_VERSION..."
 
 # Ensure we're on develop
 git checkout develop
@@ -51,10 +51,11 @@ fi
 if ! git diff-index --quiet HEAD --; then
     echo "📝 RuboCop made automatic fixes, committing changes..."
     git add -A
-    git commit -m "Fix RuboCop style issues before deployment
+    git commit -m "Release $NEW_VERSION: Fix RuboCop style issues before deployment
 
 - Automatic fixes applied by RuboCop
-- All style guidelines now enforced"
+- All style guidelines now enforced
+- Preparing for $MESSAGE"
 fi
 
 # 2. Run critical tests (domain CSV import tests specifically)
@@ -99,7 +100,9 @@ echo "🚀 Quality checks passed! Deploying $NEW_VERSION to production..."
 git stash push -m "Temporary test fixture changes" spec/fixtures/files/domains_*.csv
 git checkout master
 git pull origin master
-git merge develop --no-edit
+git merge develop -m "Release $NEW_VERSION: $MESSAGE
+
+Merging develop branch to master for production deployment"
 
 # Create formatted release name with version and message
 RELEASE_NAME="Release $NEW_VERSION: $MESSAGE"
