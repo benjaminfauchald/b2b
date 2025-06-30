@@ -111,6 +111,11 @@ jobs:
         ruby-version: 3.3.0
         bundler-cache: true
     
+    - name: Setup test credentials
+      run: |
+        mkdir -p config/credentials
+        echo "2b6511362ac3e7195e7097e15c402eaa" > config/credentials/test.key
+    
     - name: Setup test database
       env:
         RAILS_ENV: test
