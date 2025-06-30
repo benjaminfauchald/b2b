@@ -8,7 +8,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
     )
   end
 
-  let(:domain) { create(:domain, domain: "example.com", dns: true, www: nil, a_record_ip: nil) }
+  let(:domain) { create(:domain, dns: true, www: nil, a_record_ip: nil) }
 
   before do
     service_config
@@ -23,7 +23,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
         let(:test_ip) { "192.168.1.100" }
 
         before do
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_return(test_ip)
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return(test_ip)
         end
 
         it "stores the resolved IP address in domain.a_record_ip" do
@@ -45,7 +45,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
           expect(audit_log.status).to eq("success")
           expect(audit_log.metadata["a_record"]).to eq(test_ip)
-          expect(audit_log.metadata["domain_name"]).to eq("example.com")
+          expect(audit_log.metadata["domain_name"]).to eq(domain.domain)
         end
 
         it "updates www status and IP in single operation" do
@@ -55,7 +55,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
         it "handles IPv6 addresses correctly" do
           ipv6_address = "2001:db8::1"
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_return(ipv6_address)
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return(ipv6_address)
 
           result = service.perform
 
@@ -68,7 +68,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       context "when A record resolution fails" do
         before do
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_raise(Resolv::ResolvError.new("Name or service not known"))
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_raise(Resolv::ResolvError.new("Name or service not known"))
         end
 
         it "sets www to false and a_record_ip to nil" do
@@ -101,7 +101,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       context "when A record resolution times out" do
         before do
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_raise(Timeout::Error.new)
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_raise(Timeout::Error.new)
         end
 
         it "sets www to false and a_record_ip to nil" do
@@ -132,7 +132,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
         before do
           domain.update(www: true, a_record_ip: old_ip)
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_return(new_ip)
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return(new_ip)
         end
 
         it "updates to new IP address when resolution succeeds" do
@@ -220,7 +220,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
     describe "backwards compatibility" do
       it "maintains existing behavior for www column" do
-        allow(Resolv).to receive(:getaddress).with("www.example.com").and_return("192.168.1.1")
+        allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return("192.168.1.1")
 
         service.perform
         domain.reload
@@ -231,7 +231,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
       end
 
       it "doesn't break existing scopes and methods" do
-        allow(Resolv).to receive(:getaddress).with("www.example.com").and_return("192.168.1.1")
+        allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return("192.168.1.1")
         service.perform
 
         domain.reload
@@ -243,16 +243,6 @@ RSpec.describe DomainARecordTestingService, type: :service do
     end
 
     describe "error handling" do
-      context "when domain is nil" do
-        let(:service) { described_class.new(domain: nil) }
-
-        it "returns error result", skip: "Service is designed to handle batch processing when domain is nil" do
-          result = service.perform
-          expect(result.success?).to be false
-          expect(result.error).to match(/domain.*required/i)
-        end
-      end
-
       context "when service is disabled" do
         before do
           service_config.update(active: false)
@@ -267,7 +257,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
       context "when database update fails" do
         before do
-          allow(Resolv).to receive(:getaddress).with("www.example.com").and_return("192.168.1.1")
+          allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return("192.168.1.1")
           allow(domain).to receive(:update_columns).and_raise(ActiveRecord::RecordInvalid.new(domain))
         end
 
@@ -281,7 +271,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
   describe "Legacy compatibility" do
     describe ".test_a_record" do
       it "still works as before but stores IP address" do
-        allow(Resolv).to receive(:getaddress).with("www.example.com").and_return("192.168.1.1")
+        allow(Resolv).to receive(:getaddress).with("www.#{domain.domain}").and_return("192.168.1.1")
 
         result = described_class.test_a_record(domain)
 

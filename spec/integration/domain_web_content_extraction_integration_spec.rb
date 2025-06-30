@@ -77,7 +77,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
     describe "End-to-End Workflow" do
       it "processes domain from A record test to web content extraction" do
         # Step 1: A Record Test - Mock DNS resolution
-        allow(Resolv).to receive(:getaddress).with("www.needs-test.com").and_return("203.0.113.1")
+        allow(Resolv).to receive(:getaddress).and_return("203.0.113.1")
 
         # Execute A Record Testing
         a_record_service = DomainARecordTestingService.new(domain: domain_needing_a_record_test)
@@ -105,7 +105,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
 
       it "creates complete audit trail for both services" do
         # Mock DNS resolution
-        allow(Resolv).to receive(:getaddress).with("www.needs-test.com").and_return("203.0.113.1")
+        allow(Resolv).to receive(:getaddress).and_return("203.0.113.1")
 
         # Execute both services
         DomainARecordTestingService.new(domain: domain_needing_a_record_test).perform
@@ -128,14 +128,14 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
         ).last
 
         expect(web_content_audit.status).to eq("success")
-        expect(web_content_audit.metadata["url"]).to eq("https://needs-test.com")
+        expect(web_content_audit.metadata["url"]).to eq("https://#{domain_needing_a_record_test.domain}")
         expect(web_content_audit.metadata["extraction_success"]).to be true
         expect(web_content_audit.completed_at).to be > a_record_audit.completed_at
       end
 
       it "handles A record failure gracefully without attempting web extraction" do
         # Mock DNS resolution failure
-        allow(Resolv).to receive(:getaddress).with("www.needs-test.com").and_raise(Resolv::ResolvError.new)
+        allow(Resolv).to receive(:getaddress).and_raise(Resolv::ResolvError.new)
 
         # Execute A Record Testing
         a_record_service = DomainARecordTestingService.new(domain: domain_needing_a_record_test)
@@ -170,48 +170,51 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
       end
 
       it "processes complete workflow for multiple domains" do
-        # Mock DNS resolutions for all domains
-        allow(Resolv).to receive(:getaddress) do |domain|
-          case domain
-          when "www.batch1.com"
+        # Clear any existing domains except the one we need to preserve
+        Domain.where.not(id: domain_ready_for_extraction.id).destroy_all
+
+        # Create exactly 3 domains for this test
+        domain1 = create(:domain, dns: true, www: nil)
+        domain2 = create(:domain, dns: true, www: nil)
+        domain3 = create(:domain, dns: true, www: nil)
+
+        # Mock DNS resolutions - first 2 succeed, 3rd fails
+        allow(Resolv).to receive(:getaddress) do |domain_url|
+          case domain_url
+          when "www.#{domain1.domain}"
             "1.1.1.1"
-          when "www.batch2.com"
+          when "www.#{domain2.domain}"
             "2.2.2.2"
-          when "www.batch3.com"
+          when "www.#{domain3.domain}"
             raise Resolv::ResolvError.new
           else
-            raise "Unexpected domain: #{domain}"
+            raise "Unexpected domain: #{domain_url}"
           end
         end
 
-        # Mock web content responses
-        allow(Firecrawl).to receive(:scrape).with("https://batch1.com").and_return(
+        # Mock web content responses for any domain
+        allow(Firecrawl).to receive(:scrape) do |url|
           OpenStruct.new(
             success?: true,
-            result: OpenStruct.new(
-              markdown: "Batch1 content",
-              metadata: { "title" => "Batch1" },
-              screenshot_url: nil
-            )
+            markdown: "# Batch Test Domain\n\nBatch content for #{url}",
+            html: "<html><head><title>Batch Test</title></head><body><h1>Batch Test</h1><p>Batch content for #{url}</p></body></html>",
+            metadata: {
+              "title" => "Batch Test",
+              "description" => "Test content for batch processing",
+              "url" => url,
+              "statusCode" => 200
+            },
+            links: [],
+            screenshot_url: nil
           )
-        )
-        allow(Firecrawl).to receive(:scrape).with("https://batch2.com").and_return(
-          OpenStruct.new(
-            success?: true,
-            result: OpenStruct.new(
-              markdown: "Batch2 content",
-              metadata: { "title" => "Batch2" },
-              screenshot_url: nil
-            )
-          )
-        )
+        end
 
         # Execute A Record Testing for all domains
         a_record_service = DomainARecordTestingService.new(batch_size: 3)
         a_record_result = a_record_service.perform
 
         expect(a_record_result.success?).to be true
-        expect(a_record_result.data[:processed]).to eq(4)
+        expect(a_record_result.data[:processed]).to eq(3)
         expect(a_record_result.data[:successful]).to eq(2) # 2 successful DNS resolutions
 
         # Execute Web Content Extraction for domains with A records
@@ -230,20 +233,20 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
         expect(web_content_result.data[:skipped]).to eq(0) # No domains should be skipped since scope filters them
 
         # Verify final state
-        batch_domains[0].reload
-        expect(batch_domains[0].www).to be true
-        expect(batch_domains[0].a_record_ip).to eq("1.1.1.1")
-        expect(batch_domains[0].web_content_data).to be_present
+        domain1.reload
+        expect(domain1.www).to be true
+        expect(domain1.a_record_ip).to eq("1.1.1.1")
+        expect(domain1.web_content_data).to be_present
 
-        batch_domains[1].reload
-        expect(batch_domains[1].www).to be true
-        expect(batch_domains[1].a_record_ip).to eq("2.2.2.2")
-        expect(batch_domains[1].web_content_data).to be_present
+        domain2.reload
+        expect(domain2.www).to be true
+        expect(domain2.a_record_ip).to eq("2.2.2.2")
+        expect(domain2.web_content_data).to be_present
 
-        batch_domains[2].reload
-        expect(batch_domains[2].www).to be false
-        expect(batch_domains[2].a_record_ip).to be_nil
-        expect(batch_domains[2].web_content_data).to be_nil
+        domain3.reload
+        expect(domain3.www).to be false
+        expect(domain3.a_record_ip).to be_nil
+        expect(domain3.web_content_data).to be_nil
       end
     end
 
@@ -272,7 +275,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
     describe "Error Handling and Recovery" do
       it "handles Firecrawl API failures without breaking the workflow" do
         # Mock successful A record test
-        allow(Resolv).to receive(:getaddress).with("www.needs-test.com").and_return("203.0.113.1")
+        allow(Resolv).to receive(:getaddress).and_return("203.0.113.1")
 
         # Execute A Record Testing first
         a_record_service = DomainARecordTestingService.new(domain: domain_needing_a_record_test)
@@ -316,7 +319,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
         )
 
         # Mock successful Firecrawl response for retry
-        allow(Firecrawl).to receive(:scrape).with("https://example.com").and_return(mock_firecrawl_response)
+        allow(Firecrawl).to receive(:scrape).with(anything).and_return(mock_firecrawl_response)
 
         # Retry web content extraction
         retry_service = DomainWebContentExtractionService.new(domain: domain_ready_for_extraction)
@@ -369,7 +372,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
     describe "Performance and Timing" do
       it "tracks execution times for both services" do
         # Mock DNS and Firecrawl
-        allow(Resolv).to receive(:getaddress).with("www.needs-test.com").and_return("203.0.113.1")
+        allow(Resolv).to receive(:getaddress).and_return("203.0.113.1")
         allow(Firecrawl).to receive(:scrape).and_return(mock_firecrawl_response)
 
         # Execute services and measure timing

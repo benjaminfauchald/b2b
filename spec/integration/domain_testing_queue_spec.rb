@@ -235,6 +235,8 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
 
   describe 'Concurrent Queue Processing' do
     it 'handles multiple workers processing simultaneously' do
+      # Clean slate for this test
+      Domain.delete_all
       domains = create_list(:domain, 20, dns: nil)
 
       # Mock DomainTestingService to update dns field

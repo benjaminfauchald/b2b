@@ -96,10 +96,13 @@ jobs:
           PGPORT: 5432
           PGUSER: ${{ secrets.POSTGRES_USER }}
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          PGDATABASE: postgres
-          DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432
+          PGDATABASE: b2b_test
+          DATABASE_URL: postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/b2b_test
           # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test test:system
+        run: |
+          bin/rails db:create RAILS_ENV=test
+          bin/rails db:test:prepare
+          bundle exec rspec
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v4

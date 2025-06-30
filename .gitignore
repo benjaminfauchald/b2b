@@ -103,3 +103,7 @@ vendor/bundle/
 * 2.*
 * [0-9].*
 *\ *
+
+# Ignore temporary test scripts
+test_*.rb
+test_*.js

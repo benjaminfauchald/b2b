@@ -10,6 +10,9 @@ RSpec.describe DomainImportService, type: :service do
     ServiceConfiguration.find_or_create_by(service_name: 'domain_import') do |config|
       config.active = true
     end
+
+    # Clean up any existing test domains to avoid duplicate conflicts
+    Domain.where(domain: [ 'example.com', 'test.org', 'sample.net' ]).destroy_all
   end
 
   describe '#perform' do

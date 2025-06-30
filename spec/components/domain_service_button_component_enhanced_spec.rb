@@ -18,10 +18,6 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
         )
       end
 
-      it "includes correct action path for web content extraction" do
-        # Skip this test as action_path requires view context
-        skip "Cannot test action_path outside of view context"
-      end
 
       it "includes web content icon" do
         icon = component.send(:service_config)[:icon]
@@ -375,11 +371,6 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
         form_id = component.send(:form_id)
         expect(form_id).to eq("queue-web_content-#{domain.id}")
       end
-
-      it "provides correct action path" do
-        # Skip this test as action_path requires view context
-        skip "Cannot test action_path outside of view context"
-      end
     end
 
     describe "icon rendering" do
@@ -460,11 +451,6 @@ RSpec.describe DomainServiceButtonComponent, type: :component do
       expect(page).to have_text("Web Content Status")
       expect(page).to have_button
       expect(page).to have_css("form")
-    end
-
-    it "includes correct form attributes" do
-      # Skip this test as action_path requires view context
-      skip "Cannot test action_path outside of view context"
     end
   end
 end

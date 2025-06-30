@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe DomainARecordTestingService, type: :service do
-  let(:domain) { create(:domain, domain: 'example.com', dns: true, www: nil) }
+  let(:domain) { create(:domain, dns: true, www: nil) }
   let(:service) { described_class.new(domain: domain) }
 
   describe '#perform' do
@@ -34,7 +34,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
             result = service.perform
 
             audit_log = ServiceAuditLog.last
-            expect(audit_log.metadata['domain_name']).to eq('example.com')
+            expect(audit_log.metadata['domain_name']).to eq(domain.domain)
             expect(audit_log.metadata['www_status']).to eq(true)
             expect(audit_log.metadata['test_result']).to eq('success')
           end

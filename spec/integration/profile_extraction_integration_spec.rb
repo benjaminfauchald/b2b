@@ -99,6 +99,9 @@ RSpec.describe "Profile Extraction Integration", type: :request do
     end
 
     it "includes both manual and AI LinkedIn companies" do
+      # Ensure clean state for this test
+      Company.where.not(id: [ company_with_manual_linkedin.id, company_with_ai_linkedin.id, company_with_low_confidence.id ]).destroy_all
+
       # Mock the worker to capture which companies get queued
       queued_companies = []
       allow(PersonProfileExtractionWorker).to receive(:perform_async) do |company_id|
