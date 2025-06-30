@@ -46,15 +46,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Use when**: Deploying from develop branch with version bumping
 - **Workflow**: develop → master → tag → push
 - **Same quality checks as simple deploy plus version management**
+- **Release Name Format**: Automatically creates "Release X.Y.Z: [message]" format
 - **Examples**:
-  - `./bin/deploy patch "Fix user authentication bug"`
-  - `./bin/deploy minor "Add new CSV import features"`
-  - `./bin/deploy major "Major UI overhaul"`
+  - `./bin/deploy patch "Fix user authentication bug"` → Creates "Release 1.2.1: Fix user authentication bug"
+  - `./bin/deploy minor "Add new CSV import features"` → Creates "Release 1.3.0: Add new CSV import features"  
+  - `./bin/deploy major "Major UI overhaul"` → Creates "Release 2.0.0: Major UI overhaul"
 
 #### Legacy Manual Deployment (DEPRECATED)
 ❌ **DO NOT USE**: Manual git commands without quality checks
 ❌ **AVOID**: `git push origin master` without running tests
 ❌ **AVOID**: Committing without RuboCop checks
+
+### Release Naming Convention
+**Automatic Release Naming**: The deploy script automatically creates properly formatted release names:
+- **Format**: `Release X.Y.Z: [descriptive message]`
+- **Examples**:
+  - `Release 1.2.1: Fix deployment script for production server environment`
+  - `Release 1.3.0: Add domain CSV import functionality with error handling`
+  - `Release 2.0.0: Major database schema migration and API restructure`
+
+**Message Guidelines**:
+- Use descriptive, professional language
+- Focus on the main feature/fix being deployed
+- Keep under 80 characters for readability
+- Start with action verb (Fix, Add, Update, Remove, etc.)
 
 ### Quality Control Requirements
 **MANDATORY for all deployments:**
@@ -62,6 +77,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **Critical Test Verification**: Domain CSV import tests must pass (23 tests)
 3. **Code Standards**: Follow existing patterns and conventions
 4. **No Breaking Changes**: Existing functionality must remain intact
+5. **Proper Release Naming**: Use descriptive messages for version tags
 
 ### Deployment Failure Handling
 - **RuboCop Failures**: Script auto-fixes correctable issues, manual fixes required for others

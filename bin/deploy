@@ -99,8 +99,11 @@ git checkout master
 git pull origin master
 git merge develop --no-edit
 
-# Tag and push
-git tag -a "$NEW_VERSION" -m "$MESSAGE"
+# Create formatted release name with version and message
+RELEASE_NAME="Release $NEW_VERSION: $MESSAGE"
+
+# Tag and push with formatted release name
+git tag -a "$NEW_VERSION" -m "$RELEASE_NAME"
 git push origin master
 git push origin "$NEW_VERSION"
 

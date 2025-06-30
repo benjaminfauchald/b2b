@@ -29,7 +29,7 @@ RSpec.describe DomainImportResult do
 
       expect(result.imported_count).to eq(1)
       expect(result.imported_domains).to contain_exactly(
-        hash_including(domain: 'example.com', row: 2)
+        hash_including(domain: domain.domain, row: 2)
       )
     end
 
@@ -179,7 +179,7 @@ RSpec.describe DomainImportResult do
         failed_count: 1,
         total_count: 2,
         imported_domains: array_including(
-          hash_including(domain: 'example.com', row: 2)
+          hash_including(domain: domain.domain, row: 2)
         ),
         failed_domains: array_including(
           hash_including(domain: 'invalid.domain', row: 3, errors: [ 'Error' ])
@@ -205,7 +205,7 @@ RSpec.describe DomainImportResult do
         'imported_count' => 1,
         'failed_count' => 0,
         'imported_domains' => array_including(
-          hash_including('domain' => 'example.com', 'row' => 2)
+          hash_including('domain' => domain.domain, 'row' => 2)
         )
       )
     end
