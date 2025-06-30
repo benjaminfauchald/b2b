@@ -4,9 +4,7 @@ RSpec.describe CompaniesController, type: :request do
   let(:user) { create(:user) }
 
   before do
-    # Stub authentication
-    allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
-    allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
+    sign_in user
   end
 
   describe "Country filtering" do

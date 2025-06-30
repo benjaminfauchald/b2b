@@ -67,6 +67,12 @@ jobs:
         run: |
           bin/rails db:create
           bin/rails db:schema:load
+          
+      - name: Precompile assets
+        env:
+          RAILS_ENV: test
+        run: |
+          bin/rails assets:precompile
 
       - name: Run RuboCop
         run: bundle exec rubocop --parallel
