@@ -1,6 +1,6 @@
 class CountrySelectorComponent < ViewComponent::Base
   include Rails.application.routes.url_helpers
-  
+
   attr_reader :available_countries, :selected_country
 
   def initialize(available_countries:, selected_country:)

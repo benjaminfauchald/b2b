@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe CompaniesController, type: :controller do
+RSpec.describe 'Companies enhancement services', type: :request do
   let(:user) { create(:user) }
   let(:admin_user) { create(:user, role: 'admin') }
   let(:company) { create(:company) }
@@ -24,7 +24,7 @@ RSpec.describe CompaniesController, type: :controller do
           companies = create_list(:company, 5, source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")
 
           expect {
-            post :queue_financial_data, params: { count: 5 }
+            post queue_financial_data_companies_path, params: { count: 5 }
           }.to change { CompanyFinancialDataWorker.jobs.size }.by(5)
 
           expect(response).to have_http_status(:success)
@@ -37,7 +37,7 @@ RSpec.describe CompaniesController, type: :controller do
           # Create companies that meet financial data criteria
           create_list(:company, 10, source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")
 
-          post :queue_financial_data, params: { count: 3 }
+          post queue_financial_data_companies_path, params: { count: 3 }
 
           json = JSON.parse(response.body)
           expect(json['queued_count']).to eq(3)
@@ -47,7 +47,7 @@ RSpec.describe CompaniesController, type: :controller do
           # Create a company that meets financial data criteria
           create(:company, source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")
 
-          post :queue_financial_data, params: { count: 1 }
+          post queue_financial_data_companies_path, params: { count: 1 }
 
           json = JSON.parse(response.body)
           expect(json).to have_key('queue_stats')
@@ -57,7 +57,7 @@ RSpec.describe CompaniesController, type: :controller do
         it 'requires authentication' do
           sign_out user
 
-          post :queue_financial_data
+          post queue_financial_data_companies_path
 
           expect(response).to redirect_to(new_user_session_path)
         end
@@ -72,7 +72,7 @@ RSpec.describe CompaniesController, type: :controller do
         end
 
         it 'returns error message' do
-          post :queue_financial_data
+          post queue_financial_data_companies_path
 
           expect(response).to have_http_status(:ok)
           json = JSON.parse(response.body)
@@ -92,7 +92,7 @@ RSpec.describe CompaniesController, type: :controller do
 
       it 'queues individual company for processing' do
         expect {
-          post :queue_single_financial_data, params: { id: company.id }
+          post queue_single_financial_data_company_path(company), params: { id: company.id }
         }.to change { CompanyFinancialDataWorker.jobs.size }.by(1)
 
         expect(response).to have_http_status(:success)
@@ -103,7 +103,7 @@ RSpec.describe CompaniesController, type: :controller do
 
       it 'creates audit log for manual queue action' do
         expect {
-          post :queue_single_financial_data, params: { id: company.id }
+          post queue_single_financial_data_company_path(company), params: { id: company.id }
         }.to change { ServiceAuditLog.count }.by(1)
 
         audit_log = ServiceAuditLog.last
@@ -114,7 +114,7 @@ RSpec.describe CompaniesController, type: :controller do
       end
 
       it 'returns job details' do
-        post :queue_single_financial_data, params: { id: company.id }
+        post queue_single_financial_data_company_path(company), params: { id: company.id }
 
         json = JSON.parse(response.body)
         expect(json).to have_key('job_id')
@@ -123,9 +123,9 @@ RSpec.describe CompaniesController, type: :controller do
       end
 
       it 'handles non-existent company' do
-        expect {
-          post :queue_single_financial_data, params: { id: 999999 }
-        }.to raise_error(ActiveRecord::RecordNotFound)
+        post queue_single_financial_data_company_path(999999)
+
+        expect(response).to have_http_status(:not_found)
       end
     end
 
@@ -142,7 +142,7 @@ RSpec.describe CompaniesController, type: :controller do
         companies = create_list(:company, 3, operating_revenue: 15_000_000, website: nil)
 
         expect {
-          post :queue_web_discovery, params: { count: 3 }
+          post queue_web_discovery_companies_path, params: { count: 3 }
         }.to change { CompanyWebDiscoveryWorker.jobs.size }.by(3)
 
         expect(response).to have_http_status(:success)
@@ -162,7 +162,7 @@ RSpec.describe CompaniesController, type: :controller do
         companies = create_list(:company, 2, operating_revenue: 15_000_000, linkedin_url: nil, linkedin_ai_url: nil)
 
         expect {
-          post :queue_linkedin_discovery, params: { count: 2 }
+          post queue_linkedin_discovery_companies_path, params: { count: 2 }
         }.to change { CompanyLinkedinDiscoveryWorker.jobs.size }.by(2)
 
         expect(response).to have_http_status(:success)
@@ -181,7 +181,7 @@ RSpec.describe CompaniesController, type: :controller do
         companies = create_list(:company, 4)
 
         expect {
-          post :queue_employee_discovery, params: { count: 4 }
+          post queue_employee_discovery_companies_path, params: { count: 4 }
         }.to change { CompanyEmployeeDiscoveryWorker.jobs.size }.by(4)
 
         expect(response).to have_http_status(:success)
@@ -190,7 +190,7 @@ RSpec.describe CompaniesController, type: :controller do
 
     describe 'GET #enhancement_queue_status' do
       it 'returns queue statistics for all services' do
-        get :enhancement_queue_status
+        get enhancement_queue_status_companies_path
 
         expect(response).to have_http_status(:success)
         json = JSON.parse(response.body)
@@ -205,7 +205,7 @@ RSpec.describe CompaniesController, type: :controller do
         create(:service_configuration, service_name: 'company_financial_data', active: true)
         create(:service_configuration, service_name: 'company_web_discovery', active: false)
 
-        get :enhancement_queue_status
+        get enhancement_queue_status_companies_path
 
         json = JSON.parse(response.body)
         expect(json['success']).to be true
@@ -219,7 +219,7 @@ RSpec.describe CompaniesController, type: :controller do
         it 'allows regular users to queue companies' do
           create(:service_configuration, service_name: 'company_financial_data', active: true)
 
-          post :queue_financial_data, params: { count: 1 }
+          post queue_financial_data_companies_path, params: { count: 1 }
 
           expect(response).to have_http_status(:success)
         end
@@ -232,7 +232,7 @@ RSpec.describe CompaniesController, type: :controller do
         end
 
         it 'allows admins to access queue statistics' do
-          get :enhancement_queue_status
+          get enhancement_queue_status_companies_path
 
           expect(response).to have_http_status(:success)
         end
@@ -244,7 +244,7 @@ RSpec.describe CompaniesController, type: :controller do
     it 'includes enhancement dashboard data' do
       companies = create_list(:company, 3)
 
-      get :index
+      get companies_path
 
       expect(response).to have_http_status(:success)
       # expect(response).to render_template('index') # Requires rails-controller-testing gem
@@ -254,7 +254,7 @@ RSpec.describe CompaniesController, type: :controller do
 
   describe 'show page enhancements' do
     it 'includes service status for individual company' do
-      get :show, params: { id: company.id }
+      get company_path(company), params: { id: company.id }
 
       expect(response).to have_http_status(:success)
       # expect(response).to render_template('show') # Requires rails-controller-testing gem

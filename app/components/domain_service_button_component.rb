@@ -2,7 +2,7 @@
 
 class DomainServiceButtonComponent < ViewComponent::Base
   include Rails.application.routes.url_helpers
-  
+
   def initialize(domain:, service:, size: :normal)
     @domain = domain
     @service = service.to_sym
