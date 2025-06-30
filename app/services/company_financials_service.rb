@@ -18,15 +18,16 @@ class CompanyFinancialsService < ApplicationService
   end
   class InvalidResponseError < StandardError; end
 
-  def initialize(company:, **options)
+  def initialize(company: nil, **options)
     @company = company
-    @org_number = company.registration_number
+    @org_number = company&.registration_number
     @attempts = 0
     super(service_name: "company_financials", action: "update", **options)
   end
 
   def perform
     return error_result("Service is disabled") unless service_active?
+    return error_result("Company not found or not provided") unless @company
     return error_result("No organization number") unless @org_number.present?
 
     # Check if update is needed before starting audit

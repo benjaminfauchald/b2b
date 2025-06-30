@@ -1,15 +1,15 @@
 require "ostruct"
 
 class PersonSocialMediaExtractionService < ApplicationService
-  def initialize(person_id:, **options)
+  def initialize(person_id: nil, person: nil, **options)
     @person_id = person_id
-    @person = Person.find(person_id)
+    @person = person || (person_id ? Person.find(person_id) : nil)
     super(service_name: "person_social_media_extraction", action: "extract", **options)
   end
 
   def perform
     return error_result("Service is disabled") unless service_active?
-    return error_result("Person not found") unless @person
+    return error_result("Person not found or not provided") unless @person
 
     audit_service_operation(@person) do |audit_log|
       Rails.logger.info "🚀 Starting Social Media Extraction for #{@person.name}"

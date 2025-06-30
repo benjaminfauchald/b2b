@@ -5,13 +5,14 @@ require "uri"
 require "set"
 
 class CompanyEmployeeDiscoveryService < ApplicationService
-  def initialize(company)
+  def initialize(company = nil)
     @company = company
     super(service_name: "company_employee_discovery", action: "process")
   end
 
   def perform
     return error_result("Service is disabled") unless service_active?
+    return error_result("Company not found or not provided") unless @company
 
     audit_service_operation(@company) do |audit_log|
       unless needs_update?

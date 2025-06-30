@@ -1,6 +1,10 @@
 require "json-schema"
 
 class KafkaService < ApplicationService
+  def initialize(service_name: "kafka_service", **options)
+    super(service_name: service_name, **options)
+  end
+
   class << self
     def topic_name
       name.underscore
@@ -82,5 +86,29 @@ class KafkaService < ApplicationService
 
   def perform
     raise NotImplementedError, "#{self.class.name} must implement #perform"
+  end
+
+  def service_active?
+    config = ServiceConfiguration.find_by(service_name: service_name)
+    return false unless config
+    config.active?
+  end
+
+  def success_result(message, data = {})
+    OpenStruct.new(
+      success?: true,
+      message: message,
+      data: data,
+      error: nil
+    )
+  end
+
+  def error_result(message, data = {})
+    OpenStruct.new(
+      success?: false,
+      message: nil,
+      error: message,
+      data: data
+    )
   end
 end

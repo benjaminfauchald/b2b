@@ -6,9 +6,9 @@ class PersonProfileExtractionWorker
   def perform(company_id)
     Rails.logger.info "🚀 PersonProfileExtractionWorker: Starting profile extraction for company #{company_id}"
 
-    # Use the new async service
-    service = PersonProfileExtractionServiceV2.new(company_id: company_id)
-    result = service.call
+    # Use the async service
+    service = PersonProfileExtractionAsyncService.new(company_id: company_id)
+    result = service.perform
 
     if result.success?
       Rails.logger.info "✅ PersonProfileExtractionWorker: Profile extraction launched for company #{company_id}: #{result.message}"

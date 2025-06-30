@@ -10,7 +10,7 @@ class DomainImportService < ApplicationService
   MAX_FILE_SIZE = 50.megabytes
   VALID_MIME_TYPES = %w[text/csv application/csv text/plain].freeze
 
-  def initialize(file:, user:, **options)
+  def initialize(file: nil, user: nil, **options)
     @file = file
     @user = user
     @result = DomainImportResult.new

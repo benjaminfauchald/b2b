@@ -39,10 +39,10 @@ namespace :sct do
           active: true,
           refresh_interval_hours: 24,
           batch_size: 100,
-          max_retries: 3,
-          retry_delay_minutes: 5,
-          description: "Auto-generated configuration for #{service_class.name}",
-          metadata: {
+          retry_attempts: 3,
+          depends_on_services: [],
+          settings: {
+            description: "Auto-generated configuration for #{service_class.name}",
             auto_generated: true,
             created_at: Time.current.iso8601,
             service_class: service_class.name

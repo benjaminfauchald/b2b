@@ -6,13 +6,14 @@ require "google/apis/customsearch_v1"
 require "openai"
 
 class CompanyWebDiscoveryService < ApplicationService
-  def initialize(company_id:, **options)
-    @company = Company.find(company_id)
+  def initialize(company_id: nil, company: nil, **options)
+    @company = company || (company_id ? Company.find(company_id) : nil)
     super(service_name: "company_web_discovery", action: "discover", **options)
   end
 
   def perform
     return error_result("Service is disabled") unless service_active?
+    return error_result("Company not found or not provided") unless @company
 
     # Check if update is needed before starting audit
     unless needs_update?

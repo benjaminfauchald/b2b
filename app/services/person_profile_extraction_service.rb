@@ -6,9 +6,9 @@ require "ostruct"
 class PersonProfileExtractionService < ApplicationService
   include HTTParty
 
-  def initialize(company_id:, **options)
+  def initialize(company_id: nil, company: nil, **options)
     @company_id = company_id
-    @company = Company.find(company_id)
+    @company = company || (company_id ? Company.find(company_id) : nil)
     @phantom_id = ENV["PHANTOMBUSTER_PHANTOM_ID"]
     @api_key = ENV["PHANTOMBUSTER_API_KEY"]
     @base_url = "https://api.phantombuster.com/api/v2"
@@ -19,6 +19,7 @@ class PersonProfileExtractionService < ApplicationService
     return error_result("Service is disabled") unless service_active?
     return error_result("Missing PhantomBuster configuration") unless phantombuster_configured?
 
+    return error_result("Company not found or not provided") unless @company
     linkedin_url = @company.best_linkedin_url
     return error_result("Company has no valid LinkedIn URL") unless linkedin_url.present?
 
