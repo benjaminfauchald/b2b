@@ -80,6 +80,12 @@ RSpec.configure do |config|
   config.include Rails.application.routes.url_helpers, type: :request
   config.include Rails.application.routes.url_helpers, type: :integration
   config.include Rails.application.routes.url_helpers, type: :controller
+  
+  # Include Devise test helpers
+  config.include Devise::Test::IntegrationHelpers, type: :request
+  config.include Devise::Test::IntegrationHelpers, type: :integration
+  config.include Devise::Test::ControllerHelpers, type: :controller
+  config.include Devise::Test::ControllerHelpers, type: :view
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
