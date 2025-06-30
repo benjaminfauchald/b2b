@@ -26,7 +26,7 @@ RSpec.describe 'Domain queue operations', type: :request do
 
     context 'with valid parameters' do
       it 'queues the requested number of domains' do
-        post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
 
         expect(response).to have_http_status(:success)
         json = JSON.parse(response.body)
@@ -37,7 +37,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       end
 
       it 'returns updated queue statistics' do
-        post queue_dns_testing_domains_path, params: { count: 5 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 5 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['queue_stats']).to be_present
@@ -50,7 +50,7 @@ RSpec.describe 'Domain queue operations', type: :request do
         # Test all but 5 domains (update them to dns: true so they won't be returned by needing_service)
         untested_domains[5..-1].each { |d| d.update!(dns: true) }
 
-        post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['success']).to be true
@@ -59,7 +59,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       end
 
       it 'validates count is positive' do
-        post queue_dns_testing_domains_path, params: { count: 0 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 0 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['success']).to be false
@@ -67,7 +67,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       end
 
       it 'limits maximum queue size' do
-        post queue_dns_testing_domains_path, params: { count: 1001 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 1001 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['success']).to be false
@@ -79,7 +79,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       before { Domain.update_all(dns: true) }
 
       it 'returns appropriate message' do
-        post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['success']).to be false
@@ -94,7 +94,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       end
 
       it 'returns service disabled message' do
-        post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+        post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
 
         json = JSON.parse(response.body)
         expect(json['success']).to be false
@@ -119,7 +119,7 @@ RSpec.describe 'Domain queue operations', type: :request do
     end
 
     it 'returns current queue statistics' do
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
 
       expect(response).to have_http_status(:success)
       json = JSON.parse(response.body)
@@ -139,7 +139,7 @@ RSpec.describe 'Domain queue operations', type: :request do
     end
 
     it 'includes Sidekiq statistics' do
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
 
       json = JSON.parse(response.body)
       stats = json['queue_stats']
@@ -156,19 +156,19 @@ RSpec.describe 'Domain queue operations', type: :request do
       create_list(:domain, 20, dns: nil)
 
       # Check initial status
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
       initial_stats = JSON.parse(response.body)['queue_stats']
       expect(initial_stats['domain_dns_testing']).to eq(0)
       expect(initial_stats['domains_needing']['domain_testing']).to eq(20)
 
       # Queue some domains
-      post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+      post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
       response_data = JSON.parse(response.body)
       expect(response_data['success']).to be true
       expect(response_data['queued_count']).to eq(10)
 
       # Check updated status - verify that the queueing was successful
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
       updated_stats = JSON.parse(response.body)['queue_stats']
       expect(updated_stats).to have_key('domain_dns_testing')
       # Note: In test environment, queue size may be 0 due to immediate processing
@@ -179,14 +179,14 @@ RSpec.describe 'Domain queue operations', type: :request do
       domains = create_list(:domain, 10, dns: nil)
 
       # Queue all domains
-      post queue_dns_testing_domains_path, params: { count: 10 }, format: :json
+      post queue_dns_testing_domains_path, params: { count: 10 }, as: :json
       response_data = JSON.parse(response.body)
       expect(response_data['success']).to be true
       expect(response_data['queued_count']).to eq(10)
 
       # In test environment, jobs may be processed immediately
       # So let's verify the logical outcome: domains needing service should be updated
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
       stats = JSON.parse(response.body)['queue_stats']
 
       # Verify the stats structure is correct
@@ -210,7 +210,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       test_domains.each { |domain| domain.update!(dns: true) }
 
       # Check queue stats - domains should now need MX and A record testing
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
       stats = JSON.parse(response.body)['queue_stats']
 
       # Verify queue stats structure
@@ -235,7 +235,7 @@ RSpec.describe 'Domain queue operations', type: :request do
       start_time = Time.current
 
       # Queue maximum allowed
-      post queue_dns_testing_domains_path, params: { count: 1000 }, format: :json
+      post queue_dns_testing_domains_path, params: { count: 1000 }, as: :json
 
       response_time = Time.current - start_time
 
@@ -255,7 +255,7 @@ RSpec.describe 'Domain queue operations', type: :request do
 
       start_time = Time.current
 
-      get queue_status_domains_path, format: :json
+      get queue_status_domains_path, as: :json
 
       response_time = Time.current - start_time
 
