@@ -214,7 +214,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
         a_record_result = a_record_service.perform
 
         expect(a_record_result.success?).to be true
-        expect(a_record_result.data[:processed]).to eq(3)
+        expect(a_record_result.data[:processed]).to eq(4)
         expect(a_record_result.data[:successful]).to eq(2) # 2 successful DNS resolutions
 
         # Execute Web Content Extraction for domains with A records

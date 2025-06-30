@@ -30,7 +30,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       get import_domains_path
 
       expect(response.body).to include('File Requirements')
-      expect(response.body).to include('CSV format only')
+      expect(response.body).to include('CSV format (.csv extension)')
       expect(response.body).to include('Maximum file size')
     end
   end

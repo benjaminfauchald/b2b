@@ -53,7 +53,9 @@ RSpec.describe 'Domain Queue Testing', type: :request do
       end
 
       it 'returns queue stats in response' do
-        post queue_dns_testing_domains_path, params: { count: 0 }
+        create_list(:domain, 2, dns: nil)
+        
+        post queue_dns_testing_domains_path, params: { count: 1 }
 
         json = JSON.parse(response.body)
         expect(json).to have_key("queue_stats")
@@ -66,9 +68,9 @@ RSpec.describe 'Domain Queue Testing', type: :request do
         post queue_dns_testing_domains_path, params: { count: 10 }
 
         json = JSON.parse(response.body)
-        expect(json["success"]).to be true
-        expect(json["queued_count"]).to eq(0)
-        expect(json["message"]).to eq("Queued 0 domains for DNS testing")
+        expect(json["success"]).to be false
+        expect(json["available_count"]).to eq(0)
+        expect(json["message"]).to include("No domains need DNS testing")
       end
     end
 
@@ -99,8 +101,8 @@ RSpec.describe 'Domain Queue Testing', type: :request do
       end
 
       it 'queues domains needing MX testing' do
-        # Create domains that need MX testing (based on DomainMxTestingService logic)
-        domains = create_list(:domain, 3, mx: nil)
+        # Create domains that need MX testing (dns: true and mx: nil)
+        domains = create_list(:domain, 3, dns: true, mx: nil)
 
         expect {
           post queue_mx_testing_domains_path, params: { count: 10 }
@@ -110,11 +112,11 @@ RSpec.describe 'Domain Queue Testing', type: :request do
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
         expect(json["queued_count"]).to eq(3)
-        expect(json["message"]).to eq("Queued 3 domains for MX testing")
+        expect(json["message"]).to eq("Queued all 3 available domains for MX testing (requested: 10)")
       end
 
       it 'respects count parameter' do
-        create_list(:domain, 5, mx: nil)
+        create_list(:domain, 5, dns: true, mx: nil)
 
         expect {
           post queue_mx_testing_domains_path, params: { count: 2 }
@@ -125,7 +127,7 @@ RSpec.describe 'Domain Queue Testing', type: :request do
       end
 
       it 'uses default count of 100 when not specified' do
-        create_list(:domain, 150, mx: nil)
+        create_list(:domain, 150, dns: true, mx: nil)
 
         expect {
           post queue_mx_testing_domains_path
@@ -139,7 +141,7 @@ RSpec.describe 'Domain Queue Testing', type: :request do
       end
 
       it 'returns error when service is disabled' do
-        create_list(:domain, 3, mx: nil)
+        create_list(:domain, 3, dns: true, mx: nil)
 
         expect {
           post queue_mx_testing_domains_path
