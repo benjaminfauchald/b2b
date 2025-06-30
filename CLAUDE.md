@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quick Reference - Deployment
+
+**One Workflow**: `.github/workflows/main.yml` - Handles all CI/CD needs
+**One Deploy Script**: `./bin/deploy` - Smart enough to handle all scenarios
+
+The deploy script is now super simple to use:
+- `./bin/deploy` - Quick deploy with patch version
+- `./bin/deploy "Fix bug"` - Deploy with message  
+- `./bin/deploy minor "New feature"` - Minor version bump
+- `./bin/deploy major "Breaking change"` - Major version bump
+
 ## Development Commands
 
 ### Rails Server & Development Stack
