@@ -118,6 +118,11 @@ jobs:
         mkdir -p config/credentials
         echo "2b6511362ac3e7195e7097e15c402eaa" > config/credentials/test.key
     
+    - name: Install dependencies
+      run: |
+        gem install bundler
+        bundle install --jobs 4 --retry 3
+    
     - name: Setup test database
       env:
         RAILS_ENV: test
