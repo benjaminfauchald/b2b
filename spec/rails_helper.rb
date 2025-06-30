@@ -76,12 +76,12 @@ RSpec.configure do |config|
   config.include ViewComponent::SystemTestHelpers, type: :component
   config.include Capybara::RSpecMatchers, type: :component
   config.include Rails.application.routes.url_helpers, type: :component
-  
+
   # Configure Capybara for component tests
   config.before(:each, type: :component) do
     driven_by(:rack_test)
   end
-  
+
   # Set default host for route helpers in tests
   config.before(:each) do
     Rails.application.routes.default_url_options[:host] = 'test.host'
