@@ -10,14 +10,14 @@ module ServiceAuditableOptimized
       # Use EXISTS subquery instead of NOT IN for better performance
       refresh_threshold = service_config.refresh_interval_hours.hours.ago
 
-      where(<<-SQL)
+      where(<<-SQL, auditable_type: name, service_name: service_name, status: ServiceAuditLog.statuses[:success], threshold: refresh_threshold)
         NOT EXISTS (
           SELECT 1 FROM service_audit_logs sal
-          WHERE sal.auditable_type = '#{name}'
+          WHERE sal.auditable_type = :auditable_type
             AND sal.auditable_id = #{table_name}.id
-            AND sal.service_name = '#{service_name}'
-            AND sal.status = #{ServiceAuditLog.statuses[:success]}
-            AND sal.completed_at >= '#{refresh_threshold.to_fs(:db)}'
+            AND sal.service_name = :service_name
+            AND sal.status = :status
+            AND sal.completed_at >= :threshold
         )
       SQL
     end

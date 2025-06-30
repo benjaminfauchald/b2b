@@ -589,7 +589,9 @@ class DomainsController < ApplicationController
 
         # Save file to temporary location
         original_filename = params[:csv_file].respond_to?(:original_filename) ? params[:csv_file].original_filename : "import_#{import_id}.csv"
-        temp_file_path = Rails.root.join("tmp", "import_#{import_id}_#{original_filename}")
+        # Sanitize filename to prevent path traversal
+        safe_filename = File.basename(original_filename).gsub(/[^0-9A-Za-z.\-]/, '_')
+        temp_file_path = Rails.root.join("tmp", "import_#{import_id}_#{safe_filename}")
         File.open(temp_file_path, "wb") do |file|
           file.write(params[:csv_file].read)
         end
