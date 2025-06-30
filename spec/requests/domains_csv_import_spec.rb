@@ -9,7 +9,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
   # Shared CSV content for all tests - use unique domains to avoid conflicts
   let(:test_domain_1) { "import-test-#{Time.current.to_i}-#{Random.rand(9999)}.com" }
   let(:test_domain_2) { "import-test-#{Time.current.to_i}-#{Random.rand(9999)}.org" }
-  
+
   let(:valid_csv_content) do
     <<~CSV
       domain,dns,www,mx
@@ -22,7 +22,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
     # Use unique test domains to avoid conflicts with existing data
     valid_domain_1 = "valid-import-#{Time.current.to_i}-#{Random.rand(9999)}.com"
     valid_domain_2 = "valid-import-#{Time.current.to_i}-#{Random.rand(9999)}.org"
-    
+
     <<~CSV
       domain,dns,www,mx
       #{valid_domain_1},true,true,false
@@ -71,7 +71,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       let(:csv_file) do
         fixture_file_upload('domains_test.csv', 'text/csv')
       end
-      
+
       before do
         # Create the fixture file for testing
         File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_test.csv'), valid_csv_content)
@@ -113,7 +113,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       let(:csv_file) do
         fixture_file_upload('domains_invalid_test.csv', 'text/csv')
       end
-      
+
       before do
         # Create the fixture file for testing
         File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_invalid_test.csv'), invalid_csv_content)
@@ -155,7 +155,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       let(:text_file) do
         fixture_file_upload('test_file.txt', 'text/plain')
       end
-      
+
       before do
         # Create the fixture file for testing
         File.write(Rails.root.join('spec', 'fixtures', 'files', 'test_file.txt'), 'not csv content')
@@ -177,7 +177,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       let(:large_file) do
         fixture_file_upload('large_test.csv', 'text/csv')
       end
-      
+
       before do
         # Create the fixture file for testing
         File.write(Rails.root.join('spec', 'fixtures', 'files', 'large_test.csv'), large_content)
@@ -187,7 +187,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
         post import_domains_path, params: { csv_file: large_file }
 
         expect(response).to redirect_to(import_status_domains_path)
-        
+
         # Check that import_id is set in session
         expect(session[:import_id]).to be_present
         expect(session[:import_status]).to eq('queued')
@@ -199,7 +199,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
       let(:malformed_csv) do
         fixture_file_upload('domains_malformed_test.csv', 'text/csv')
       end
-      
+
       before do
         # Create the fixture file for testing
         File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_malformed_test.csv'), malformed_csv_content)
@@ -256,7 +256,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
         session_mock = { import_results: import_results.to_json }
         allow(session_mock).to receive(:delete)
         allow_any_instance_of(DomainsController).to receive(:session).and_return(session_mock)
-        
+
         get import_results_domains_path
 
         expect(session_mock).to have_received(:delete).with(:import_results)
@@ -325,7 +325,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
     let(:csv_file) do
       fixture_file_upload('domains_audit_test.csv', 'text/csv')
     end
-    
+
     before do
       # Create the fixture file for testing
       File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_audit_test.csv'), valid_csv_content)
@@ -346,7 +346,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
     let(:csv_file) do
       fixture_file_upload('domains_rate_test.csv', 'text/csv')
     end
-    
+
     before do
       # Create the fixture file for testing
       File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_rate_test.csv'), valid_csv_content)

@@ -54,7 +54,7 @@ RSpec.describe 'Domain Queue Testing', type: :request do
 
       it 'returns queue stats in response' do
         create_list(:domain, 2, dns: nil)
-        
+
         post queue_dns_testing_domains_path, params: { count: 1 }
 
         json = JSON.parse(response.body)

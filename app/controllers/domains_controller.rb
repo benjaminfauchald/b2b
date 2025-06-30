@@ -689,7 +689,7 @@ class DomainsController < ApplicationController
 
         # Use actual data from service result even for error cases
         import_data = result.data[:result] || result
-        
+
         Rails.logger.info "  - Import data class: #{import_data.class}"
         Rails.logger.info "  - Imported count: #{import_data.imported_count || result.data[:imported] || 0}"
         Rails.logger.info "  - Failed count: #{import_data.failed_count || result.data[:failed] || 0}"
@@ -700,8 +700,8 @@ class DomainsController < ApplicationController
           imported_count: import_data.imported_count || result.data[:imported] || 0,
           failed_count: import_data.failed_count || result.data[:failed] || 0,
           duplicate_count: import_data.duplicate_count || result.data[:duplicates] || 0,
-          total_count: (import_data.imported_count || result.data[:imported] || 0) + 
-                      (import_data.failed_count || result.data[:failed] || 0) + 
+          total_count: (import_data.imported_count || result.data[:imported] || 0) +
+                      (import_data.failed_count || result.data[:failed] || 0) +
                       (import_data.duplicate_count || result.data[:duplicates] || 0),
           processing_time: (import_data.processing_time rescue nil),
           summary_message: error_message,
