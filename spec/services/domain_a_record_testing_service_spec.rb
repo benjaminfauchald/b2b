@@ -36,7 +36,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
             audit_log = ServiceAuditLog.last
             expect(audit_log.metadata['domain_name']).to eq('example.com')
             expect(audit_log.metadata['www_status']).to eq(true)
-            expect(audit_log.metadata['test_result']).to eq(:success)
+            expect(audit_log.metadata['test_result']).to eq('success')
           end
 
           it 'returns successful result' do
@@ -44,7 +44,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
             expect(result.success?).to be true
             expect(result.message).to eq('A record test completed')
-            expect(result.data[:result][:status]).to eq(:success)
+            expect(result.data[:result][:status]).to eq('success')
           end
 
           it 'updates domain www status to true' do
@@ -76,7 +76,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('domain_a_record_testing')
             expect(audit_log.status).to eq('success')
-            expect(audit_log.metadata['test_result']).to eq(:no_records)
+            expect(audit_log.metadata['test_result']).to eq('no_records')
           end
 
           it 'updates domain www status to false' do
@@ -99,7 +99,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
             audit_log = ServiceAuditLog.last
             expect(audit_log.service_name).to eq('domain_a_record_testing')
             expect(audit_log.status).to eq('success')
-            expect(audit_log.metadata['test_result']).to eq(:timeout)
+            expect(audit_log.metadata['test_result']).to eq('timeout')
           end
 
           it 'updates domain www status to false' do
@@ -112,8 +112,8 @@ RSpec.describe DomainARecordTestingService, type: :service do
 
         context 'with unexpected error during service execution' do
           before do
-            # Mock an error in the audit_service_operation itself
-            allow_any_instance_of(described_class).to receive(:audit_service_operation).and_raise(StandardError, 'Service error')
+            # Mock an error in the perform_a_record_test method
+            allow_any_instance_of(described_class).to receive(:perform_a_record_test).and_raise(StandardError, 'Service error')
           end
 
           it 'creates audit log with failed status' do
@@ -143,7 +143,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
         end
 
         it 'creates audit logs for each domain' do
-          expect { service.perform }.to change(ServiceAuditLog, :count).by(4) # 3 domains + 1 batch result
+          expect { service.perform }.to change(ServiceAuditLog, :count).by(3) # 3 domains
 
           audit_logs = ServiceAuditLog.where(service_name: 'domain_a_record_testing')
           domain_logs = audit_logs.where.not(auditable: nil)
@@ -226,7 +226,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
         result = described_class.test_a_record(domain)
         domain.reload
 
-        expect(result).to be nil
+        expect(result).to be false
         expect(domain.www).to be nil
       end
     end

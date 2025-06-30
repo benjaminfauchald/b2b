@@ -70,30 +70,48 @@ class DomainWebContentExtractionService < ApplicationService
       end
     end
 
-    audit_service_operation(domain) do |audit_log|
-      result = perform_web_content_extraction
+    # Create the audit log manually to handle both success and failure cases
+    audit_log = ServiceAuditLog.create!(
+      auditable: domain,
+      service_name: service_name,
+      operation_type: "process",
+      status: :pending,
+      table_name: domain.class.table_name,
+      record_id: domain.id.to_s,
+      columns_affected: ["web_content_data"],
+      metadata: { "status" => "initialized" },
+      started_at: Time.current
+    )
 
-      if result[:success]
-        store_web_content_data(domain, result[:data])
+    result = perform_web_content_extraction
 
-        audit_log.add_metadata(
+    if result[:success]
+      store_web_content_data(domain, result[:data])
+
+      audit_log.mark_success!(
+        {
           domain_name: domain.domain,
           url: build_url,
           content_length: result[:data]["content"]&.length || 0,
           extraction_success: true
-        )
+        },
+        ["web_content_data"]
+      )
 
-        success_result("Web content extracted successfully", result: result)
-      else
-        audit_log.add_metadata(
+      success_result("Web content extracted successfully", result: result)
+    else
+      audit_log.mark_failed!(
+        result[:error],
+        {
           domain_name: domain.domain,
           url: build_url,
           error: result[:error],
           extraction_success: false
-        )
+        },
+        ["web_content_data"]
+      )
 
-        error_result(result[:error])
-      end
+      error_result(result[:error])
     end
   end
 
@@ -103,12 +121,14 @@ class DomainWebContentExtractionService < ApplicationService
     # Configure API key for this request
     Firecrawl.api_key firecrawl_api_key
 
-    response = Firecrawl.scrape(url)
+    # Scrape with markdown format
+    response = Firecrawl.scrape(url, { formats: ["markdown", "html", "links"] })
 
     if response.success?
-      validate_and_normalize_content(response.result)
+      validate_and_normalize_content(response)
     else
-      { success: false, error: response.result.error_description }
+      error_msg = response.respond_to?(:error_description) ? response.error_description : "Extraction failed"
+      { success: false, error: error_msg }
     end
   rescue StandardError => e
     { success: false, error: "Firecrawl extraction failed: #{e.message}" }
@@ -116,12 +136,20 @@ class DomainWebContentExtractionService < ApplicationService
 
   def validate_and_normalize_content(result)
     return { success: false, error: "Invalid content data" } unless result.respond_to?(:markdown)
-    return { success: false, error: "No content found" } unless result.markdown.present?
+    
+    # Ensure we have at least markdown or html content
+    content = result.markdown || result.html
+    return { success: false, error: "No content found" } if content.blank?
 
     normalized_data = {
-      "content" => result.markdown,
+      "content" => content,
+      "markdown" => result.markdown,
+      "html" => result.html,
       "title" => result.metadata&.[]("title"),
+      "description" => result.metadata&.[]("description"),
       "url" => result.metadata&.[]("url"),
+      "links" => result.links,
+      "metadata" => result.metadata&.to_h || {},
       "screenshot_url" => result.screenshot_url,
       "extracted_at" => Time.current.iso8601
     }
@@ -143,31 +171,56 @@ class DomainWebContentExtractionService < ApplicationService
 
     domains.find_each(batch_size: batch_size) do |domain|
       begin
-        audit_service_operation(domain) do |audit_log|
-          # Skip domains without A records
-          unless domain.www && domain.a_record_ip.present?
-            results[:skipped] += 1
-            return success_result("Skipped - no A record")
-          end
+        # Skip domains without A records (this shouldn't happen as the scope filters them)
+        unless domain.www && domain.a_record_ip.present?
+          results[:skipped] += 1
+          results[:processed] += 1
+          next
+        end
 
-          result = perform_web_content_extraction_for_domain(domain)
+        # Create the audit log manually  
+        audit_log = ServiceAuditLog.create!(
+          auditable: domain,
+          service_name: service_name,
+          operation_type: "process",
+          status: :pending,
+          table_name: domain.class.table_name,
+          record_id: domain.id.to_s,
+          columns_affected: ["web_content_data"],
+          metadata: { "status" => "initialized" },
+          started_at: Time.current
+        )
 
-          audit_log.add_metadata(
-            domain_name: domain.domain,
-            url: build_url_for_domain(domain),
-            content_length: result[:success] ? result[:data]["content"]&.length || 0 : 0,
-            extraction_success: result[:success],
-            error: result[:error]
+        # Set @domain for the batch operation
+        @domain = domain
+        result = perform_web_content_extraction_for_domain(domain)
+
+        if result[:success]
+          store_web_content_data(domain, result[:data])
+          
+          audit_log.mark_success!(
+            {
+              domain_name: domain.domain,
+              url: build_url_for_domain(domain),
+              content_length: result[:data]["content"]&.length || 0,
+              extraction_success: true
+            },
+            ["web_content_data"]
           )
-
-          if result[:success]
-            store_web_content_data(domain, result[:data])
-            results[:successful] += 1
-            success_result("Web content extracted", result: result)
-          else
-            results[:failed] += 1
-            error_result(result[:error])
-          end
+          
+          results[:successful] += 1
+        else
+          audit_log.mark_failed!(
+            result[:error],
+            {
+              domain_name: domain.domain,
+              url: build_url_for_domain(domain),
+              error: result[:error],
+              extraction_success: false
+            },
+            ["web_content_data"]
+          )
+          results[:failed] += 1
         end
         results[:processed] += 1
       rescue StandardError => e
@@ -190,12 +243,14 @@ class DomainWebContentExtractionService < ApplicationService
     # Configure API key for this request
     Firecrawl.api_key firecrawl_api_key
 
-    response = Firecrawl.scrape(url)
+    # Scrape with markdown format
+    response = Firecrawl.scrape(url, { formats: ["markdown", "html", "links"] })
 
     if response.success?
-      validate_and_normalize_content(response.result)
+      validate_and_normalize_content(response)
     else
-      { success: false, error: response.result.error_description }
+      error_msg = response.respond_to?(:error_description) ? response.error_description : "Extraction failed"
+      { success: false, error: error_msg }
     end
   rescue StandardError => e
     { success: false, error: "Firecrawl extraction failed: #{e.message}" }

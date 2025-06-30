@@ -1,5 +1,5 @@
 class SsoLoginComponent < ViewComponent::Base
-  def initialize(providers: [ :google_oauth2, :github ], action: "Sign in", **options)
+  def initialize(providers: [ :google_oauth2, :github ], action: "Continue", **options)
     @providers = Array(providers)
     @action = action
     @options = options

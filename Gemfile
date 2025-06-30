@@ -73,6 +73,7 @@ group :development, :test do
   # Guard for automatic testing
   gem "guard-rspec"
   gem "guard-rubocop"
+  gem "terminal-notifier-guard"
 
   # Environment variables
   gem "dotenv-rails"

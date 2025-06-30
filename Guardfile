@@ -24,9 +24,25 @@
 #  * zeus: 'zeus rspec' (requires the server to be started separately)
 #  * 'just' rspec: 'rspec'
 
-guard :rspec, cmd: "bundle exec rspec" do
+guard :rspec, cmd: "bundle exec rspec", notification: true do
   require "guard/rspec/dsl"
+  require_relative "lib/guard_claude_helper"
   dsl = Guard::RSpec::Dsl.new(self)
+  
+  # Callback for when tests fail
+  callback(:run_on_modifications_end) do |guard_class, event, result|
+    if result&.failure_count && result.failure_count > 0
+      failed_specs = result.failed_examples.map do |example|
+        {
+          description: example.description,
+          file_path: example.metadata[:file_path],
+          line_number: example.metadata[:line_number],
+          exception: example.exception.message
+        }
+      end
+      GuardClaudeHelper.on_test_failure(failed_specs)
+    end
+  end
 
   # Feel free to open issues for suggestions and improvements
 
@@ -67,4 +83,9 @@ guard :rspec, cmd: "bundle exec rspec" do
   watch(%r{^spec/acceptance/steps/(.+)_steps\.rb$}) do |m|
     Dir[File.join("**/#{m[1]}.feature")][0] || "spec/acceptance"
   end
+end
+
+guard :rubocop do
+  watch(%r{.+\.rb$})
+  watch(%r{(?:.+/)?\.rubocop(?:_todo)?\.yml$}) { |m| File.dirname(m[0]) }
 end

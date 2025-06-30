@@ -28,7 +28,10 @@ class DomainARecordTestingService < ApplicationService
 
   # Legacy class methods for backward compatibility
   def self.test_a_record(domain)
-    new(domain: domain).send(:test_single_domain)
+    service = new(domain: domain)
+    result = service.send(:perform_a_record_test_for_domain, domain)
+    service.send(:update_domain_status, domain, result)
+    result[:status] == 'success'
   end
 
   def self.queue_all_domains
@@ -95,15 +98,20 @@ class DomainARecordTestingService < ApplicationService
 
   def test_single_domain
     audit_service_operation(domain) do |audit_log|
+      previous_ip = domain.a_record_ip
       result = perform_a_record_test
       update_domain_status(domain, result)
 
-      audit_log.add_metadata(
+      metadata = {
         domain_name: domain.domain,
         www_status: domain.www,
         test_result: result[:status],
         a_record: result[:a_record]
-      )
+      }
+      metadata[:error] = result[:error] if result[:error]
+      metadata[:previous_a_record] = previous_ip if previous_ip.present?
+      
+      audit_log.add_metadata(metadata)
 
       success_result("A record test completed", result: result)
     end
@@ -118,29 +126,36 @@ class DomainARecordTestingService < ApplicationService
       Timeout.timeout(DNS_TIMEOUT) do
         a_record = Resolv.getaddress("www.#{test_domain.domain}")
         {
-          status: :success,
+          status: 'success',
           a_record: a_record
         }
       end
     rescue Resolv::ResolvError => e
       {
-        status: :no_records,
+        status: 'no_records',
         error: "A record resolution failed"
       }
     rescue Timeout::Error => e
       {
-        status: :timeout,
+        status: 'timeout',
         error: "A record resolution timed out after #{DNS_TIMEOUT} seconds"
+      }
+    rescue StandardError => e
+      {
+        status: 'error',
+        error: "Unexpected error: #{e.message}"
       }
     end
   end
 
   def update_domain_status(domain, result)
     case result[:status]
-    when :success
+    when 'success'
       domain.update_columns(www: true, a_record_ip: result[:a_record])
-    when :no_records, :timeout
+    when 'no_records', 'timeout'
       domain.update_columns(www: false, a_record_ip: nil)
+    when 'error'
+      domain.update_columns(www: nil, a_record_ip: nil)
     end
   end
 
@@ -161,7 +176,7 @@ class DomainARecordTestingService < ApplicationService
           )
 
           case result[:status]
-          when :success
+          when 'success'
             results[:successful] += 1
             success_result("A record test completed", result: result)
           else
@@ -170,7 +185,8 @@ class DomainARecordTestingService < ApplicationService
           end
         end
         results[:processed] += 1
-        produce_message_with_retry(domain.domain, result)
+        # TODO: Enable when Kafka is configured
+        # produce_message_with_retry(domain.domain, result)
       rescue StandardError => e
         results[:errors] += 1
         Rails.logger.error "Error testing A record for domain #{domain.domain}: #{e.message}"

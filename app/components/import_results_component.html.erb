@@ -1,0 +1,193 @@
+<div role="status" aria-label="Import results">
+  <!-- Status Alert -->
+  <div class="<%= status_alert_classes %>">
+    <div class="flex items-center">
+      <svg class="<%= status_icon_classes %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<%= status_icon_path %>"></path>
+      </svg>
+      <div class="flex-1">
+        <h2 class="<%= status_heading_classes %>"><%= status_title %></h2>
+        <p class="<%= status_message_classes %>"><%= detailed_status_message %></p>
+        <% if additional_status_message %>
+          <p class="<%= status_message_classes %>"><%= additional_status_message %></p>
+        <% end %>
+        <% if result_type == :failure && result.respond_to?(:error_message) && result.error_message.present? %>
+          <p class="<%= status_message_classes %>"><%= result.error_message %></p>
+        <% end %>
+        
+        <!-- Metrics Grid -->
+        <div class="<%= metrics_classes %>">
+          <div class="<%= metric_card_classes %>">
+            <div class="<%= metric_label_classes %>">Total Processed</div>
+            <div class="<%= metric_value_classes %>"><%= result.total_count %></div>
+          </div>
+          
+          <div class="<%= metric_card_classes %>">
+            <div class="<%= metric_label_classes %>">Successfully Imported</div>
+            <div class="<%= metric_value_classes %>"><%= result.imported_count %></div>
+          </div>
+          
+          <div class="<%= metric_card_classes %>">
+            <div class="<%= metric_label_classes %>">Failed</div>
+            <div class="<%= metric_value_classes %>"><%= result.failed_count %></div>
+          </div>
+          
+          <% if result.respond_to?(:duplicate_count) && result.duplicate_count > 0 %>
+            <div class="<%= metric_card_classes %>">
+              <div class="<%= metric_label_classes %>">Duplicates</div>
+              <div class="<%= metric_value_classes %>"><%= result.duplicate_count %></div>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="mt-4 text-sm <%= status_text_classes %>">
+          <span class="sr-only">Processing performance:</span>
+          Processing time: <%= result.processing_time %> seconds<br>
+          Rate: <%= processing_rate %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mb-6 flex flex-wrap gap-3">
+    <% if result_type == :success || result_type == :partial %>
+      <%= link_to "View All Domains", domains_path, class: button_classes(:primary) %>
+      <%= link_to "Import More Domains", new_import_path, class: button_classes(:secondary) %>
+      <% if result_type == :partial && has_errors_to_export? %>
+        <%= link_to "Download Error Report", export_errors_path, class: button_classes(:secondary) %>
+      <% end %>
+    <% else %>
+      <%= link_to "Try Again", new_import_path, class: button_classes(:primary) %>
+      <% if has_errors_to_export? %>
+        <%= link_to "Download Error Report", export_errors_path, class: button_classes(:secondary) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Imported Domains Section -->
+  <% if has_imported_domains? %>
+    <div class="mb-8">
+      <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="<%= section_heading_classes %>">
+            <span class="sr-only">List of</span>
+            Successfully Imported (<%= result.imported_count %>)
+          </h3>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700">
+          <div class="overflow-x-auto">
+            <table class="<%= table_classes %>">
+              <thead class="<%= table_header_classes %>">
+                <tr>
+                  <th class="<%= table_header_cell_classes %>">Domain</th>
+                  <th class="<%= table_header_cell_classes %>">Row</th>
+                  <th class="<%= table_header_cell_classes %>">Created At</th>
+                </tr>
+              </thead>
+              <tbody class="<%= table_body_classes %>">
+                <% result.imported_domains.each do |domain_data| %>
+                  <tr>
+                    <td class="<%= table_cell_classes %>">
+                      <span class="font-medium dark:text-gray-200"><%= domain_data[:domain] %></span>
+                    </td>
+                    <td class="<%= table_cell_classes %>">
+                      <%= domain_data[:row] %>
+                    </td>
+                    <td class="<%= table_cell_classes %>">
+                      <span class="dark:text-gray-200"><%= domain_data[:created_at]&.strftime("%B %d, %Y") %></span>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <% if result.imported_count > 0 %>
+          <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-right sm:px-6">
+            <%= button_to "Export Imported Domains", export_imported_path, method: :get, class: "#{button_classes(:outline)} text-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Failed Domains Section -->
+  <% if has_failed_domains? %>
+    <div class="mb-8">
+      <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="<%= section_heading_classes %>">
+            Failed to Import (<%= result.failed_count %>)
+          </h3>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700">
+          <!-- Desktop Table View -->
+          <div class="hidden sm:block overflow-x-auto">
+            <table class="<%= table_classes %>">
+              <thead class="<%= table_header_classes %>">
+                <tr>
+                  <th class="<%= table_header_cell_classes %>">Row</th>
+                  <th class="<%= table_header_cell_classes %>">Domain</th>
+                  <th class="<%= table_header_cell_classes %>">Errors</th>
+                </tr>
+              </thead>
+              <tbody class="<%= table_body_classes %>">
+                <% result.failed_domains.each do |failed_domain| %>
+                  <tr>
+                    <td class="<%= table_cell_classes %>">
+                      <%= failed_domain[:row] %>
+                    </td>
+                    <td class="<%= table_cell_classes %>">
+                      <%= failed_domain[:domain].presence || '(blank)' %>
+                    </td>
+                    <td class="<%= error_cell_classes %>">
+                      <% failed_domain[:errors].each do |error| %>
+                        <div class="mb-1"><%= error %></div>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Card View -->
+          <div class="block sm:hidden">
+            <% mobile_friendly_errors.each do |error_data| %>
+              <div class="px-4 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                <div class="flex items-start justify-between">
+                  <div class="font-medium text-gray-900 dark:text-white text-sm">
+                    <%= error_data[:summary] %>
+                  </div>
+                </div>
+                <div class="mt-2 text-sm text-red-600 dark:text-red-400">
+                  <%= error_data[:errors] %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <% if has_errors_to_export? %>
+          <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-right sm:px-6">
+            <%= button_to "Export Errors as CSV", export_errors_path, method: :get, class: "#{button_classes(:outline)} text-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Help Section -->
+  <div class="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+    <h4 class="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Need Help?</h4>
+    <ul class="text-sm text-blue-700 dark:text-blue-200 space-y-1">
+      <li>• Download CSV template to see the correct format</li>
+      <li>• Ensure domain names are valid (e.g., example.com, not www.example.com)</li>
+      <li>• Boolean values can be: true/false, 1/0, yes/no, or left empty</li>
+      <li>• Maximum file size is 10MB</li>
+    </ul>
+  </div>
+</div>

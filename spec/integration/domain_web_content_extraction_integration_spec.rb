@@ -52,25 +52,23 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
     let(:mock_firecrawl_response) do
       OpenStruct.new(
         success?: true,
-        result: OpenStruct.new(
-          markdown: "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
-          metadata: {
-            "title" => "Example Domain",
-            "description" => "This domain is for use in illustrative examples",
-            "url" => "https://needs-test.com",
-            "statusCode" => 200
-          },
-          screenshot_url: nil
-        )
+        markdown: "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
+        html: "<h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents.</p>",
+        metadata: {
+          "title" => "Example Domain",
+          "description" => "This domain is for use in illustrative examples",
+          "url" => "https://needs-test.com",
+          "statusCode" => 200
+        },
+        links: ["https://example.com/about", "https://example.com/contact"],
+        screenshot_url: nil
       )
     end
 
     let(:mock_firecrawl_error_response) do
       OpenStruct.new(
         success?: false,
-        result: OpenStruct.new(
-          error_description: "Connection timeout"
-        )
+        error_description: "Connection timeout"
       )
     end
 

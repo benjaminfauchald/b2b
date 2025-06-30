@@ -1,0 +1,38 @@
+<div class="<%= wrapper_classes %>">
+  <table class="<%= table_classes %>">
+    <thead class="<%= header_classes %>">
+      <tr>
+        <% headers.each do |header| %>
+          <th class="<%= header_cell_classes %>">
+            <%= header %>
+          </th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody class="<%= body_classes %>">
+      <% if rows.any? %>
+        <% rows.each_with_index do |row, row_index| %>
+          <tr class="<%= row_classes(row_index) %>">
+            <% row.each_with_index do |cell, cell_index| %>
+              <% if cell_index == 0 %>
+                <th scope="row" class="<%= first_cell_classes %>">
+                  <%= cell %>
+                </th>
+              <% else %>
+                <td class="<%= cell_classes %>">
+                  <%= cell %>
+                </td>
+              <% end %>
+            <% end %>
+          </tr>
+        <% end %>
+      <% else %>
+        <tr>
+          <td colspan="<%= headers.length %>" class="<%= cell_classes %> text-center text-gray-500 dark:text-gray-400">
+            No data available
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

@@ -15,7 +15,8 @@ RSpec.describe 'Domain CSV Import', type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include('Import Domains from CSV')
-      expect(response.body).to include('Choose CSV file or drag and drop')
+      expect(response.body).to include('Choose CSV file')
+      expect(response.body).to include('drag and drop')
     end
 
     it 'includes CSV format information' do
@@ -126,8 +127,11 @@ RSpec.describe 'Domain CSV Import', type: :request do
       it 'rejects non-CSV files' do
         post import_domains_path, params: { csv_file: text_file }
 
-        expect(response).to redirect_to(import_domains_path)
-        expect(flash[:alert]).to include('Please upload a CSV file')
+        expect(response).to redirect_to(import_results_domains_path)
+        
+        # Follow redirect and check results page shows the error
+        follow_redirect!
+        expect(response.body).to include('Import Failed')
       end
     end
 
@@ -138,8 +142,11 @@ RSpec.describe 'Domain CSV Import', type: :request do
       it 'rejects files that are too large' do
         post import_domains_path, params: { csv_file: large_file }
 
-        expect(response).to redirect_to(import_domains_path)
-        expect(flash[:alert]).to include('File size exceeds maximum')
+        expect(response).to redirect_to(import_results_domains_path)
+        
+        # Follow redirect and check results page shows the error
+        follow_redirect!
+        expect(response.body).to include('Import Failed')
       end
     end
 

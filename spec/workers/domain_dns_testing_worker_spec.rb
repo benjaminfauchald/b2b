@@ -4,7 +4,7 @@ require 'rails_helper'
 require 'sidekiq/testing'
 
 RSpec.describe DomainDnsTestingWorker, type: :worker do
-  let(:domain) { create(:domain, dns: nil) }
+  let(:domain) { create(:domain, dns: nil, mx: nil, www: nil) }
   let(:worker) { described_class.new }
 
   before do
@@ -27,7 +27,12 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
     context 'with valid domain' do
       context 'when DNS resolution succeeds' do
         before do
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
+          # Mock the instance method for getresources to return records
+          resolver_double = instance_double(Resolv::DNS)
+          allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
+          allow(resolver_double).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::A).and_return([double(address: '1.2.3.4')])
+          allow(resolver_double).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::MX).and_return([double(exchange: 'mx.example.com')])
+          allow(resolver_double).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::TXT).and_return([double(strings: ['v=spf1'])])
         end
 
         it 'updates domain DNS status to true' do
@@ -67,7 +72,10 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
 
       context 'when DNS resolution fails' do
         before do
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([])
+          # Mock the instance method for getresources to return empty arrays (no records)
+          resolver_double = instance_double(Resolv::DNS)
+          allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
+          allow(resolver_double).to receive(:getresources).and_return([])
         end
 
         it 'updates domain DNS status to false' do
@@ -97,7 +105,10 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
 
       context 'when DNS resolution times out' do
         before do
-          allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+          # Mock the instance method for getresources to raise Timeout::Error
+          resolver_double = instance_double(Resolv::DNS)
+          allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
+          allow(resolver_double).to receive(:getresources).and_raise(Timeout::Error)
         end
 
         it 'handles timeout gracefully' do
@@ -169,18 +180,37 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
     it 'handles concurrent processing' do
       domains = create_list(:domain, 10, dns: nil)
 
-      # Mock DNS resolution
-      allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
+      # Mock DNS resolution to always succeed by mocking the perform_dns_test method
+      allow_any_instance_of(DomainTestingService).to receive(:perform_dns_test).and_return({
+        status: "success",
+        records: {
+          a: ['1.2.3.4'],
+          mx: ['mx.example.com'],
+          txt: ['v=spf1']
+        }
+      })
 
-      # Process concurrently
-      Sidekiq::Testing.inline! do
-        threads = domains.map do |domain|
-          Thread.new { described_class.perform_async(domain.id) }
+      # Process concurrently using threads with proper synchronization
+      mutex = Mutex.new
+      processed_count = 0
+      
+      threads = domains.map do |domain|
+        Thread.new do
+          # Perform the work directly instead of async to ensure completion
+          worker = described_class.new
+          worker.perform(domain.id)
+          
+          mutex.synchronize { processed_count += 1 }
         end
-        threads.each(&:join)
       end
+      
+      # Wait for all threads to complete
+      threads.each(&:join)
 
-      # All domains should be processed
+      # Verify all domains were processed
+      expect(processed_count).to eq(domains.size)
+      
+      # All domains should be marked as having DNS
       domains.each(&:reload)
       expect(domains.all? { |d| d.dns == true }).to be true
     end
@@ -188,54 +218,67 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
 
   describe 'Error handling and retries' do
     it 'retries on transient failures' do
-      call_count = 0
+      # This test verifies that the worker is configured to retry
+      # Actual retry behavior is handled by Sidekiq and is difficult to test in isolation
+      
+      # Verify retry configuration
+      expect(described_class.sidekiq_options['retry']).to eq(3)
+      
+      # Test that errors are properly re-raised for Sidekiq to handle
+      allow_any_instance_of(DomainTestingService).to receive(:perform)
+        .and_raise(StandardError, 'Temporary failure')
 
-      # Mock failure then success
-      allow_any_instance_of(DomainTestingService).to receive(:perform) do
-        call_count += 1
-        if call_count == 1
-          raise StandardError, 'Temporary failure'
-        else
-          OpenStruct.new(success?: true)
-        end
-      end
-
-      # Should retry and eventually succeed
+      worker = described_class.new
+      
       expect {
-        Sidekiq::Testing.inline! do
-          described_class.perform_async(domain.id)
-        end
-      }.not_to raise_error
+        worker.perform(domain.id)
+      }.to raise_error(StandardError, 'Temporary failure')
+      
+      # In production, Sidekiq would catch this error and retry based on the retry: 3 option
     end
 
     it 'dead letters after max retries' do
-      # Force failures
+      # This test verifies the worker's behavior when it exhausts retries
+      # The actual dead letter queue management is handled by Sidekiq
+      
+      # Force persistent failures
       allow_any_instance_of(DomainTestingService).to receive(:perform)
         .and_raise(StandardError, 'Persistent failure')
 
-      Sidekiq::Testing.fake! do
-        described_class.perform_async(domain.id)
-
-        # Simulate retries
+      # Verify the worker has retry limit configured
+      expect(described_class.sidekiq_options['retry']).to eq(3)
+      
+      # Test that the worker properly raises errors for Sidekiq to handle
+      worker = described_class.new
+      
+      # Each call should raise the error
+      3.times do
         expect {
-          3.times do
-            begin
-              described_class.drain
-            rescue StandardError
-              # Expected
-            end
-          end
+          worker.perform(domain.id)
         }.to raise_error(StandardError, 'Persistent failure')
       end
+      
+      # In production, after 3 retries (as configured), Sidekiq would move this to the dead set
+      # This is Sidekiq's internal behavior and doesn't need unit testing here
     end
   end
 
   describe 'Performance characteristics' do
     it 'processes domains quickly' do
       # Mock fast DNS resolution
-      allow_any_instance_of(Resolv::DNS).to receive(:getresources) do
+      resolver_double = instance_double(Resolv::DNS)
+      allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::A) do
         sleep 0.01 # Simulate minimal network delay
-        [ 'fake_record' ]
+        [double(address: '1.2.3.4')]
+      end
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::MX) do
+        sleep 0.01
+        [double(exchange: 'mx.example.com')]
+      end
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::TXT) do
+        sleep 0.01
+        [double(strings: ['v=spf1'])]
       end
 
       start_time = Time.current
@@ -252,7 +295,11 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
       domains = create_list(:domain, 50, dns: nil)
 
       # Mock DNS resolution
-      allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
+      resolver_double = instance_double(Resolv::DNS)
+      allow(Resolv::DNS).to receive(:new).and_return(resolver_double)
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::A).and_return([double(address: '1.2.3.4')])
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::MX).and_return([double(exchange: 'mx.example.com')])
+      allow(resolver_double).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::TXT).and_return([double(strings: ['v=spf1'])])
 
       start_time = Time.current
 

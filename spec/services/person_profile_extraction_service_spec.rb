@@ -20,7 +20,9 @@ RSpec.describe PersonProfileExtractionService, type: :service do
   describe '#perform' do
     context 'when service configuration is active' do
       before do
-        create(:service_configuration, service_name: 'person_profile_extraction', active: true)
+        ServiceConfiguration.find_or_create_by(service_name: 'person_profile_extraction') do |config|
+          config.active = true
+        end
       end
 
       context 'when company has LinkedIn URL' do
@@ -128,14 +130,14 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
             audit_log = ServiceAuditLog.last
             expect(audit_log.status).to eq('failed')
-            expect(audit_log.error_message).to include('Service error')
+            expect(audit_log.error_message).to include('Failed to fetch phantom config')
           end
 
           it 'returns error result' do
             result = service.perform
 
             expect(result.success?).to be false
-            expect(result.error).to include('Service error')
+            expect(result.error).to include('Service error: Failed to fetch phantom config')
           end
         end
       end
@@ -176,7 +178,9 @@ RSpec.describe PersonProfileExtractionService, type: :service do
     context 'when PhantomBuster is not configured' do
       before do
         ENV.delete('PHANTOMBUSTER_PHANTOM_ID')
-        create(:service_configuration, service_name: 'person_profile_extraction', active: true)
+        ServiceConfiguration.find_or_create_by(service_name: 'person_profile_extraction') do |config|
+          config.active = true
+        end
       end
 
       it 'returns configuration error' do
@@ -191,8 +195,12 @@ RSpec.describe PersonProfileExtractionService, type: :service do
   private
 
   def stub_phantombuster_config_fetch
-    stub_request(:get, "https://api.phantombuster.com/api/v2/agents/fetch")
-      .with(query: { id: 'test_phantom_id' })
+    stub_request(:get, "https://api.phantombuster.com/api/v2/agents/fetch?id=test_phantom_id")
+      .with(
+        headers: {
+          'X-Phantombuster-Key-1' => 'test_api_key'
+        }
+      )
       .to_return(
         status: 200,
         body: {
@@ -247,7 +255,12 @@ RSpec.describe PersonProfileExtractionService, type: :service do
   end
 
   def stub_phantombuster_config_fetch_error
-    stub_request(:get, "https://api.phantombuster.com/api/v2/agents/fetch")
+    stub_request(:get, "https://api.phantombuster.com/api/v2/agents/fetch?id=test_phantom_id")
+      .with(
+        headers: {
+          'X-Phantombuster-Key-1' => 'test_api_key'
+        }
+      )
       .to_return(status: 500, body: 'Internal Server Error')
   end
 

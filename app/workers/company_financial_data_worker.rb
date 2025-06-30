@@ -17,8 +17,16 @@ class CompanyFinancialDataWorker
     if result.success?
       Rails.logger.info "Successfully processed financial data for company #{company_id}"
     else
-      if result.data[:retry_after]
-        Rails.logger.warn "Rate limited for company #{company_id}, retry after #{result.data[:retry_after]} seconds"
+      # Check for retry_after in result.data hash or directly on result
+      retry_after = nil
+      if result.data&.is_a?(Hash) && result.data[:retry_after]
+        retry_after = result.data[:retry_after]
+      elsif result.respond_to?(:retry_after) && result.retry_after
+        retry_after = result.retry_after
+      end
+
+      if retry_after
+        Rails.logger.warn "Rate limited for company #{company_id}, retry after #{retry_after} seconds"
       else
         Rails.logger.error "Failed to process financial data for company #{company_id}: #{result.error}"
       end

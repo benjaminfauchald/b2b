@@ -125,6 +125,13 @@ RSpec.describe Domain, type: :model do
         it "returns false when web content was recently extracted" do
           domain.update(www: true, a_record_ip: "192.168.1.1", web_content_data: { "title" => "Test" })
 
+          # Create service configuration
+          create(:service_configuration,
+            service_name: "domain_web_content_extraction",
+            active: true,
+            refresh_interval_hours: 48  # 2 days
+          )
+
           # Create recent successful audit log
           create(:service_audit_log,
             auditable: domain,
@@ -160,7 +167,8 @@ RSpec.describe Domain, type: :model do
             auditable: domain,
             service_name: "domain_web_content_extraction",
             status: "failed",
-            completed_at: 1.day.ago
+            completed_at: 1.day.ago,
+            metadata: { "error" => "Failed to extract content" }
           )
 
           # Successful attempt
@@ -197,7 +205,8 @@ RSpec.describe Domain, type: :model do
             auditable: domain,
             service_name: "domain_web_content_extraction",
             status: "failed",
-            completed_at: 1.day.ago
+            completed_at: 1.day.ago,
+            metadata: { "error" => "Extraction failed" }
           )
 
           expect(domain.web_content_extraction_status).to eq(:failed)
@@ -230,6 +239,13 @@ RSpec.describe Domain, type: :model do
         end
 
         it "includes domains with old web content" do
+          # Create service configuration first
+          create(:service_configuration,
+            service_name: "domain_web_content_extraction",
+            active: true,
+            refresh_interval_hours: 24
+          )
+          
           # Create old successful extraction
           create(:service_audit_log,
             auditable: domain_with_content,
@@ -243,12 +259,19 @@ RSpec.describe Domain, type: :model do
         end
 
         it "excludes domains with recent web content" do
-          # Create recent successful extraction
+          # Create service configuration first
+          create(:service_configuration,
+            service_name: "domain_web_content_extraction",
+            active: true,
+            refresh_interval_hours: 24
+          )
+          
+          # Create recent successful extraction (within refresh interval)
           create(:service_audit_log,
             auditable: domain_with_content,
             service_name: "domain_web_content_extraction",
             status: "success",
-            completed_at: 1.day.ago
+            completed_at: 1.hour.ago
           )
 
           result = Domain.needing_web_content_extraction

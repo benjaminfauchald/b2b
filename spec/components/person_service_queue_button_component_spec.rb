@@ -44,6 +44,12 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
   end
 
   describe "progress tracking" do
+    before do
+      # Clear existing companies and audit logs first
+      Company.destroy_all
+      ServiceAuditLog.destroy_all
+    end
+
     let!(:companies_needing) do
       [
         create(:company, linkedin_url: "https://linkedin.com/company/test1"),
@@ -53,7 +59,8 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     let!(:companies_not_needing) do
       [
-        create(:company, linkedin_ai_url: "https://linkedin.com/company/low", linkedin_ai_confidence: 70),
+        # This company WILL qualify because ai_confidence >= 50, but let's exclude it 
+        create(:company, linkedin_ai_url: "https://linkedin.com/company/low", linkedin_ai_confidence: 30),
         create(:company, linkedin_url: nil, linkedin_ai_url: nil)
       ]
     end
@@ -138,6 +145,12 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
   end
 
   describe "progress bar rendering" do
+    before do
+      # Clean up all companies and audit logs to ensure test isolation
+      Company.destroy_all
+      ServiceAuditLog.destroy_all
+    end
+
     let!(:companies) do
       3.times.map do |i|
         create(:company, linkedin_url: "https://linkedin.com/company/test#{i}")
@@ -165,6 +178,11 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
   end
 
   describe "form behavior" do
+    before do
+      # Clean up all companies to ensure test isolation
+      Company.destroy_all
+    end
+
     let!(:companies) { 2.times.map { create(:company, linkedin_url: "https://test.com") } }
 
     it "sets correct default and max values for batch size input" do
@@ -178,6 +196,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     context "when many companies need processing" do
       before do
+        # Already have 2 companies from parent context
         150.times { create(:company, linkedin_url: "https://test#{rand(1000)}.com") }
       end
 

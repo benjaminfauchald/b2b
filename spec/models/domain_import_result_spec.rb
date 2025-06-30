@@ -136,13 +136,14 @@ RSpec.describe DomainImportResult do
 
   describe '#finalize!' do
     it 'calculates processing time' do
-      # Simulate some processing time
-      sleep(0.01)
+      # Mock Time.current to simulate elapsed time
+      start_time = Time.current
+      allow(Time).to receive(:current).and_return(start_time, start_time + 1.5)
 
+      result = DomainImportResult.new
       result.finalize!
 
-      expect(result.processing_time).to be > 0
-      expect(result.processing_time).to be < 1
+      expect(result.processing_time).to eq(1.5)
     end
 
     it 'rounds processing time to 2 decimal places' do
@@ -216,7 +217,7 @@ RSpec.describe DomainImportResult do
         domain = create(:domain)
         result.add_imported_domain(domain, 2)
 
-        expect(result.summary_message).to eq('1 domain imported successfully')
+        expect(result.summary_message).to eq('1 imported')
       end
     end
 
@@ -226,7 +227,7 @@ RSpec.describe DomainImportResult do
         result.add_imported_domain(domain, 2)
         result.add_failed_domain('invalid.domain', 3, [ 'Error' ])
 
-        expect(result.summary_message).to eq('1 of 2 domains imported successfully, 1 failed')
+        expect(result.summary_message).to eq('1 imported, 1 failed')
       end
     end
 
@@ -234,7 +235,7 @@ RSpec.describe DomainImportResult do
       it 'returns failure message' do
         result.add_failed_domain('invalid.domain', 2, [ 'Error' ])
 
-        expect(result.summary_message).to eq('0 domains imported, 1 failed')
+        expect(result.summary_message).to eq('1 failed')
       end
     end
 
@@ -249,15 +250,18 @@ RSpec.describe DomainImportResult do
 
   describe '#domains_per_second' do
     it 'calculates processing rate' do
+      # Set up time mock before creating the result
+      start_time = Time.current
+      allow(Time).to receive(:current).and_return(start_time, start_time + 2.0)
+      
+      test_result = DomainImportResult.new
       domain1 = create(:domain)
       domain2 = create(:domain)
-      result.add_imported_domain(domain1, 2)
-      result.add_imported_domain(domain2, 3)
+      test_result.add_imported_domain(domain1, 2)
+      test_result.add_imported_domain(domain2, 3)
+      test_result.finalize!
 
-      # Mock processing time
-      allow(result).to receive(:processing_time).and_return(2.0)
-
-      expect(result.domains_per_second).to eq(1.0)
+      expect(test_result.domains_per_second).to eq(1.0)
     end
 
     it 'handles zero processing time' do

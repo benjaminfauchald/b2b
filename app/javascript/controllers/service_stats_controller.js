@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static values = { 
     url: String,
-    interval: { type: Number, default: 1000 } // 1 second default for real-time updates
+    interval: { type: Number, default: 30000 } // 30 second default for reasonable updates
   }
 
   connect() {

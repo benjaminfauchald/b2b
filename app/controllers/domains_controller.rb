@@ -552,10 +552,10 @@ class DomainsController < ApplicationController
     if params[:csv_file]
       Rails.logger.info "📁 FILE DETAILS:"
       Rails.logger.info "  - File class: #{params[:csv_file].class}"
-      Rails.logger.info "  - File size: #{params[:csv_file].size} bytes (#{(params[:csv_file].size / 1024.0 / 1024.0).round(2)} MB)"
-      Rails.logger.info "  - File name: #{params[:csv_file].original_filename}"
-      Rails.logger.info "  - Content type: #{params[:csv_file].content_type}"
-      Rails.logger.info "  - Temp file path: #{params[:csv_file].path}"
+      Rails.logger.info "  - File size: #{params[:csv_file].respond_to?(:size) ? "#{params[:csv_file].size} bytes (#{(params[:csv_file].size / 1024.0 / 1024.0).round(2)} MB)" : 'N/A'}"
+      Rails.logger.info "  - File name: #{params[:csv_file].respond_to?(:original_filename) ? params[:csv_file].original_filename : 'N/A'}"
+      Rails.logger.info "  - Content type: #{params[:csv_file].respond_to?(:content_type) ? params[:csv_file].content_type : 'N/A'}"
+      Rails.logger.info "  - Temp file path: #{params[:csv_file].respond_to?(:path) ? params[:csv_file].path : 'N/A'}"
     end
 
     unless params[:csv_file].present?
@@ -588,7 +588,8 @@ class DomainsController < ApplicationController
         Rails.logger.info "  - Import ID: #{import_id}"
 
         # Save file to temporary location
-        temp_file_path = Rails.root.join("tmp", "import_#{import_id}_#{params[:csv_file].original_filename}")
+        original_filename = params[:csv_file].respond_to?(:original_filename) ? params[:csv_file].original_filename : "import_#{import_id}.csv"
+        temp_file_path = Rails.root.join("tmp", "import_#{import_id}_#{original_filename}")
         File.open(temp_file_path, "wb") do |file|
           file.write(params[:csv_file].read)
         end
@@ -598,7 +599,7 @@ class DomainsController < ApplicationController
         DomainImportJob.perform_later(
           temp_file_path.to_s,
           current_user.id,
-          params[:csv_file].original_filename,
+          original_filename,
           import_id
         )
 
@@ -729,7 +730,7 @@ class DomainsController < ApplicationController
       Rails.logger.error "\n🔍 Additional context:"
       Rails.logger.error "  - User: #{current_user&.email}"
       Rails.logger.error "  - File size: #{params[:csv_file]&.size} bytes"
-      Rails.logger.error "  - File name: #{params[:csv_file]&.original_filename}"
+      Rails.logger.error "  - File name: #{params[:csv_file]&.respond_to?(:original_filename) ? params[:csv_file].original_filename : 'N/A'}"
       Rails.logger.error "  - Request duration: #{error_duration.round(4)} seconds"
       Rails.logger.error "🚨" * 20
 

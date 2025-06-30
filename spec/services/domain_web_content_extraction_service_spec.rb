@@ -39,15 +39,30 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
         }
       end
 
-      let(:mock_firecrawl_client) { double("FirecrawlClient") }
+      let(:mock_scrape_result) do
+        double("ScrapeResult",
+          success?: true,
+          markdown: "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
+          html: "<html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents.</p></body></html>",
+          metadata: {
+            "title" => "Example Domain",
+            "description" => "This domain is for use in illustrative examples",
+            "url" => "https://example.com",
+            "statusCode" => 200,
+            "responseTime" => 150
+          },
+          links: ["https://www.iana.org/domains/example"],
+          screenshot_url: nil
+        )
+      end
 
       before do
-        allow(Firecrawl::Client).to receive(:new).with("test_api_key").and_return(mock_firecrawl_client)
+        allow(Firecrawl).to receive(:api_key).with("test_api_key")
       end
 
       context "when Firecrawl extraction succeeds" do
         before do
-          allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com").and_return(mock_firecrawl_response)
+          allow(Firecrawl).to receive(:scrape).with("https://example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
         end
 
         it "extracts and stores web content successfully" do
@@ -90,30 +105,29 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
         it "handles both HTTP and HTTPS URLs" do
           # Test HTTP URL
-          domain.update(domain: "http-example.com")
-          allow(mock_firecrawl_client).to receive(:scrape).with("http://http-example.com").and_return(mock_firecrawl_response)
+          domain.update(domain: "http://example.com")
+          allow(Firecrawl).to receive(:scrape).with("http://example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
 
           result = service.perform
           expect(result.success?).to be true
         end
 
         it "uses HTTPS by default" do
-          expect(mock_firecrawl_client).to receive(:scrape).with("https://example.com")
+          expect(Firecrawl).to receive(:scrape).with("https://example.com", { formats: ["markdown", "html", "links"] })
           service.perform
         end
       end
 
       context "when Firecrawl extraction fails" do
-        let(:firecrawl_error_response) do
-          {
-            "success" => false,
-            "error" => "Failed to fetch content",
-            "details" => "Connection timeout"
-          }
+        let(:mock_error_result) do
+          double("ScrapeResult",
+            success?: false,
+            error_description: "Failed to fetch content"
+          )
         end
 
         before do
-          allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com").and_return(firecrawl_error_response)
+          allow(Firecrawl).to receive(:scrape).with("https://example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_error_result)
         end
 
         it "handles Firecrawl API errors gracefully" do
@@ -142,7 +156,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       context "when Firecrawl API raises exception" do
         before do
-          allow(mock_firecrawl_client).to receive(:scrape).and_raise(StandardError.new("Network error"))
+          allow(Firecrawl).to receive(:scrape).and_raise(StandardError.new("Network error"))
         end
 
         it "handles exceptions and creates failed audit log" do
@@ -172,7 +186,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
         end
 
         it "does not attempt Firecrawl extraction" do
-          expect(mock_firecrawl_client).not_to receive(:scrape)
+          expect(Firecrawl).not_to receive(:scrape)
           service.perform
         end
       end
@@ -184,26 +198,26 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
             auditable: domain,
             service_name: "domain_web_content_extraction",
             status: "success",
-            completed_at: 1.day.ago
+            completed_at: 1.hour.ago
           )
         end
 
         it "skips extraction for recently extracted content" do
+          expect(Firecrawl).not_to receive(:scrape)
+          
           result = service.perform
 
           expect(result.success?).to be true
           expect(result.message).to match(/recently extracted/i)
-
-          expect(mock_firecrawl_client).not_to receive(:scrape)
         end
 
         it "allows forced re-extraction" do
           service_with_force = described_class.new(domain: domain, force: true)
-          allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com").and_return(mock_firecrawl_response)
+          allow(Firecrawl).to receive(:scrape).with("https://example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
 
           result = service_with_force.perform
           expect(result.success?).to be true
-          expect(mock_firecrawl_client).to have_received(:scrape)
+          expect(Firecrawl).to have_received(:scrape)
         end
       end
     end
@@ -218,17 +232,30 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
       end
 
       let(:batch_service) { described_class.new(batch_size: 2) }
-      let(:mock_firecrawl_client) { double("FirecrawlClient") }
 
       before do
-        allow(Firecrawl::Client).to receive(:new).and_return(mock_firecrawl_client)
+        allow(Firecrawl).to receive(:api_key).with("test_api_key")
 
         # Mock successful responses for domains with A records
-        allow(mock_firecrawl_client).to receive(:scrape).with("https://test1.com").and_return(
-          { "success" => true, "data" => { "content" => "Test1 content", "metadata" => { "title" => "Test1" } } }
+        allow(Firecrawl).to receive(:scrape).with("https://test1.com", { formats: ["markdown", "html", "links"] }).and_return(
+          double("ScrapeResult", 
+            success?: true,
+            markdown: "Test1 content",
+            html: "<p>Test1 content</p>",
+            metadata: { "title" => "Test1" },
+            links: [],
+            screenshot_url: nil
+          )
         )
-        allow(mock_firecrawl_client).to receive(:scrape).with("https://test2.com").and_return(
-          { "success" => true, "data" => { "content" => "Test2 content", "metadata" => { "title" => "Test2" } } }
+        allow(Firecrawl).to receive(:scrape).with("https://test2.com", { formats: ["markdown", "html", "links"] }).and_return(
+          double("ScrapeResult",
+            success?: true,
+            markdown: "Test2 content", 
+            html: "<p>Test2 content</p>",
+            metadata: { "title" => "Test2" },
+            links: [],
+            screenshot_url: nil
+          )
         )
       end
 
@@ -239,7 +266,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
         expect(result.data[:processed]).to eq(2) # Only domains with A records
         expect(result.data[:successful]).to eq(2)
         expect(result.data[:failed]).to eq(0)
-        expect(result.data[:skipped]).to eq(1) # Domain without A record
+        expect(result.data[:skipped]).to eq(0) # No skipped because scope filters them out
       end
 
       it "creates audit logs for all attempted extractions" do
@@ -291,9 +318,26 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
     end
 
     describe "URL handling" do
+      let(:mock_scrape_result) do
+        double("ScrapeResult",
+          success?: true,
+          markdown: "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
+          html: "<html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents.</p></body></html>",
+          metadata: {
+            "title" => "Example Domain",
+            "description" => "This domain is for use in illustrative examples",
+            "url" => "https://example.com",
+            "statusCode" => 200,
+            "responseTime" => 150
+          },
+          links: ["https://www.iana.org/domains/example"],
+          screenshot_url: nil
+        )
+      end
+      
       it "handles domains with special characters" do
         domain.update(domain: "åäö-example.com")
-        allow(mock_firecrawl_client).to receive(:scrape).with("https://åäö-example.com").and_return(mock_firecrawl_response)
+        allow(Firecrawl).to receive(:scrape).with("https://åäö-example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
 
         result = service.perform
         expect(result.success?).to be true
@@ -301,7 +345,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       it "handles domains with ports" do
         domain.update(domain: "example.com:8080")
-        allow(mock_firecrawl_client).to receive(:scrape).with("https://example.com:8080").and_return(mock_firecrawl_response)
+        allow(Firecrawl).to receive(:scrape).with("https://example.com:8080", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
 
         result = service.perform
         expect(result.success?).to be true
@@ -309,7 +353,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
       it "handles subdomains correctly" do
         domain.update(domain: "www.example.com")
-        allow(mock_firecrawl_client).to receive(:scrape).with("https://www.example.com").and_return(mock_firecrawl_response)
+        allow(Firecrawl).to receive(:scrape).with("https://www.example.com", { formats: ["markdown", "html", "links"] }).and_return(mock_scrape_result)
 
         result = service.perform
         expect(result.success?).to be true
@@ -318,35 +362,38 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
 
     describe "content validation and processing" do
       let(:malformed_response) do
-        {
-          "success" => true,
-          "data" => {
-            "content" => nil,
-            "metadata" => {}
-          }
-        }
+        double("ScrapeResult",
+          success?: true,
+          markdown: nil,
+          html: nil,
+          metadata: {},
+          links: [],
+          screenshot_url: nil
+        )
       end
 
       before do
-        allow(mock_firecrawl_client).to receive(:scrape).and_return(malformed_response)
+        allow(Firecrawl).to receive(:scrape).and_return(malformed_response)
       end
 
       it "handles malformed Firecrawl responses" do
         result = service.perform
 
         expect(result.success?).to be false
-        expect(result.error).to match(/invalid.*content/i)
+        expect(result.error).to match(/no content found/i)
       end
 
       it "validates required content fields" do
-        response_without_content = {
-          "success" => true,
-          "data" => {
-            "metadata" => { "title" => "Test" }
-          }
-        }
+        response_without_content = double("ScrapeResult",
+          success?: true,
+          markdown: "",
+          html: "",
+          metadata: { "title" => "Test" },
+          links: [],
+          screenshot_url: nil
+        )
 
-        allow(mock_firecrawl_client).to receive(:scrape).and_return(response_without_content)
+        allow(Firecrawl).to receive(:scrape).and_return(response_without_content)
 
         result = service.perform
         expect(result.success?).to be false
@@ -354,9 +401,26 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
     end
 
     describe "legacy and queue methods" do
+      let(:mock_scrape_result) do
+        double("ScrapeResult",
+          success?: true,
+          markdown: "# Example Domain\n\nThis domain is for use in illustrative examples in documents.",
+          html: "<html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in illustrative examples in documents.</p></body></html>",
+          metadata: {
+            "title" => "Example Domain",
+            "description" => "This domain is for use in illustrative examples",
+            "url" => "https://example.com",
+            "statusCode" => 200,
+            "responseTime" => 150
+          },
+          links: ["https://www.iana.org/domains/example"],
+          screenshot_url: nil
+        )
+      end
+      
       describe ".extract_web_content" do
         it "provides legacy interface" do
-          allow(mock_firecrawl_client).to receive(:scrape).and_return(mock_firecrawl_response)
+          allow(Firecrawl).to receive(:scrape).and_return(mock_scrape_result)
 
           result = described_class.extract_web_content(domain)
           expect(result.success?).to be true

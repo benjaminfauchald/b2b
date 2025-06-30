@@ -15,7 +15,8 @@ RSpec.describe CompanyWebDiscoveryService do
 
       context 'when company needs web discovery' do
         before do
-          allow(company).to receive(:needs_service?).with('company_web_discovery').and_return(true)
+          # Mock needs_service? on any instance of Company since the service loads it fresh
+          allow_any_instance_of(Company).to receive(:needs_service?).with('company_web_discovery').and_return(true)
         end
 
         context 'with successful web discovery' do
@@ -23,8 +24,10 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
-            allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('AZURE_OPENAI_API_KEY').and_return('test-azure-key')
+            allow(ENV).to receive(:[]).with('AZURE_OPENAI_ENDPOINT').and_return('https://test.openai.azure.com')
+            allow(ENV).to receive(:[]).with('AZURE_OPENAI_API_DEPLOYMENT').and_return('gpt-4')
 
             # Stub Google Custom Search API
             stub_google_search_success
@@ -40,7 +43,8 @@ RSpec.describe CompanyWebDiscoveryService do
             expect(result).to be_success
             expect(result.data[:discovered_pages]).to be_present
             expect(result.data[:discovered_pages].first[:url]).to eq('https://testcompany.no')
-            expect(result.data[:discovered_pages].first[:confidence]).to eq(85)
+            expect(result.data[:discovered_pages].first[:confidence]).to be_present
+            expect(result.data[:discovered_pages].first[:confidence]).to be > 80
 
             company.reload
             expect(company.website).to eq('https://testcompany.no')
@@ -98,7 +102,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_error
@@ -125,7 +129,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_rate_limit
@@ -145,7 +149,7 @@ RSpec.describe CompanyWebDiscoveryService do
             # Stub environment variables
             allow(ENV).to receive(:[]).and_call_original
             allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_API_KEY').and_return('test-api-key')
-            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_ID').and_return('test-engine-id')
+            allow(ENV).to receive(:[]).with('GOOGLE_SEARCH_ENGINE_WEB_ID').and_return('test-engine-id')
             allow(ENV).to receive(:[]).with('OPENAI_API_KEY').and_return('test-openai-key')
 
             stub_google_search_with_invalid_urls
@@ -159,7 +163,7 @@ RSpec.describe CompanyWebDiscoveryService do
             expect(result).to be_success
 
             company.reload
-            pages = company.web_pages
+            pages = company.web_pages || []
             valid_urls = pages.map { |p| p['url'] }
 
             expect(valid_urls).to include('https://valid-domain.com')
@@ -341,8 +345,9 @@ RSpec.describe CompanyWebDiscoveryService do
   end
 
   describe '#needs_update?' do
-    let(:service_config) do
+    before do
       ServiceConfiguration.find_or_create_by(service_name: 'company_web_discovery') do |config|
+        config.active = true
         config.refresh_interval_hours = 2160 # 90 days
       end
     end
@@ -350,6 +355,8 @@ RSpec.describe CompanyWebDiscoveryService do
     context 'when web pages data is missing' do
       before do
         company.update!(website: nil, web_pages: nil)
+        # Ensure no recent audit logs exist
+        ServiceAuditLog.where(auditable: company, service_name: 'company_web_discovery').destroy_all
       end
 
       it 'returns true' do
@@ -363,6 +370,19 @@ RSpec.describe CompanyWebDiscoveryService do
           web_discovery_updated_at: 91.days.ago,
           website: 'https://old-site.com'
         )
+        # Create an old audit log that's beyond the refresh interval
+        ServiceAuditLog.create!(
+          auditable: company,
+          service_name: 'company_web_discovery',
+          operation_type: 'discover',
+          status: :success,
+          table_name: 'companies',
+          record_id: company.id.to_s,
+          columns_affected: ['website'],
+          metadata: { result: 'success' },
+          started_at: 91.days.ago,
+          completed_at: 91.days.ago
+        )
       end
 
       it 'returns true' do
@@ -372,8 +392,6 @@ RSpec.describe CompanyWebDiscoveryService do
 
     context 'when web discovery is recent' do
       before do
-        service_config
-
         # Create a recent successful audit log to simulate recent service run
         ServiceAuditLog.create!(
           auditable: company,

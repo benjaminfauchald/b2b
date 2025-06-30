@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# This script starts Guard with proper notification setup for macOS
+
+puts "🚀 Starting Guard with enhanced notifications..."
+puts "📱 Terminal notifications enabled for test results"
+puts "🔔 Traffic light system: ✅ Green = Pass, ❌ Red = Fail, ⚠️ Yellow = Pending"
+puts "⚡ Auto-running tests on file changes..."
+puts ""
+puts "Press Ctrl+C to stop Guard"
+puts "=" * 50
+
+exec "bundle", "exec", "guard", "start", "--clear"

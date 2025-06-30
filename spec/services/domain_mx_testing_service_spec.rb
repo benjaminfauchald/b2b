@@ -46,7 +46,7 @@ RSpec.describe DomainMxTestingService, type: :service do
 
             expect(result.success?).to be true
             expect(result.message).to eq('MX test completed')
-            expect(result.data[:result][:status]).to eq(:success)
+            expect(result.data[:result][:status]).to eq('success')
           end
 
           it 'updates domain MX status to true' do
@@ -118,23 +118,23 @@ RSpec.describe DomainMxTestingService, type: :service do
 
         context 'with timeout error' do
           before do
-            # Mock timeout error
-            allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+            # Mock timeout error in DNS resolution
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_raise(Timeout::Error)
           end
 
-          it 'creates audit log with failed status' do
+          it 'creates audit log with success status but error metadata' do
             expect { service.perform }.to change(ServiceAuditLog, :count).by(1)
 
             audit_log = ServiceAuditLog.last
-            expect(audit_log.status).to eq('failed')
-            expect(audit_log.error_message).to include('Service error')
+            expect(audit_log.status).to eq('success')
+            expect(audit_log.metadata['mx_status']).to eq(false)
           end
 
-          it 'returns error result' do
+          it 'returns successful result with error status in data' do
             result = service.perform
 
-            expect(result.success?).to be false
-            expect(result.error).to include('Service error')
+            expect(result.success?).to be true
+            expect(result.data[:result][:status]).to eq('error')
           end
         end
       end
@@ -151,7 +151,7 @@ RSpec.describe DomainMxTestingService, type: :service do
         end
 
         it 'creates audit logs for each domain' do
-          expect { service.perform }.to change(ServiceAuditLog, :count).by(4) # 3 domains + 1 batch result
+          expect { service.perform }.to change(ServiceAuditLog, :count).by(3) # 3 domains
 
           audit_logs = ServiceAuditLog.where(service_name: 'domain_mx_testing')
           domain_logs = audit_logs.where.not(auditable: nil)

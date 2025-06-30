@@ -59,7 +59,7 @@ class PersonProfileExtractionService < ApplicationService
                       profiles_extracted: profile_count,
                       container_id: container_id)
       else
-        error_result("Profile extraction failed: #{execution_result[:error]}")
+        raise "Profile extraction failed: #{execution_result[:error]}"
       end
     end
   rescue StandardError => e

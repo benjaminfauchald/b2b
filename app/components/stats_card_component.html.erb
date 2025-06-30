@@ -1,0 +1,22 @@
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-stat="<%= data_stat %>">
+  <div class="flex items-center justify-between">
+    <div class="flex-1">
+      <p class="text-sm font-medium text-gray-600 dark:text-gray-400"><%= label %></p>
+      <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1"><%= value %></p>
+      
+      <% if trend && trend_direction %>
+        <span class="inline-flex items-center text-sm font-medium <%= trend_color %> mt-2">
+          <%= trend_icon %> <%= trend %>
+        </span>
+      <% end %>
+    </div>
+    
+    <% if icon %>
+      <div class="flex-shrink-0">
+        <span class="text-4xl <%= color_classes %> p-3 rounded-lg">
+          <%= icon %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+</div>

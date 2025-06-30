@@ -28,6 +28,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Always touch a file before you write to avoid this error "Error: File has not been read yet. Read it first before writing to it."
 - Make sure we dont start to make duplicates of files like homepage_hero_component 2.rb or /homepage_stats_component 2.r. We ALWAYS need to work on the actual file or the system will lose integrity!
 - Make sure that we write any temporary files and scripts to the tmp/ folder
+- **CRITICAL**: When changing any code or functionality, ALWAYS check if there are existing tests that need to be updated or might be broken by the changes. Search for relevant test files and verify they still pass with the new implementation.
+
+## Guard + Claude Integration
+- Guard is set up to automatically run tests and generate failure reports
+- When tests fail, check `tmp/test_failures.md` for detailed failure information
+- Use `./bin/claude-guard prompt` to get a formatted prompt for Claude to fix failures
+- Use `./bin/claude-guard watch` to automatically detect new failures and generate prompts
+- **Workflow**: Start Guard → Make changes → Guard detects failures → Copy generated prompt to Claude → Claude fixes tests → Guard auto-reruns
 
 ## Git Commit Guidelines
 - When creating commits, DO NOT include the "Generated with Claude Code" or "Co-Authored-By: Claude" lines

@@ -83,6 +83,7 @@ RSpec.describe CompanyFinancialDataWorker, type: :worker do
 
       it 'logs the exception' do
         expect(Rails.logger).to receive(:error).with(/Error in CompanyFinancialDataWorker/)
+        expect(Rails.logger).to receive(:error).with(String) # For backtrace
         expect { worker.perform(company.id) }.to raise_error(StandardError)
       end
 

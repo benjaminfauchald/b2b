@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe DomainTestingService, type: :service do
   let(:company) { create(:company) }
-  let(:domain) { create(:domain, domain: 'example.com', dns: nil) }
+  let(:domain) { create(:domain, domain: 'example.com', dns: nil, mx: nil, www: nil) }
   let(:service) { described_class.new(domain: domain) }
 
   describe '#perform' do
@@ -16,8 +16,22 @@ RSpec.describe DomainTestingService, type: :service do
       context 'when testing single domain' do
         context 'with successful DNS resolution' do
           before do
-            # Mock successful DNS resolution
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
+            # Mock successful DNS resolution with proper DNS resource objects
+            a_record = double('A Record', address: '192.168.1.1')
+            mx_record = double('MX Record', exchange: 'mail.example.com')
+            txt_record = double('TXT Record', strings: ['v=spf1 -all'])
+            
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::A).and_return([a_record])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::MX).and_return([mx_record])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::TXT).and_return([txt_record])
+            
+            # Mock worker classes
+            stub_const('DomainMxTestingWorker', Class.new do
+              def self.perform_async(domain_id); end
+            end)
+            stub_const('DomainARecordTestingWorker', Class.new do
+              def self.perform_async(domain_id); end
+            end)
           end
 
           it 'creates a successful audit log' do
@@ -65,8 +79,8 @@ RSpec.describe DomainTestingService, type: :service do
           end
 
           it 'queues follow-up tests for successful DNS' do
-            expect(DomainMxTestingWorker).to receive(:perform_async).with(domain.id)
-            expect(DomainARecordTestingWorker).to receive(:perform_async).with(domain.id)
+            expect(DomainMxTestingWorker).to receive(:perform_async).with(domain.id).once
+            expect(DomainARecordTestingWorker).to receive(:perform_async).with(domain.id).once
 
             service.perform
           end
@@ -127,23 +141,25 @@ RSpec.describe DomainTestingService, type: :service do
 
         context 'with timeout error' do
           before do
-            # Mock timeout error
-            allow(Timeout).to receive(:timeout).and_raise(Timeout::Error)
+            # Mock timeout error in DNS resolution
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_raise(Timeout::Error)
           end
 
-          it 'creates audit log with failed status' do
+          it 'creates audit log with success status but error metadata' do
             expect { service.perform }.to change(ServiceAuditLog, :count).by(1)
 
             audit_log = ServiceAuditLog.last
-            expect(audit_log.status).to eq('failed')
-            expect(audit_log.error_message).to include('Service error')
+            expect(audit_log.status).to eq('success')
+            expect(audit_log.metadata['test_result']).to eq('error')
+            expect(audit_log.metadata['dns_status']).to eq(false)
           end
 
-          it 'returns error result' do
+          it 'returns successful result with error status in data' do
             result = service.perform
 
-            expect(result.success?).to be false
-            expect(result.error).to include('Service error')
+            expect(result.success?).to be true
+            expect(result.data[:result][:status]).to eq('error')
+            expect(result.data[:result][:records][:error]).to include('timed out')
           end
         end
       end
@@ -154,11 +170,25 @@ RSpec.describe DomainTestingService, type: :service do
 
         before do
           # Mock successful DNS resolution for all domains
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
+          a_record = double('A Record', address: '192.168.1.1')
+          mx_record = double('MX Record', exchange: 'mail.example.com')
+          txt_record = double('TXT Record', strings: ['v=spf1 -all'])
+          
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::A).and_return([a_record])
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::MX).and_return([mx_record])
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::TXT).and_return([txt_record])
+          
+          # Mock worker classes
+          stub_const('DomainMxTestingWorker', Class.new do
+            def self.perform_async(domain_id); end
+          end)
+          stub_const('DomainARecordTestingWorker', Class.new do
+            def self.perform_async(domain_id); end
+          end)
         end
 
         it 'creates audit logs for each domain' do
-          expect { service.perform }.to change(ServiceAuditLog, :count).by(4) # 3 domains + 1 batch result
+          expect { service.perform }.to change(ServiceAuditLog, :count).by(3) # 3 domains
 
           audit_logs = ServiceAuditLog.where(service_name: 'domain_testing')
           domain_logs = audit_logs.where.not(auditable: nil)

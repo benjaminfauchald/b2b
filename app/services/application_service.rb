@@ -175,12 +175,23 @@ class ApplicationService
     rescue StandardError => e
       # Check if this is a rate limit error with retry_after
       metadata = { "error" => e.message }
+      status = :failed
+      
       if e.message.include?("rate limit") && e.respond_to?(:retry_after)
         metadata["rate_limited"] = true
         metadata["retry_after"] = e.retry_after
+        status = :rate_limited
       end
 
-      audit_log.mark_failed!(e.message, metadata, [])
+      # Use update_columns to bypass validations and set the status directly
+      audit_log.update_columns(
+        status: status,
+        error_message: e.message,
+        completed_at: Time.current,
+        metadata: audit_log.metadata.merge(metadata),
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
+      )
+      
       raise e
     end
   end

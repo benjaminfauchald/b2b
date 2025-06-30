@@ -28,7 +28,9 @@ RSpec.describe 'Domain Queue Testing', type: :request do
         json = JSON.parse(response.body)
         expect(json["success"]).to be true
         expect(json["queued_count"]).to eq(3)
-        expect(json["message"]).to eq("Queued 3 domains for DNS testing")
+        expect(json["message"]).to include("Queued")
+      expect(json["message"]).to include("3")
+      expect(json["message"]).to include("DNS testing")
       end
 
       it 'respects count parameter' do

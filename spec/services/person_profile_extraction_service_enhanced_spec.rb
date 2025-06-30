@@ -1,15 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe PersonProfileExtractionService, type: :service do
-  let(:service_config) do
-    create(:service_configuration,
-      service_name: "person_profile_extraction",
-      active: true
-    )
-  end
-
   before do
-    service_config
+    ServiceConfiguration.find_or_create_by(service_name: "person_profile_extraction") do |config|
+      config.active = true
+    end
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("PHANTOMBUSTER_PHANTOM_ID").and_return("test_phantom_id")
     allow(ENV).to receive(:[]).with("PHANTOMBUSTER_API_KEY").and_return("test_api_key")
@@ -48,7 +43,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
           { success: false, error: "Test stopped here" }
         )
 
-        result = service.call
+        result = service.perform
         expect(result.success?).to be false
         expect(result.error).to include("Test stopped here")
       end
@@ -86,7 +81,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
           { success: false, error: "Test stopped here" }
         )
 
-        result = service.call
+        result = service.perform
         expect(result.success?).to be false
         expect(result.error).to include("Test stopped here")
       end
@@ -103,7 +98,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
       it "returns error for low confidence AI URL" do
         service = PersonProfileExtractionService.new(company_id: company.id)
-        result = service.call
+        result = service.perform
 
         expect(result.success?).to be false
         expect(result.error).to eq("Company has no valid LinkedIn URL")
@@ -121,7 +116,7 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
       it "returns error for missing LinkedIn URL" do
         service = PersonProfileExtractionService.new(company_id: company.id)
-        result = service.call
+        result = service.perform
 
         expect(result.success?).to be false
         expect(result.error).to eq("Company has no valid LinkedIn URL")

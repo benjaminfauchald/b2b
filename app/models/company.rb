@@ -110,7 +110,7 @@ class Company < ApplicationRecord
   scope :profile_extraction_candidates, -> {
     where(
       "(linkedin_url IS NOT NULL AND linkedin_url != '') OR " \
-      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 50)"
+      "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '' AND linkedin_ai_confidence >= 80)"
     ).order(operating_revenue: :desc)
   }
 
@@ -188,7 +188,7 @@ class Company < ApplicationRecord
   def best_linkedin_url
     if linkedin_url.present?
       linkedin_url
-    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 50
+    elsif linkedin_ai_url.present? && linkedin_ai_confidence.present? && linkedin_ai_confidence >= 80
       linkedin_ai_url
     else
       nil

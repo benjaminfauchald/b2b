@@ -174,93 +174,6 @@ norwegian_company_no_financials:
   employees_data: null
   employee_discovery_updated_at: null
 
-company_minimal_data:
-  source_country: "NO"
-  source_registry: "brreg"
-  source_id: "811014982"
-  registration_number: "811014982"
-  company_name: "JÆREN KRISTNE SENTER"
-  organization_form_code: "FLI"
-  organization_form_description: "Forening/lag/innretning"
-  registration_date: null
-  deregistration_date: null
-  deregistration_reason: null
-  registration_country: null
-  primary_industry_code: "94.91"
-  primary_industry_description: "Religiøse organisasjoner"
-  secondary_industry_code: null
-  secondary_industry_description: null
-  tertiary_industry_code: null
-  tertiary_industry_description: null
-  business_description: null
-  segment: null
-  industry: null
-  has_registered_employees: false
-  employee_count: null
-  employee_registration_date_registry: null
-  employee_registration_date_nav: null
-  linkedin_employee_count: null
-  website: null
-  email: null
-  phone: "46 37 92 47"
-  mobile: null
-  postal_address: null
-  postal_city: null
-  postal_code: null
-  postal_municipality: null
-  postal_municipality_code: null
-  postal_country: null
-  postal_country_code: null
-  business_address: null
-  business_city: null
-  business_postal_code: null
-  business_municipality: null
-  business_municipality_code: null
-  business_country: null
-  business_country_code: null
-  last_submitted_annual_report: null
-  ordinary_result: null
-  annual_result: null
-  operating_revenue: null
-  operating_costs: null
-  linkedin_url: null
-  linkedin_ai_url: null
-  linkedin_alt_url: null
-  linkedin_alternatives: null
-  linkedin_processed: false
-  linkedin_last_processed_at: null
-  linkedin_ai_confidence: null
-  sps_match: null
-  sps_match_percentage: null
-  http_error: null
-  http_error_message: null
-  source_raw_data: null
-  brreg_id: 34
-  country: null
-  description: null
-  vat_registered: null
-  vat_registration_date: null
-  voluntary_vat_registered: null
-  voluntary_vat_registration_date: null
-  bankruptcy: null
-  bankruptcy_date: null
-  under_liquidation: null
-  liquidation_date: null
-  revenue: null
-  profit: null
-  equity: null
-  total_assets: null
-  current_assets: null
-  fixed_assets: null
-  current_liabilities: null
-  long_term_liabilities: null
-  year: null
-  financial_data: null
-  financial_data_updated_at: null
-  web_pages: null
-  web_discovery_updated_at: null
-  employees_data: null
-  employee_discovery_updated_at: null
 
 company_with_special_chars:
   source_country: "NO"
@@ -350,3 +263,156 @@ company_with_special_chars:
   employees_data: null
   employee_discovery_updated_at: null
 
+
+norwegian_company_complete:
+  source_country: "NO"
+  source_registry: "brreg"
+  source_id: "987654321"
+  registration_number: "987654321"
+  company_name: "NORWEGIAN COMPLETE AS"
+  organization_form_code: "AS"
+  organization_form_description: "Aksjeselskap"
+  registration_date: null
+  deregistration_date: null
+  deregistration_reason: null
+  registration_country: null
+  primary_industry_code: "62.010"
+  primary_industry_description: "Programmeringstjenester"
+  secondary_industry_code: null
+  secondary_industry_description: null
+  tertiary_industry_code: null
+  tertiary_industry_description: null
+  business_description: null
+  segment: null
+  industry: null
+  has_registered_employees: true
+  employee_count: 50
+  employee_registration_date_registry: null
+  employee_registration_date_nav: null
+  linkedin_employee_count: 52
+  website: "https://norwegian-complete.no"
+  email: "info@norwegian-complete.no"
+  phone: "22 33 44 55"
+  mobile: null
+  postal_address: "Testgate 1"
+  postal_city: "OSLO"
+  postal_code: "0180"
+  postal_municipality: "OSLO"
+  postal_municipality_code: null
+  postal_country: "Norge"
+  postal_country_code: null
+  business_address: "Testgate 1"
+  business_city: "OSLO"
+  business_postal_code: "0180"
+  business_municipality: "OSLO"
+  business_municipality_code: null
+  business_country: "Norge"
+  business_country_code: null
+  last_submitted_annual_report: null
+  ordinary_result: 5000000
+  annual_result: 4000000
+  operating_revenue: 25000000
+  operating_costs: 20000000
+  linkedin_url: "https://linkedin.com/company/norwegian-complete"
+
+swedish_company_high_revenue:
+  source_country: "SE"
+  source_registry: "bolagsverket"
+  source_id: "5566778899"
+  registration_number: "5566778899"
+  company_name: "SWEDISH HIGH REVENUE AB"
+  organization_form_code: "AB"
+  organization_form_description: "Aktiebolag"
+  registration_date: null
+  deregistration_date: null
+  deregistration_reason: null
+  registration_country: null
+  primary_industry_code: "45.110"
+  primary_industry_description: "Sale of cars and light motor vehicles"
+  secondary_industry_code: null
+  secondary_industry_description: null
+  tertiary_industry_code: null
+  tertiary_industry_description: null
+  business_description: null
+  segment: null
+  industry: null
+  has_registered_employees: true
+  employee_count: 200
+  employee_registration_date_registry: null
+  employee_registration_date_nav: null
+  linkedin_employee_count: 210
+  website: null
+  email: "info@swedish-revenue.se"
+  phone: "+46 8 123 4567"
+  mobile: null
+  postal_address: "Storgatan 10"
+  postal_city: "STOCKHOLM"
+  postal_code: "11122"
+  postal_municipality: "STOCKHOLM"
+  postal_municipality_code: null
+  postal_country: "Sweden"
+  postal_country_code: null
+  business_address: "Storgatan 10"
+  business_city: "STOCKHOLM"
+  business_postal_code: "11122"
+  business_municipality: "STOCKHOLM"
+  business_municipality_code: null
+  business_country: "Sweden"
+  business_country_code: null
+  last_submitted_annual_report: null
+  ordinary_result: 15000000
+  annual_result: 12000000
+  operating_revenue: 150000000
+  operating_costs: 135000000
+  linkedin_url: null
+
+norwegian_company_no_financials:
+  source_country: "NO"
+  source_registry: "brreg"
+  source_id: "112233445"
+  registration_number: "112233445"
+  company_name: "NO FINANCIALS AS"
+  organization_form_code: "AS"
+  organization_form_description: "Aksjeselskap"
+  registration_date: null
+  deregistration_date: null
+  deregistration_reason: null
+  registration_country: null
+  primary_industry_code: "70.220"
+  primary_industry_description: "Bedriftsrådgivning og annen administrativ rådgivning"
+  secondary_industry_code: null
+  secondary_industry_description: null
+  tertiary_industry_code: null
+  tertiary_industry_description: null
+  business_description: null
+  segment: null
+  industry: null
+  has_registered_employees: false
+  employee_count: null
+  employee_registration_date_registry: null
+  employee_registration_date_nav: null
+  linkedin_employee_count: null
+  website: "https://no-financials.no"
+  email: null
+  phone: null
+  mobile: null
+  postal_address: null
+  postal_city: "BERGEN"
+  postal_code: "5000"
+  postal_municipality: "BERGEN"
+  postal_municipality_code: null
+  postal_country: "Norge"
+  postal_country_code: null
+  business_address: null
+  business_city: "BERGEN"
+  business_postal_code: "5000"
+  business_municipality: "BERGEN"
+  business_municipality_code: null
+  business_country: "Norge"
+  business_country_code: null
+  last_submitted_annual_report: null
+  ordinary_result: null
+  annual_result: null
+  operating_revenue: null
+  operating_costs: null
+  linkedin_url: null

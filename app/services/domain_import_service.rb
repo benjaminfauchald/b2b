@@ -50,12 +50,22 @@ class DomainImportService < ApplicationService
           domains_duplicated: @result.duplicate_domains.count
         )
 
-        Rails.logger.info "🔍 IMPORT DEBUG: About to return success result"
-        success_result("Domain import completed",
+        Rails.logger.info "🔍 IMPORT DEBUG: About to return result"
+        
+        # Return appropriate result based on whether the import was successful
+        if @result.success?
+          success_result("Domain import completed successfully",
+                        imported: @result.imported_domains.count,
+                        failed: @result.failed_domains.count,
+                        duplicates: @result.duplicate_domains.count,
+                        result: @result)
+        else
+          error_result("Domain import completed with errors",
                       imported: @result.imported_domains.count,
                       failed: @result.failed_domains.count,
                       duplicates: @result.duplicate_domains.count,
                       result: @result)
+        end
 
       rescue StandardError => e
         Rails.logger.error "❌ Domain import failed: #{e.message}"
@@ -155,21 +165,20 @@ class DomainImportService < ApplicationService
     # Read just the header to validate structure
     begin
       Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process for validation"
-      first_chunk = SmarterCSV.process(file.path, { chunk_size: 1 })
-      Rails.logger.info "🔍 IMPORT DEBUG: SmarterCSV.process returned: #{first_chunk.inspect}"
-
-      if first_chunk.nil? || first_chunk.empty?
-        Rails.logger.error "🔍 IMPORT DEBUG: first_chunk is nil or empty"
-        raise ArgumentError, "CSV file is empty or contains no data rows"
+      first_row = nil
+      
+      # Get just the first row to check headers
+      SmarterCSV.process(file.path, { chunk_size: 1 }) do |chunk|
+        Rails.logger.info "🔍 IMPORT DEBUG: Got chunk: #{chunk.inspect}"
+        first_row = chunk.first if chunk && !chunk.empty?
+        break # Only need the first chunk
       end
-
-      Rails.logger.info "🔍 IMPORT DEBUG: About to call first_chunk.first"
-      first_row = first_chunk.first
+      
       Rails.logger.info "🔍 IMPORT DEBUG: first_row: #{first_row.inspect}"
 
-      if first_row.nil?
-        Rails.logger.error "🔍 IMPORT DEBUG: first_row is nil!"
-        raise ArgumentError, "CSV file first row is nil"
+      if first_row.nil? || !first_row.is_a?(Hash)
+        Rails.logger.error "🔍 IMPORT DEBUG: first_row is nil or not a hash!"
+        raise ArgumentError, "CSV file is empty or contains no data rows"
       end
 
       Rails.logger.info "🔍 IMPORT DEBUG: About to get keys from first_row"
@@ -356,12 +365,6 @@ class DomainImportService < ApplicationService
       chunk_size: 100,
       headers_in_file: has_headers,
       user_provided_headers: has_headers ? nil : [ :domain ],
-      key_mapping: {
-        "Domain" => :domain,
-        "DNS" => :dns,
-        "WWW" => :www,
-        "MX" => :mx
-      },
       remove_empty_values: false,
       convert_values_to_numeric: false,
       remove_zero_values: false,

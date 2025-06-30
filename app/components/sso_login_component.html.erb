@@ -1,0 +1,9 @@
+<div class="<%= container_classes %>">
+  <div class="space-y-4">
+    <% enabled_providers.each do |provider_config| %>
+      <div class="oauth-provider-wrapper">
+        <%= render OauthButtonComponent.new(**provider_config) %>
+      </div>
+    <% end %>
+  </div>
+</div>

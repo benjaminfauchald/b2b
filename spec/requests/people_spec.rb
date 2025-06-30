@@ -1,16 +1,22 @@
 require 'rails_helper'
 
 RSpec.describe "People", type: :request do
+  let(:user) { create(:user) }
+  
+  before do
+    sign_in user
+  end
   describe "GET /index" do
     it "returns http success" do
-      get "/people/index"
+      get "/people"
       expect(response).to have_http_status(:success)
     end
   end
 
   describe "GET /show" do
     it "returns http success" do
-      get "/people/show"
+      person = create(:person)
+      get "/people/#{person.id}"
       expect(response).to have_http_status(:success)
     end
   end
@@ -24,29 +30,32 @@ RSpec.describe "People", type: :request do
 
   describe "GET /edit" do
     it "returns http success" do
-      get "/people/edit"
+      person = create(:person)
+      get "/people/#{person.id}/edit"
       expect(response).to have_http_status(:success)
     end
   end
 
-  describe "GET /create" do
+  describe "POST /create" do
     it "returns http success" do
-      get "/people/create"
-      expect(response).to have_http_status(:success)
+      post "/people", params: { person: { name: "Test Person" } }
+      expect(response).to have_http_status(:redirect)
     end
   end
 
-  describe "GET /update" do
+  describe "PATCH /update" do
     it "returns http success" do
-      get "/people/update"
-      expect(response).to have_http_status(:success)
+      person = create(:person)
+      patch "/people/#{person.id}", params: { person: { name: "Updated Name" } }
+      expect(response).to have_http_status(:redirect)
     end
   end
 
-  describe "GET /destroy" do
+  describe "DELETE /destroy" do
     it "returns http success" do
-      get "/people/destroy"
-      expect(response).to have_http_status(:success)
+      person = create(:person)
+      delete "/people/#{person.id}"
+      expect(response).to have_http_status(:redirect)
     end
   end
 end

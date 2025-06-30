@@ -7,6 +7,9 @@ RSpec.describe CompanyFinancialsWorker do
   let(:companies) { [] }
 
   before do
+    # Create service configuration for the test
+    create(:service_configuration, service_name: 'company_financials', active: true)
+
     # Create test companies
     3.times do |i|
       company = create(:company, registration_number: "TEST#{1000 + i}")
@@ -17,7 +20,14 @@ RSpec.describe CompanyFinancialsWorker do
     allow_any_instance_of(described_class).to receive(:log_to_sct)
 
     # Mock ServiceAuditLog creation
-    allow(ServiceAuditLog).to receive(:create!).and_return(double('ServiceAuditLog', mark_success!: true, mark_failed!: true))
+    audit_log_double = double('ServiceAuditLog', 
+      mark_success!: true, 
+      mark_failed!: true, 
+      add_metadata: true,
+      update!: true,
+      started_at: Time.current
+    )
+    allow(ServiceAuditLog).to receive(:create!).and_return(audit_log_double)
 
     # Clear Redis rate limiting keys before each test
     begin
@@ -32,6 +42,9 @@ RSpec.describe CompanyFinancialsWorker do
 
   it 'enforces a minimum 1 second delay between API calls' do
     processed_times = []
+
+    # Mock needs_update? to return true so the service will make API calls
+    allow_any_instance_of(CompanyFinancialsService).to receive(:needs_update?).and_return(true)
 
     # Mock the make_api_request method to capture timing and avoid actual API calls
     original_make_api_request = CompanyFinancialsService.instance_method(:make_api_request)

@@ -97,12 +97,12 @@ class DomainTestingService < ApplicationService
           "dns_status" => domain.dns,
           "test_duration_ms" => duration
         }, [ "dns" ])
-        { status: :success, context: context }
+        { status: 'success', context: context }
       else
         domain.update_columns(dns: false)
         audit_log.add_context(context)
         audit_log.mark_failed!("DNS test failed", { "error" => "DNS test failed", "domain_name" => domain.domain }, [])
-        { status: :failed, context: context }
+        { status: 'failed', context: context }
       end
     rescue Resolv::ResolvError => e
       duration = ((Time.current - start_time) * 1000).round(2)
@@ -116,7 +116,7 @@ class DomainTestingService < ApplicationService
       domain.update_columns(dns: false)
       audit_log.add_context(context)
       audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, [])
-      { status: :failed, context: context }
+      { status: 'failed', context: context }
     rescue Timeout::Error => e
       duration = ((Time.current - start_time) * 1000).round(2)
       context = {
@@ -129,7 +129,7 @@ class DomainTestingService < ApplicationService
       domain.update_columns(dns: false)
       audit_log.add_context(context)
       audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, [])
-      { status: :failed, context: context }
+      { status: 'failed', context: context }
     rescue StandardError => e
       duration = ((Time.current - start_time) * 1000).round(2)
       context = {
@@ -142,7 +142,7 @@ class DomainTestingService < ApplicationService
       domain.update_columns(dns: nil)
       audit_log.add_context(context)
       audit_log.mark_failed!(e.message, { "error" => e.message, "domain_name" => domain.domain }, [])
-      { status: :failed, context: context }
+      { status: 'failed', context: context }
     end
   end
 
@@ -221,6 +221,11 @@ class DomainTestingService < ApplicationService
     {
       status: "error",
       records: { error: e.message }
+    }
+  rescue Timeout::Error => e
+    {
+      status: "error", 
+      records: { error: "DNS resolution timed out after #{DNS_TIMEOUT} seconds" }
     }
   end
 

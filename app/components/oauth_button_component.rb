@@ -4,7 +4,7 @@ class OauthButtonComponent < ViewComponent::Base
     @name = name
     @icon = icon
     @color = color || default_color
-    @button_text = button_text || "Sign in with #{name}"
+    @button_text = button_text || "Continue with #{name}"
     @options = options
   end
 

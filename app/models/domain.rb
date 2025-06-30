@@ -26,7 +26,24 @@ class Domain < ApplicationRecord
   scope :with_a_records, -> { with_a_record }
   scope :with_web_content, -> { where.not(web_content_data: nil) }
   scope :needing_web_content, -> { with_a_record.where(web_content_data: nil) }
-  scope :needing_web_content_extraction, -> { needing_web_content }
+  scope :needing_web_content_extraction, -> { 
+    # Start with domains that have A records
+    base_scope = with_a_record
+    
+    # Get service configuration to check if it's active
+    service_config = ServiceConfiguration.find_by(service_name: "domain_web_content_extraction")
+    return base_scope.where(web_content_data: nil) unless service_config&.active?
+    
+    # Include domains without any web content data
+    without_content = base_scope.where(web_content_data: nil)
+    
+    # For domains with content, check if they need refresh using the parent implementation
+    with_content = base_scope.where.not(web_content_data: nil)
+    needing_refresh = with_content.merge(needing_service("domain_web_content_extraction"))
+    
+    # Combine both conditions
+    where(id: without_content).or(where(id: needing_refresh))
+  }
   scope :web_content_extracted, -> { where.not(web_content_data: nil) }
   scope :web_content_failed, -> {
     with_a_record.where(web_content_data: nil)
@@ -59,7 +76,14 @@ class Domain < ApplicationRecord
   end
 
   def needs_web_content_extraction?
-    www == true && a_record_ip.present? && (web_content_data.nil? || needs_service?("domain_web_content_extraction"))
+    # Must have www=true and a_record_ip present
+    return false unless www == true && a_record_ip.present?
+    
+    # If no web content data, needs extraction
+    return true if web_content_data.nil?
+    
+    # If has web content data, check if it needs refresh based on service audit logs
+    needs_service?("domain_web_content_extraction")
   end
 
   def web_content_extracted_at
@@ -99,11 +123,11 @@ class Domain < ApplicationRecord
       # A record testing needs DNS to be active but WWW not tested
       dns_active.where(www: nil)
     when "domain_web_content_extraction"
-      # Web content extraction needs WWW active and A record IP
-      needing_web_content
+      # Use the parent implementation but only for domains with A records
+      with_a_record.merge(super(service_name))
     when "domain_testing"
-      # Use the ServiceAuditable logic for DNS testing
-      super(service_name)
+      # DNS testing specifically targets domains that haven't been tested yet
+      where(dns: nil)
     else
       # Fall back to ServiceAuditable logic
       super(service_name)

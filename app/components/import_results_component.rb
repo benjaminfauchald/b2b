@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
 class ImportResultsComponent < ViewComponent::Base
-  def initialize(result:)
+  def initialize(result:, domains_path: "/domains", new_import_path: "/domains/import", export_errors_path: "/domains/import/export_errors", export_imported_path: "/domains/import/export_imported")
     @result = result
+    @domains_path = domains_path
+    @new_import_path = new_import_path
+    @export_errors_path = export_errors_path
+    @export_imported_path = export_imported_path
   end
 
   private
 
-  attr_reader :result
+  attr_reader :result, :domains_path, :new_import_path, :export_errors_path, :export_imported_path
 
   def status_alert_classes
     base_classes = "p-6 mb-6 rounded-lg border"
@@ -16,7 +20,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "#{base_classes} bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700"
     when :partial
-      "#{base_classes} bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700"
+      "#{base_classes} bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700"
     else
       "#{base_classes} bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700"
     end
@@ -27,11 +31,11 @@ class ImportResultsComponent < ViewComponent::Base
 
     case result_type
     when :success
-      "#{base_classes} text-green-500 dark:text-green-400"
+      "#{base_classes} text-green-400 dark:text-green-400"
     when :partial
-      "#{base_classes} text-blue-500 dark:text-blue-400"
+      "#{base_classes} text-yellow-500 dark:text-yellow-400"
     else
-      "#{base_classes} text-red-500 dark:text-red-400"
+      "#{base_classes} text-red-400 dark:text-red-400"
     end
   end
 
@@ -40,7 +44,7 @@ class ImportResultsComponent < ViewComponent::Base
     when :success
       "text-green-700 dark:text-green-200"
     when :partial
-      "text-blue-700 dark:text-blue-200"
+      "text-yellow-700 dark:text-yellow-200"
     else
       "text-red-700 dark:text-red-200"
     end
@@ -131,6 +135,28 @@ class ImportResultsComponent < ViewComponent::Base
       "Import Completed with Errors"
     else
       "Import Failed"
+    end
+  end
+
+  def detailed_status_message
+    case result_type
+    when :success
+      result.summary_message
+    when :partial
+      "#{result.imported_count} of #{result.total_count} domains imported successfully"
+    when :failure
+      "#{result.imported_count} domains imported"
+    end
+  end
+
+  def additional_status_message
+    case result_type
+    when :partial
+      "#{result.failed_count} domains failed to import"
+    when :failure
+      "#{result.failed_count} domains failed"
+    else
+      nil
     end
   end
 

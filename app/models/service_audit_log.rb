@@ -3,9 +3,11 @@ class ServiceAuditLog < ApplicationRecord
   STATUS_PENDING = 0
   STATUS_SUCCESS = 1
   STATUS_FAILED = 2
+  STATUS_RATE_LIMITED = 3
+  STATUS_SKIPPED = 4
 
   # Rails 8 enum for status
-  enum :status, { pending: 0, success: 1, failed: 2 }
+  enum :status, { pending: 0, success: 1, failed: 2, rate_limited: 3, skipped: 4 }
 
   # Associations
   belongs_to :service_configuration, foreign_key: "service_name", primary_key: "service_name", optional: true
@@ -68,11 +70,14 @@ class ServiceAuditLog < ApplicationRecord
 
   def mark_failed!(error_message, metadata = {}, columns_affected = [])
     now = Time.current
+    # Merge the existing metadata with the new metadata, ensuring error key exists
+    merged_metadata = self.metadata.merge(metadata).merge("error" => error_message)
+    
     update_columns(
       status: STATUS_FAILED,
       error_message: error_message,
       completed_at: now,
-      metadata: metadata,
+      metadata: merged_metadata,
       columns_affected: columns_affected
     )
     update_column(:execution_time_ms, calculate_duration)
