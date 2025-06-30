@@ -1,0 +1,3 @@
+domain,dns,www,mx
+import-test-1751296736-959.com,true,true,false
+import-test-1751296736-1623.org,false,false,true

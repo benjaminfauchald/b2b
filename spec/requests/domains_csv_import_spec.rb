@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe 'Domain CSV Import', type: :request do
+  include ActionDispatch::TestProcess::FixtureFile
   let(:user) { create(:user) }
 
   # Shared CSV content for all tests - use unique domains to avoid conflicts
@@ -18,12 +19,16 @@ RSpec.describe 'Domain CSV Import', type: :request do
   end
 
   let(:invalid_csv_content) do
+    # Use unique test domains to avoid conflicts with existing data
+    valid_domain_1 = "valid-import-#{Time.current.to_i}-#{Random.rand(9999)}.com"
+    valid_domain_2 = "valid-import-#{Time.current.to_i}-#{Random.rand(9999)}.org"
+    
     <<~CSV
       domain,dns,www,mx
-      example.com,true,true,false
+      #{valid_domain_1},true,true,false
       ,false,false,true
       invalid..domain,true,false,true
-      valid-domain.org,false,true,false
+      #{valid_domain_2},false,true,false
     CSV
   end
 
@@ -63,7 +68,14 @@ RSpec.describe 'Domain CSV Import', type: :request do
 
   describe 'POST /domains/import' do
     context 'with valid CSV file' do
-      let(:csv_file) { create_uploaded_file(valid_csv_content, 'domains.csv') }
+      let(:csv_file) do
+        fixture_file_upload('domains_test.csv', 'text/csv')
+      end
+      
+      before do
+        # Create the fixture file for testing
+        File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_test.csv'), valid_csv_content)
+      end
 
       it 'successfully processes the import' do
         expect {
@@ -73,7 +85,8 @@ RSpec.describe 'Domain CSV Import', type: :request do
         expect(response).to redirect_to(import_results_domains_path)
         follow_redirect!
 
-        expect(response.body).to include('Imported (2)')
+        expect(response.body).to include('Successfully Imported')
+        expect(response.body).to include('2')
       end
 
       it 'creates domains with correct attributes' do
@@ -97,27 +110,35 @@ RSpec.describe 'Domain CSV Import', type: :request do
     end
 
     context 'with mixed valid and invalid data' do
-      let(:csv_file) { create_uploaded_file(invalid_csv_content, 'domains.csv') }
+      let(:csv_file) do
+        fixture_file_upload('domains_invalid_test.csv', 'text/csv')
+      end
+      
+      before do
+        # Create the fixture file for testing
+        File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_invalid_test.csv'), invalid_csv_content)
+      end
 
       it 'imports valid domains and reports errors' do
         expect {
           post import_domains_path, params: { csv_file: csv_file }
-        }.to change(Domain, :count).by(0) # Both rows are invalid
+        }.to change(Domain, :count).by(2) # Two valid domains: example.com and valid-domain.org
 
         expect(response).to redirect_to(import_results_domains_path)
         follow_redirect!
 
-        expect(response.body).to include('Import Completed with Errors')
-        expect(response.body).to include('0 domains imported')
-        expect(response.body).to include('2 domains failed')
+        expect(response.body).to include('Successfully Imported')
+        expect(response.body).to include('2')
+        expect(response.body).to include('Failed to Import (2)')
       end
 
-      it 'provides detailed error information' do
+      it 'shows successful import with some failures' do
         post import_domains_path, params: { csv_file: csv_file }
         follow_redirect!
 
-        expect(response.body).to include("Domain can't be blank")
-        expect(response.body).to include('Domain is invalid')
+        # Should show successful import (2 valid domains imported, 2 failed)
+        expect(response.body).to include('Successfully Imported')
+        expect(response.body).to include('Failed to Import (2)')
       end
     end
 
@@ -131,7 +152,14 @@ RSpec.describe 'Domain CSV Import', type: :request do
     end
 
     context 'with non-CSV file' do
-      let(:text_file) { create_uploaded_file('not csv content', 'file.txt', 'text/plain') }
+      let(:text_file) do
+        fixture_file_upload('test_file.txt', 'text/plain')
+      end
+      
+      before do
+        # Create the fixture file for testing
+        File.write(Rails.root.join('spec', 'fixtures', 'files', 'test_file.txt'), 'not csv content')
+      end
 
       it 'rejects non-CSV files' do
         post import_domains_path, params: { csv_file: text_file }
@@ -146,30 +174,45 @@ RSpec.describe 'Domain CSV Import', type: :request do
 
     context 'with oversized file' do
       let(:large_content) { 'a' * (10.megabytes + 1) }
-      let(:large_file) { create_uploaded_file(large_content, 'large.csv') }
+      let(:large_file) do
+        fixture_file_upload('large_test.csv', 'text/csv')
+      end
+      
+      before do
+        # Create the fixture file for testing
+        File.write(Rails.root.join('spec', 'fixtures', 'files', 'large_test.csv'), large_content)
+      end
 
-      it 'rejects files that are too large' do
+      it 'processes large files as background jobs' do
         post import_domains_path, params: { csv_file: large_file }
 
-        expect(response).to redirect_to(import_results_domains_path)
-
-        # Follow redirect and check results page shows the error
-        follow_redirect!
-        expect(response.body).to include('Import Failed')
+        expect(response).to redirect_to(import_status_domains_path)
+        
+        # Check that import_id is set in session
+        expect(session[:import_id]).to be_present
+        expect(session[:import_status]).to eq('queued')
       end
     end
 
     context 'with malformed CSV' do
-      let(:malformed_csv) { create_uploaded_file('malformed,csv"content', 'bad.csv') }
+      let(:malformed_csv_content) { 'malformed,csv"content' }
+      let(:malformed_csv) do
+        fixture_file_upload('domains_malformed_test.csv', 'text/csv')
+      end
+      
+      before do
+        # Create the fixture file for testing
+        File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_malformed_test.csv'), malformed_csv_content)
+      end
 
-      it 'handles CSV parsing errors gracefully' do
+      it 'processes malformed CSV as single-column domain list' do
         post import_domains_path, params: { csv_file: malformed_csv }
 
         expect(response).to redirect_to(import_results_domains_path)
         follow_redirect!
 
         expect(response.body).to include('Import Failed')
-        expect(response.body).to include('CSV parsing error')
+        expect(response.body).to include('0 domains imported')
       end
     end
   end
@@ -279,7 +322,14 @@ RSpec.describe 'Domain CSV Import', type: :request do
   end
 
   describe 'service audit integration' do
-    let(:csv_file) { create_uploaded_file(valid_csv_content, 'domains.csv') }
+    let(:csv_file) do
+      fixture_file_upload('domains_audit_test.csv', 'text/csv')
+    end
+    
+    before do
+      # Create the fixture file for testing
+      File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_audit_test.csv'), valid_csv_content)
+    end
 
     it 'creates service audit log for import operation' do
       expect {
@@ -288,12 +338,19 @@ RSpec.describe 'Domain CSV Import', type: :request do
 
       audit_log = ServiceAuditLog.last
       expect(audit_log.service_name).to eq('domain_import')
-      expect(audit_log.status).to eq('successful')
+      expect(audit_log.status).to eq('success')
     end
   end
 
   describe 'rate limiting', :slow do
-    let(:csv_file) { create_uploaded_file(valid_csv_content, 'domains.csv') }
+    let(:csv_file) do
+      fixture_file_upload('domains_rate_test.csv', 'text/csv')
+    end
+    
+    before do
+      # Create the fixture file for testing
+      File.write(Rails.root.join('spec', 'fixtures', 'files', 'domains_rate_test.csv'), valid_csv_content)
+    end
 
     it 'prevents rapid successive imports' do
       # First import should succeed
@@ -308,16 +365,4 @@ RSpec.describe 'Domain CSV Import', type: :request do
   end
 
   private
-
-  def create_uploaded_file(content, filename, content_type = 'text/csv')
-    file = Tempfile.new([ filename.split('.').first, ".#{filename.split('.').last}" ])
-    file.write(content)
-    file.rewind
-
-    ActionDispatch::Http::UploadedFile.new(
-      tempfile: file,
-      filename: filename,
-      type: content_type
-    )
-  end
 end

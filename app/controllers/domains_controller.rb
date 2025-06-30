@@ -687,20 +687,31 @@ class DomainsController < ApplicationController
         error_message = result.error || "Import failed"
         Rails.logger.info "  - Error message: #{error_message}"
 
+        # Use actual data from service result even for error cases
+        import_data = result.data[:result] || result
+        
+        Rails.logger.info "  - Import data class: #{import_data.class}"
+        Rails.logger.info "  - Imported count: #{import_data.imported_count || result.data[:imported] || 0}"
+        Rails.logger.info "  - Failed count: #{import_data.failed_count || result.data[:failed] || 0}"
+        Rails.logger.info "  - Duplicate count: #{import_data.duplicate_count || result.data[:duplicates] || 0}"
+
         session_data = {
           success: false,
-          imported_count: 0,
-          failed_count: 0,
-          duplicate_count: 0,
-          total_count: 0,
-          processing_time: nil,
+          imported_count: import_data.imported_count || result.data[:imported] || 0,
+          failed_count: import_data.failed_count || result.data[:failed] || 0,
+          duplicate_count: import_data.duplicate_count || result.data[:duplicates] || 0,
+          total_count: (import_data.imported_count || result.data[:imported] || 0) + 
+                      (import_data.failed_count || result.data[:failed] || 0) + 
+                      (import_data.duplicate_count || result.data[:duplicates] || 0),
+          processing_time: (import_data.processing_time rescue nil),
           summary_message: error_message,
-          csv_errors: [ error_message ],
-          failed_domains: [],
-          duplicate_domains: []
+          csv_errors: (import_data.csv_errors || []).first(3),
+          failed_domains: (import_data.failed_domains || []).first(10),
+          duplicate_domains: (import_data.duplicate_domains || []).first(10)
         }
 
         session[:import_results] = session_data.to_json
+        Rails.logger.info "  - Session data size: #{session[:import_results].length} characters"
       end
 
       session[:last_import_at] = Time.current
