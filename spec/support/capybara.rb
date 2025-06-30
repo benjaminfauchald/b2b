@@ -6,7 +6,7 @@ RSpec.configure do |config|
   config.before(:each, type: :component) do
     Capybara.current_driver = :rack_test
   end
-  
+
   # Configure Capybara for CI environments
   if ENV['CI']
     Capybara.register_driver :selenium_chrome_headless do |app|
@@ -16,13 +16,13 @@ RSpec.configure do |config|
       options.add_argument('--disable-gpu')
       options.add_argument('--disable-dev-shm-usage')
       options.add_argument('--window-size=1400,1400')
-      
+
       Capybara::Selenium::Driver.new(app, browser: :chrome, options: options)
     end
-    
+
     Capybara.javascript_driver = :selenium_chrome_headless
   end
-  
+
   # Default settings
   Capybara.default_max_wait_time = 5
   Capybara.server = :puma, { Silent: true }

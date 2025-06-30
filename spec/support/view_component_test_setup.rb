@@ -11,7 +11,7 @@ ViewComponent::Base.config.view_component_path = Rails.root.join("app/components
 ViewComponent::Base.config.test_framework = :rspec
 
 # Ensure component templates can be found
-ViewComponent::Base.config.view_paths = [Rails.root.join("app/views").to_s]
+ViewComponent::Base.config.view_paths = [ Rails.root.join("app/views").to_s ]
 
 # Set up test controller for rendering components
 class ViewComponentTestController < ActionController::Base

@@ -4,7 +4,7 @@ if defined?(ViewComponent)
   Rails.application.config.after_initialize do
     ViewComponent::Base.config.view_component_path = Rails.root.join("app/components").to_s
     ViewComponent::Base.config.test_framework = :rspec
-    
+
     # Only configure preview-related settings in development
     if Rails.env.development?
       ViewComponent::Base.config.preview_route = "/rails/view_components"
