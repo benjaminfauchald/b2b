@@ -51,7 +51,14 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpq-dev google-chrome-stable
+          sudo apt-get install -y \
+            libpq-dev \
+            google-chrome-stable \
+            libjemalloc2 \
+            libvips \
+            libyaml-dev \
+            build-essential \
+            nodejs
 
       - name: Setup test database
         env:
@@ -87,8 +94,9 @@ jobs:
           GOOGLE_SEARCH_API_KEY: test_google_search_key
           GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID: test_engine_id
           GOOGLE_SEARCH_ENGINE_WEB_ID: test_web_engine_id
-          # Rails credentials key (if you have one)
-          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+          # Additional settings for ViewComponent and asset handling
+          RAILS_SERVE_STATIC_FILES: true
+          DISABLE_SPRING: true
         run: |
           bundle exec rspec --format documentation
 
