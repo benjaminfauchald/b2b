@@ -95,6 +95,8 @@ fi
 echo "🚀 Quality checks passed! Deploying $NEW_VERSION to production..."
 
 # Merge to master
+# Stash any test fixture changes before checkout
+git stash push -m "Temporary test fixture changes" spec/fixtures/files/domains_*.csv
 git checkout master
 git pull origin master
 git merge develop --no-edit
