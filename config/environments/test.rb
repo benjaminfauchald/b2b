@@ -50,4 +50,8 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Reduce log verbosity during tests
+  config.log_level = :warn
+  config.logger = Logger.new(nil) # Suppress most output during tests
 end

@@ -18,7 +18,6 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
 
   let!(:domain_ready_for_extraction) do
     create(:domain,
-      domain: "example.com",
       dns: true,
       www: true,
       a_record_ip: "192.168.1.1"
@@ -27,7 +26,6 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
 
   let!(:domain_without_a_record) do
     create(:domain,
-      domain: "no-a-record.com",
       dns: true,
       www: false,
       a_record_ip: nil
@@ -36,7 +34,6 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
 
   let!(:domain_needing_a_record_test) do
     create(:domain,
-      domain: "needs-test.com",
       dns: true,
       www: nil,
       a_record_ip: nil
@@ -122,7 +119,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
 
         expect(a_record_audit.status).to eq("success")
         expect(a_record_audit.metadata["a_record"]).to eq("203.0.113.1")
-        expect(a_record_audit.metadata["domain_name"]).to eq("needs-test.com")
+        expect(a_record_audit.metadata["domain_name"]).to eq(domain_needing_a_record_test.domain)
 
         # Verify Web Content audit log
         web_content_audit = ServiceAuditLog.where(
@@ -166,9 +163,9 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
     describe "Batch Processing Integration" do
       let!(:batch_domains) do
         [
-          create(:domain, domain: "batch1.com", dns: true, www: nil),
-          create(:domain, domain: "batch2.com", dns: true, www: nil),
-          create(:domain, domain: "batch3.com", dns: true, www: nil)
+          create(:domain, dns: true, www: nil),
+          create(:domain, dns: true, www: nil),
+          create(:domain, dns: true, www: nil)
         ]
       end
 

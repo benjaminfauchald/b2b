@@ -32,7 +32,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
     context 'when requesting more domains than available' do
       before do
         # Create only 5 domains that need testing
-        5.times { |i| FactoryBot.create(:domain, domain: "example#{i}.com") }
+        5.times { FactoryBot.create(:domain) }
       end
 
       it 'queues all available domains when requesting more than available' do
@@ -80,7 +80,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
 
     context 'with invalid count parameters' do
       before do
-        FactoryBot.create(:domain, domain: "example.com")
+        FactoryBot.create(:domain)
       end
 
       it 'rejects zero count' do
@@ -116,7 +116,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
     context 'when requesting more domains than available' do
       before do
         # Create domains that need MX testing (dns: true, www: true, mx: nil)
-        3.times { |i| FactoryBot.create(:domain, domain: "mx#{i}.com", dns: true, www: true, mx: nil) }
+        3.times { FactoryBot.create(:domain, dns: true, www: true, mx: nil) }
       end
 
       it 'queues all available domains when requesting more than available' do
@@ -135,7 +135,7 @@ RSpec.describe 'Domain Queue Validation', type: :request do
     context 'when requesting more domains than available' do
       before do
         # Create domains that need A record testing (dns: true, www: nil)
-        2.times { |i| FactoryBot.create(:domain, domain: "www#{i}.com", dns: true, www: nil) }
+        2.times { FactoryBot.create(:domain, dns: true, www: nil) }
       end
 
       it 'queues all available domains when requesting more than available' do

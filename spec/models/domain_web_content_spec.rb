@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe Domain, type: :model do
   describe "Web Content Extraction Features" do
-    let(:domain) { create(:domain, domain: "example.com") }
+    let(:domain) { create(:domain) }
 
     describe "a_record_ip column" do
       it "allows storing IP addresses" do

@@ -23,7 +23,7 @@ RSpec.describe DomainImportResult do
 
   describe '#add_imported_domain' do
     it 'adds domain to imported list' do
-      domain = create(:domain, domain: 'example.com')
+      domain = create(:domain)
 
       result.add_imported_domain(domain, 2)
 
@@ -34,7 +34,7 @@ RSpec.describe DomainImportResult do
     end
 
     it 'increments imported count' do
-      domain = create(:domain, domain: 'example.com')
+      domain = create(:domain)
 
       expect {
         result.add_imported_domain(domain, 2)
@@ -165,7 +165,7 @@ RSpec.describe DomainImportResult do
 
   describe '#to_h' do
     it 'returns hash representation' do
-      domain = create(:domain, domain: 'example.com')
+      domain = create(:domain)
       result.add_imported_domain(domain, 2)
       result.add_failed_domain('invalid.domain', 3, [ 'Error' ])
       result.set_error_message('Test error')
@@ -193,7 +193,7 @@ RSpec.describe DomainImportResult do
 
   describe '#to_json' do
     it 'returns JSON representation' do
-      domain = create(:domain, domain: 'example.com')
+      domain = create(:domain)
       result.add_imported_domain(domain, 2)
       result.finalize!
 

@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe DomainTestingService, type: :service do
   let(:company) { create(:company) }
-  let(:domain) { create(:domain, domain: 'example.com', dns: nil, mx: nil, www: nil) }
+  let(:domain) { create(:domain, dns: nil, mx: nil, www: nil) }
   let(:service) { described_class.new(domain: domain) }
 
   describe '#perform' do
@@ -18,12 +18,12 @@ RSpec.describe DomainTestingService, type: :service do
           before do
             # Mock successful DNS resolution with proper DNS resource objects
             a_record = double('A Record', address: '192.168.1.1')
-            mx_record = double('MX Record', exchange: 'mail.example.com')
+            mx_record = double('MX Record', exchange: "mail.#{domain.domain}")
             txt_record = double('TXT Record', strings: [ 'v=spf1 -all' ])
 
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::A).and_return([ a_record ])
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::MX).and_return([ mx_record ])
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::TXT).and_return([ txt_record ])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::A).and_return([ a_record ])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::MX).and_return([ mx_record ])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(domain.domain, Resolv::DNS::Resource::IN::TXT).and_return([ txt_record ])
 
             # Mock worker classes
             stub_const('DomainMxTestingWorker', Class.new do
@@ -49,7 +49,7 @@ RSpec.describe DomainTestingService, type: :service do
             result = service.perform
 
             audit_log = ServiceAuditLog.last
-            expect(audit_log.metadata['domain_name']).to eq('example.com')
+            expect(audit_log.metadata['domain_name']).to eq(domain.domain)
             expect(audit_log.metadata['dns_status']).to eq(true)
             expect(audit_log.metadata['test_result']).to eq('success')
           end
@@ -291,7 +291,7 @@ RSpec.describe DomainTestingService, type: :service do
     it 'returns true for domains with A records' do
       allow_any_instance_of(Resolv::DNS).to receive(:getresources).and_return([ 'fake_record' ])
 
-      result = service.send(:has_dns?, 'example.com')
+      result = service.send(:has_dns?, domain.domain)
       expect(result).to be true
     end
 

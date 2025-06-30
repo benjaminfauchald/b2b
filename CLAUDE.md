@@ -23,11 +23,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Example company URL without financial info (returns 404): https://data.brreg.no/regnskapsregisteret/regnskap/932968126
 - The api.brreg.no API gives 404 if there is not found any financial data. It's not an error, it's a feature
 
+## Deployment & Quality Control
+
+### Enhanced Deployment Scripts with Quality Checks
+**ALWAYS use these scripts for deployment - they ensure code quality and test reliability:**
+
+#### Simple Deploy (Quick Push to Master)
+```bash
+./bin/simple_deploy [commit_message]
+```
+- **Use when**: You're already on master branch and want to deploy current changes
+- **Automatic Quality Checks**:
+  - ✅ Runs `bundle exec rubocop --autocorrect` and commits any style fixes
+  - ✅ Runs critical domain CSV import tests (MANDATORY - deployment aborts if failing)
+  - ✅ Attempts to run full test suite (optional - continues if fails/times out)
+  - ✅ Commits changes and pushes to master
+
+#### Full Versioned Deploy (Develop → Master)
+```bash
+./bin/deploy [patch|minor|major] "Release message"
+```
+- **Use when**: Deploying from develop branch with version bumping
+- **Workflow**: develop → master → tag → push
+- **Same quality checks as simple deploy plus version management**
+- **Examples**:
+  - `./bin/deploy patch "Fix user authentication bug"`
+  - `./bin/deploy minor "Add new CSV import features"`
+  - `./bin/deploy major "Major UI overhaul"`
+
+#### Legacy Manual Deployment (DEPRECATED)
+❌ **DO NOT USE**: Manual git commands without quality checks
+❌ **AVOID**: `git push origin master` without running tests
+❌ **AVOID**: Committing without RuboCop checks
+
+### Quality Control Requirements
+**MANDATORY for all deployments:**
+1. **RuboCop Style Compliance**: All code must pass `bundle exec rubocop`
+2. **Critical Test Verification**: Domain CSV import tests must pass (23 tests)
+3. **Code Standards**: Follow existing patterns and conventions
+4. **No Breaking Changes**: Existing functionality must remain intact
+
+### Deployment Failure Handling
+- **RuboCop Failures**: Script auto-fixes correctable issues, manual fixes required for others
+- **Critical Test Failures**: Deployment immediately aborts - fix tests before retry
+- **Full Test Suite Failures**: Deployment continues (critical tests already passed)
+- **Network Issues**: Retry deployment after connectivity restored
+
 ## Development Best Practices
 - Never use localhost for any server setup or testing use local.connectica.no
 - Always touch a file before you write to avoid this error "Error: File has not been read yet. Read it first before writing to it."
 - Make sure we dont start to make duplicates of files like homepage_hero_component 2.rb or /homepage_stats_component 2.r. We ALWAYS need to work on the actual file or the system will lose integrity!
 - Make sure that we write any temporary files and scripts to the tmp/ folder
+- **ALWAYS use enhanced deployment scripts** - never push manually without quality checks
 
 ## Test Management Rules - CRITICAL ⚠️
 **MANDATORY WORKFLOW for ANY code changes:**

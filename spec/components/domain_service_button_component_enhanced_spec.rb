@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe DomainServiceButtonComponent, type: :component do
-  let(:domain) { create(:domain, domain: "example.com") }
+  let(:domain) { create(:domain) }
 
   describe "Web Content Extraction Service Integration" do
     let(:component) do

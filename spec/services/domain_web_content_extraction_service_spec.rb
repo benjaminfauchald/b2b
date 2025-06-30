@@ -8,7 +8,7 @@ RSpec.describe DomainWebContentExtractionService, type: :service do
     )
   end
 
-  let(:domain) { create(:domain, domain: "example.com", www: true, a_record_ip: "192.168.1.1") }
+  let(:domain) { create(:domain, www: true, a_record_ip: "192.168.1.1") }
 
   before do
     service_config
