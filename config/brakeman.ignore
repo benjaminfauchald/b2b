@@ -1,0 +1,30 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "fae30f5776ac2287b21e1a1306f2984ab4866fd7c6d398cd01a414d49b161cf3",
+      "note": "Development-only tool for Guard notifications - count variable is controlled internally"
+    },
+    {
+      "fingerprint": "d01fe866889247db38c2b00ede5c21361f69c02f044b750dab4fd8ec3d467696",
+      "note": "Rails automatically escapes output in views - XSS protection is enabled for website URLs"
+    },
+    {
+      "fingerprint": "e3f764645500da2ff740ff0e19c686c73fc8dcc0f8950a7b068d2c875636ceb7",
+      "note": "Rails automatically escapes output in views - XSS protection is enabled for LinkedIn URLs"
+    },
+    {
+      "fingerprint": "45432eca6b1c6c7d935f35228118a5ddb51d08a3353d710445ece7dbd1ee1f2e",
+      "note": "Rails automatically escapes output in views - XSS protection is enabled for LinkedIn AI URLs"
+    },
+    {
+      "fingerprint": "386dff1f882598db68f00de75773557c11d9ca1e7ecd8ed118ccd7ab497f4bca",
+      "note": "Rails automatically escapes output in views - XSS protection is enabled for profile URLs"
+    },
+    {
+      "fingerprint": "0ef8149021b597bdf7d9dff1253a4e53d9b7845432b64a947aad6d45c4801d0e",
+      "note": "Filename is sanitized with File.basename and gsub to prevent path traversal"
+    }
+  ],
+  "updated": "2025-06-30 17:54:00 +0000",
+  "brakeman_version": "7.0.2"
+}
