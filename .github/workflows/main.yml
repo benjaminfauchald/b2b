@@ -94,8 +94,8 @@ jobs:
           GOOGLE_SEARCH_API_KEY: test_google_search_key
           GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID: test_engine_id
           GOOGLE_SEARCH_ENGINE_WEB_ID: test_web_engine_id
-          # Disable credentials check for test environment
-          RAILS_MASTER_KEY: 1234567890123456789012345678901234567890123456789012345678901234
+          # Test environment doesn't need master key
+          RAILS_ENV: test
         run: |
           bundle exec rspec --format documentation
 

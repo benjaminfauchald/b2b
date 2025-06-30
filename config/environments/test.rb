@@ -6,6 +6,7 @@
 Rails.application.configure do
   # Disable credentials requirement in test environment
   config.require_master_key = false
+  config.read_encrypted_secrets = false
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.
