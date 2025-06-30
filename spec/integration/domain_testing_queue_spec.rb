@@ -216,7 +216,7 @@ RSpec.describe 'Domain Testing Queue Integration', type: :integration do
     it 'includes domains_needing counts' do
       # Clear existing domains from before block
       Domain.delete_all
-      
+
       # Create domains in various states
       create_list(:domain, 10, dns: nil) # Need DNS testing
       create_list(:domain, 5, dns: true, mx: nil) # Need MX testing

@@ -39,7 +39,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
       # Always update company data (even with empty results to mark as processed)
       update_company_linkedin_data(discovered_profiles)
-      
+
       if discovered_profiles.any?
         # Add metadata for successful discovery
         highest_confidence = discovered_profiles.first[:confidence] rescue 0
@@ -401,7 +401,7 @@ class CompanyLinkedinDiscoveryService < ApplicationService
           profile_type: profile[:profile_type]
         }
       end
-      
+
       # Update employee count if available in the best match company_info
       if best_match[:company_info] && best_match[:company_info][:employees]
         @company.linkedin_employee_count = best_match[:company_info][:employees]

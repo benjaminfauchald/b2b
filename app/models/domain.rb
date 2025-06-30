@@ -26,21 +26,21 @@ class Domain < ApplicationRecord
   scope :with_a_records, -> { with_a_record }
   scope :with_web_content, -> { where.not(web_content_data: nil) }
   scope :needing_web_content, -> { with_a_record.where(web_content_data: nil) }
-  scope :needing_web_content_extraction, -> { 
+  scope :needing_web_content_extraction, -> {
     # Start with domains that have A records
     base_scope = with_a_record
-    
+
     # Get service configuration to check if it's active
     service_config = ServiceConfiguration.find_by(service_name: "domain_web_content_extraction")
     return base_scope.where(web_content_data: nil) unless service_config&.active?
-    
+
     # Include domains without any web content data
     without_content = base_scope.where(web_content_data: nil)
-    
+
     # For domains with content, check if they need refresh using the parent implementation
     with_content = base_scope.where.not(web_content_data: nil)
     needing_refresh = with_content.merge(needing_service("domain_web_content_extraction"))
-    
+
     # Combine both conditions
     where(id: without_content).or(where(id: needing_refresh))
   }
@@ -78,10 +78,10 @@ class Domain < ApplicationRecord
   def needs_web_content_extraction?
     # Must have www=true and a_record_ip present
     return false unless www == true && a_record_ip.present?
-    
+
     # If no web content data, needs extraction
     return true if web_content_data.nil?
-    
+
     # If has web content data, check if it needs refresh based on service audit logs
     needs_service?("domain_web_content_extraction")
   end

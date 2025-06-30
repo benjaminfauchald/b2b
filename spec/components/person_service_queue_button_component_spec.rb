@@ -59,7 +59,7 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
     let!(:companies_not_needing) do
       [
-        # This company WILL qualify because ai_confidence >= 50, but let's exclude it 
+        # This company WILL qualify because ai_confidence >= 50, but let's exclude it
         create(:company, linkedin_ai_url: "https://linkedin.com/company/low", linkedin_ai_confidence: 30),
         create(:company, linkedin_url: nil, linkedin_ai_url: nil)
       ]

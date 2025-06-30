@@ -94,7 +94,7 @@ class DomainMxTestingService < ApplicationService
             test_duration_ms: result[:duration]
           )
 
-          if result[:status] == 'success'
+          if result[:status] == "success"
             results[:successful] += 1
             success_result("MX test completed", result: result)
           else
@@ -123,20 +123,20 @@ class DomainMxTestingService < ApplicationService
       Timeout.timeout(MX_TIMEOUT) do
         mx_records = resolver.getresources(domain_name, Resolv::DNS::Resource::IN::MX)
         {
-          status: mx_records.any? ? 'success' : 'no_records',
+          status: mx_records.any? ? "success" : "no_records",
           mx_records: mx_records.map { |mx| mx.exchange.to_s },
           duration: Time.current - start_time
         }
       end
     rescue Resolv::ResolvError => e
       {
-        status: 'error',
+        status: "error",
         error: "DNS resolution failed",
         duration: Time.current - start_time
       }
     rescue Timeout::Error => e
       {
-        status: 'error',
+        status: "error",
         error: "DNS resolution timed out after #{MX_TIMEOUT} seconds",
         duration: Time.current - start_time
       }
@@ -145,9 +145,9 @@ class DomainMxTestingService < ApplicationService
 
   def update_domain_status(domain, result)
     case result[:status]
-    when 'success'
+    when "success"
       domain.update_columns(mx: true)
-    when 'no_records', 'error', 'timeout'
+    when "no_records", "error", "timeout"
       domain.update_columns(mx: false)
     end
   end

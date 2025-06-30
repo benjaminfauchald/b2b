@@ -24,7 +24,7 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
     # Clean up any existing data
     Company.destroy_all
     ServiceAuditLog.destroy_all
-    
+
     # Mock Sidekiq queue
     allow(Sidekiq::Queue).to receive(:new).with(queue_name).and_return(
       double(size: 5)
@@ -60,12 +60,12 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
         table_name: "companies",
         record_id: Company.first.id.to_s,
         operation_type: "process",
-        columns_affected: ["financial_data"],
+        columns_affected: [ "financial_data" ],
         metadata: { processed: true },
         started_at: 1.minute.ago,
         completed_at: Time.current
       )
-      
+
       render_inline(component)
 
       expect(page).to have_text(title)
@@ -145,7 +145,7 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
       # Setup for financial data service - need to have NO eligible companies
       # Delete all companies first
       Company.destroy_all
-      
+
       # Create companies but mark them as already processed
       2.times do |i|
         company = Company.create!(
@@ -156,7 +156,7 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
           source_id: "77777#{1000 + i}",
           organization_form_code: "AS"
         )
-        
+
         ServiceAuditLog.create!(
           service_name: "company_financials",
           status: "success",
@@ -164,13 +164,13 @@ RSpec.describe CompanyServiceQueueButtonComponent, type: :component do
           table_name: "companies",
           record_id: company.id.to_s,
           operation_type: "process",
-          columns_affected: ["financial_data"],
+          columns_affected: [ "financial_data" ],
           metadata: { processed: true },
           started_at: 1.minute.ago,
           completed_at: Time.current
         )
       end
-      
+
       render_inline(component)
 
       expect(page).to have_text("Financial Data Completion")

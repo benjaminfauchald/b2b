@@ -128,7 +128,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
         post import_domains_path, params: { csv_file: text_file }
 
         expect(response).to redirect_to(import_results_domains_path)
-        
+
         # Follow redirect and check results page shows the error
         follow_redirect!
         expect(response.body).to include('Import Failed')
@@ -143,7 +143,7 @@ RSpec.describe 'Domain CSV Import', type: :request do
         post import_domains_path, params: { csv_file: large_file }
 
         expect(response).to redirect_to(import_results_domains_path)
-        
+
         # Follow redirect and check results page shows the error
         follow_redirect!
         expect(response.body).to include('Import Failed')

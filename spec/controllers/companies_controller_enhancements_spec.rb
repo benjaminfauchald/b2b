@@ -46,7 +46,7 @@ RSpec.describe CompaniesController, type: :controller do
         it 'returns queue statistics' do
           # Create a company that meets financial data criteria
           create(:company, source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")
-          
+
           post :queue_financial_data, params: { count: 1 }
 
           json = JSON.parse(response.body)
@@ -247,8 +247,8 @@ RSpec.describe CompaniesController, type: :controller do
       get :index
 
       expect(response).to have_http_status(:success)
-# expect(response).to render_template('index') # Requires rails-controller-testing gem
-# expect(response.body).to include('companies') # View rendering test skipped
+      # expect(response).to render_template('index') # Requires rails-controller-testing gem
+      # expect(response.body).to include('companies') # View rendering test skipped
     end
   end
 
@@ -257,8 +257,8 @@ RSpec.describe CompaniesController, type: :controller do
       get :show, params: { id: company.id }
 
       expect(response).to have_http_status(:success)
-# expect(response).to render_template('show') # Requires rails-controller-testing gem
-# expect(response.body).to include(company.company_name) # View rendering test skipped
+      # expect(response).to render_template('show') # Requires rails-controller-testing gem
+      # expect(response.body).to include(company.company_name) # View rendering test skipped
     end
   end
 end

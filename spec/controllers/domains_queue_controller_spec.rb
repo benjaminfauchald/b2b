@@ -193,8 +193,8 @@ RSpec.describe DomainsController, type: :controller do
       expect(stats).to have_key('domain_dns_testing')
       expect(stats).to have_key('domains_needing')
       expect(stats['domains_needing']).to have_key('domain_testing')
-      
-      # The number of domains needing service should be <= original count 
+
+      # The number of domains needing service should be <= original count
       # (may be reduced if jobs processed immediately)
       expect(stats['domains_needing']['domain_testing']).to be <= 10
     end
@@ -205,7 +205,7 @@ RSpec.describe DomainsController, type: :controller do
       # Clean slate - clear all existing domains and create fresh ones
       Domain.delete_all
       test_domains = create_list(:domain, 3, dns: nil, mx: nil, www: nil)
-      
+
       # Update domains to simulate successful DNS tests
       test_domains.each { |domain| domain.update!(dns: true) }
 
@@ -217,7 +217,7 @@ RSpec.describe DomainsController, type: :controller do
       expect(stats).to have_key('domains_needing')
       expect(stats['domains_needing']).to have_key('domain_mx_testing')
       expect(stats['domains_needing']).to have_key('domain_a_record_testing')
-      
+
       # These 3 domains should now need MX and A record testing (dns=true, mx=nil, www=nil)
       expect(stats['domains_needing']['domain_mx_testing']).to eq(3)
       expect(stats['domains_needing']['domain_a_record_testing']).to eq(3)

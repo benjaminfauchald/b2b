@@ -83,7 +83,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
             result = service.perform
 
             expect(result).to be_success
-            
+
             # Check the data structure and totals
             discovered_data = result.data[:discovered_employees]
             expect(discovered_data[:total_found]).to eq(25)
@@ -92,7 +92,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
               'company_websites' => 8,
               'public_registries' => 2
             })
-            
+
             # Check that key employees from test data are present
             employees = discovered_data[:employees]
             expect(employees.find { |e| e[:name] == 'John Doe' && e[:title] == 'CEO' }).to be_present
@@ -408,7 +408,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           employee_discovery_updated_at: 1.day.ago,
           employees_data: { total_found: 25, employees: [] }.to_json
         )
-        
+
         # Create a successful audit log from 1 day ago
         ServiceAuditLog.create!(
           auditable: company,
@@ -417,7 +417,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['employees_data'],
+          columns_affected: [ 'employees_data' ],
           metadata: { employees_found: 25 },
           started_at: 1.day.ago,
           completed_at: 1.day.ago
@@ -436,7 +436,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           employees_data: { total_found: 10, employees: [] }.to_json,
           employee_count: 100 # Official count is much higher
         )
-        
+
         # Create a successful audit log from 30 days ago (within 45 day window)
         ServiceAuditLog.create!(
           auditable: company,
@@ -445,7 +445,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['employees_data'],
+          columns_affected: [ 'employees_data' ],
           metadata: { employees_found: 10 },
           started_at: 30.days.ago,
           completed_at: 30.days.ago
@@ -473,17 +473,17 @@ RSpec.describe CompanyEmployeeDiscoveryService do
       website_count = 0
       registry_count = 0
     end
-    
+
     # Separate employees by source from test data
     linkedin_employees = response_data[:employees]&.select { |e| e[:source] == 'linkedin' } || []
     website_employees = response_data[:employees]&.select { |e| e[:source] == 'company_websites' } || []
     registry_employees = response_data[:employees]&.select { |e| e[:source] == 'public_registries' } || []
-    
+
     # If no employees have sources assigned, assign them all to LinkedIn
     if linkedin_employees.empty? && registry_employees.empty? && website_employees.empty? && response_data[:employees]
       linkedin_employees = response_data[:employees].map { |emp| emp.merge(source: 'linkedin') }
     end
-    
+
     # For deduplication tests, don't generate extra employees - use exactly what's provided
     # Generate additional employees to match expected counts only if needed
     while linkedin_employees.count < linkedin_count && linkedin_count > response_data[:employees]&.count.to_i
@@ -508,7 +508,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
 
     # Company website scraping (simulated)
     if company.website.present?
-      # Generate mock website employees 
+      # Generate mock website employees
       website_employees = []
       if website_count > 0
         website_employees = (1..website_count).map do |i|
@@ -586,7 +586,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
         )
     end
 
-    # Registry succeeds 
+    # Registry succeeds
     board_members = (1..registry_count).map do |i|
       {
         name: "Board Member #{i}",
@@ -609,7 +609,7 @@ RSpec.describe CompanyEmployeeDiscoveryService do
         status: 429,
         headers: { 'Retry-After' => '3600' }
       )
-    
+
     # Don't stub other services since the service should stop on rate limit
   end
 

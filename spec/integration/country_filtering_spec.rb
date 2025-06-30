@@ -9,22 +9,22 @@ RSpec.describe "Country Filtering", type: :request do
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
 
     # Create test data - companies that meet financial data criteria
-    create_list(:company, 5, 
-      source_country: "NO", 
+    create_list(:company, 5,
+      source_country: "NO",
       company_name: "Norwegian Company",
       source_registry: "brreg",
       ordinary_result: nil,
       organization_form_code: "AS"
     )
-    create_list(:company, 3, 
-      source_country: "SE", 
+    create_list(:company, 3,
+      source_country: "SE",
       company_name: "Swedish Company",
       source_registry: "brreg",
       ordinary_result: nil,
       organization_form_code: "AS"
     )
-    create_list(:company, 2, 
-      source_country: "DK", 
+    create_list(:company, 2,
+      source_country: "DK",
       company_name: "Danish Company",
       source_registry: "brreg",
       ordinary_result: nil,

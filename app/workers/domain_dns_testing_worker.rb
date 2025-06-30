@@ -11,7 +11,7 @@ class DomainDnsTestingWorker
     end
 
     # Check if service is active before processing
-    service_config = ServiceConfiguration.find_by(service_name: 'domain_testing')
+    service_config = ServiceConfiguration.find_by(service_name: "domain_testing")
     unless service_config&.active?
       Rails.logger.warn "Service is disabled"
       return

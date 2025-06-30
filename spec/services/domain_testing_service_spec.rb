@@ -19,12 +19,12 @@ RSpec.describe DomainTestingService, type: :service do
             # Mock successful DNS resolution with proper DNS resource objects
             a_record = double('A Record', address: '192.168.1.1')
             mx_record = double('MX Record', exchange: 'mail.example.com')
-            txt_record = double('TXT Record', strings: ['v=spf1 -all'])
-            
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::A).and_return([a_record])
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::MX).and_return([mx_record])
-            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::TXT).and_return([txt_record])
-            
+            txt_record = double('TXT Record', strings: [ 'v=spf1 -all' ])
+
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::A).and_return([ a_record ])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::MX).and_return([ mx_record ])
+            allow_any_instance_of(Resolv::DNS).to receive(:getresources).with('example.com', Resolv::DNS::Resource::IN::TXT).and_return([ txt_record ])
+
             # Mock worker classes
             stub_const('DomainMxTestingWorker', Class.new do
               def self.perform_async(domain_id); end
@@ -172,12 +172,12 @@ RSpec.describe DomainTestingService, type: :service do
           # Mock successful DNS resolution for all domains
           a_record = double('A Record', address: '192.168.1.1')
           mx_record = double('MX Record', exchange: 'mail.example.com')
-          txt_record = double('TXT Record', strings: ['v=spf1 -all'])
-          
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::A).and_return([a_record])
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::MX).and_return([mx_record])
-          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::TXT).and_return([txt_record])
-          
+          txt_record = double('TXT Record', strings: [ 'v=spf1 -all' ])
+
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::A).and_return([ a_record ])
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::MX).and_return([ mx_record ])
+          allow_any_instance_of(Resolv::DNS).to receive(:getresources).with(anything, Resolv::DNS::Resource::IN::TXT).and_return([ txt_record ])
+
           # Mock worker classes
           stub_const('DomainMxTestingWorker', Class.new do
             def self.perform_async(domain_id); end

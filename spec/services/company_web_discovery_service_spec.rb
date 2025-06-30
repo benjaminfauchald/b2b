@@ -378,7 +378,7 @@ RSpec.describe CompanyWebDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['website'],
+          columns_affected: [ 'website' ],
           metadata: { result: 'success' },
           started_at: 91.days.ago,
           completed_at: 91.days.ago

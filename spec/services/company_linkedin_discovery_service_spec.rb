@@ -313,7 +313,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['linkedin_url'],
+          columns_affected: [ 'linkedin_url' ],
           metadata: { result: 'success' },
           started_at: 61.days.ago,
           completed_at: 61.days.ago
@@ -340,7 +340,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['linkedin_url'],
+          columns_affected: [ 'linkedin_url' ],
           metadata: { result: 'success' },
           started_at: 1.day.ago,
           completed_at: 1.day.ago
@@ -359,7 +359,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
           linkedin_processed: true,
           company_name: 'Completely Different Company Name AS'
         )
-        
+
         # Create a recent audit log to ensure needs_update? returns false
         ServiceAuditLog.create!(
           auditable: company,
@@ -368,7 +368,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
           status: :success,
           table_name: 'companies',
           record_id: company.id.to_s,
-          columns_affected: ['linkedin_url'],
+          columns_affected: [ 'linkedin_url' ],
           metadata: { result: 'success' },
           started_at: 30.days.ago,
           completed_at: 30.days.ago
@@ -418,7 +418,7 @@ RSpec.describe CompanyLinkedinDiscoveryService do
     if response_data[:primary_url] || response_data[:alternate_urls]&.any?
       stub_openai_validation(response_data)
     end
-    
+
     # Mock the service to include company_info in the discovered profiles
     if response_data[:primary_url] || response_data[:alternate_urls]&.any?
       allow_any_instance_of(CompanyLinkedinDiscoveryService).to receive(:discover_linkedin_profiles) do
@@ -471,27 +471,27 @@ RSpec.describe CompanyLinkedinDiscoveryService do
     # Stub OpenAI API for profile validation
     # Extract all confidence scores from the response data
     confidence_scores = response_data[:confidence_scores] || {}
-    
+
     # For each URL that needs validation, stub the Azure OpenAI response
     if response_data[:primary_url]
       confidence = confidence_scores[response_data[:primary_url]] || 98
       stub_azure_openai_response(confidence)
     end
-    
+
     # Stub responses for alternate URLs as well
     response_data[:alternate_urls]&.each do |url|
       confidence = confidence_scores[url] || 75
       stub_azure_openai_response(confidence)
     end
   end
-  
+
   def stub_azure_openai_response(confidence)
     openai_response = {
-      choices: [{
+      choices: [ {
         message: {
           content: "MATCH: Yes\nCONFIDENCE: #{confidence}\nREASONING: Company name matches exactly"
         }
-      }]
+      } ]
     }
 
     stub_request(:post, "https://test.openai.azure.com/v1/chat/completions")

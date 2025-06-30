@@ -97,7 +97,7 @@ class CompanyEmployeeDiscoveryService < ApplicationService
     sources.each do |source|
       begin
         result = search_from_source(source)
-        
+
         if result[:success]
           employees = result[:data][:employees] || []
           discovered_employees.concat(employees)
@@ -120,7 +120,7 @@ class CompanyEmployeeDiscoveryService < ApplicationService
 
     # Deduplicate employees based on name and email
     unique_employees = deduplicate_employees(discovered_employees)
-    
+
     # Validate emails
     unique_employees.each do |employee|
       employee[:email_valid] = valid_email?(employee[:email]) if employee[:email]
@@ -151,11 +151,11 @@ class CompanyEmployeeDiscoveryService < ApplicationService
 
   def search_from_source(source)
     case source
-    when 'linkedin'
+    when "linkedin"
       search_linkedin_employees
-    when 'company_websites'
+    when "company_websites"
       search_website_employees
-    when 'public_registries'
+    when "public_registries"
       search_registry_employees
     else
       { success: false, error: "Unknown source: #{source}" }
@@ -163,11 +163,11 @@ class CompanyEmployeeDiscoveryService < ApplicationService
   end
 
   def search_linkedin_employees
-    api_endpoint = ENV['LINKEDIN_API_ENDPOINT'] || 'http://linkedin'
+    api_endpoint = ENV["LINKEDIN_API_ENDPOINT"] || "http://linkedin"
     uri = URI("#{api_endpoint}/company/#{@company.registration_number}/employees")
-    
+
     response = Net::HTTP.get_response(uri)
-    
+
     case response.code.to_i
     when 200
       data = JSON.parse(response.body, symbolize_names: true)
@@ -187,12 +187,12 @@ class CompanyEmployeeDiscoveryService < ApplicationService
 
   def search_website_employees
     return { success: false, error: "No website available" } unless @company.website.present?
-    
-    api_endpoint = ENV['WEB_SCRAPER_API'] || 'http://scrape'
+
+    api_endpoint = ENV["WEB_SCRAPER_API"] || "http://scrape"
     uri = URI("#{api_endpoint}/scrape?url=#{URI.encode_www_form_component(@company.website)}")
-    
+
     response = Net::HTTP.get_response(uri)
-    
+
     case response.code.to_i
     when 200
       data = JSON.parse(response.body, symbolize_names: true)
@@ -209,11 +209,11 @@ class CompanyEmployeeDiscoveryService < ApplicationService
   end
 
   def search_registry_employees
-    api_endpoint = ENV['BRREG_API_ENDPOINT'] || 'http://brreg'
+    api_endpoint = ENV["BRREG_API_ENDPOINT"] || "http://brreg"
     uri = URI("#{api_endpoint}/roller/#{@company.registration_number}")
-    
+
     response = Net::HTTP.get_response(uri)
-    
+
     case response.code.to_i
     when 200
       data = JSON.parse(response.body, symbolize_names: true)
@@ -223,7 +223,7 @@ class CompanyEmployeeDiscoveryService < ApplicationService
         {
           name: member[:name],
           title: member[:role] || member[:title],
-          source: 'public_registries',
+          source: "public_registries",
           confidence: 1.0
         }
       end
@@ -240,7 +240,7 @@ class CompanyEmployeeDiscoveryService < ApplicationService
 
   def configured_sources
     config = ServiceConfiguration.find_by(service_name: "company_employee_discovery")
-    sources = config&.get_setting("sources") || ['linkedin', 'company_websites', 'public_registries']
+    sources = config&.get_setting("sources") || [ "linkedin", "company_websites", "public_registries" ]
     sources
   end
 
@@ -248,41 +248,41 @@ class CompanyEmployeeDiscoveryService < ApplicationService
     # Simple deduplication based on name (case insensitive)
     unique_employees = []
     seen_names = Set.new
-    
+
     employees.each do |employee|
       name_key = employee[:name]&.downcase&.strip
       next if name_key.blank? || seen_names.include?(name_key)
-      
+
       seen_names.add(name_key)
       unique_employees << employee
     end
-    
+
     unique_employees
   end
 
   def identify_key_contacts(employees)
     key_contacts = {}
-    
+
     employees.each do |employee|
       title = employee[:title]&.downcase
       next unless title
-      
+
       # Prioritize more specific titles and don't overwrite if already found
-      if (title.include?('ceo') || title.include?('chief executive')) && !key_contacts[:ceo]
+      if (title.include?("ceo") || title.include?("chief executive")) && !key_contacts[:ceo]
         key_contacts[:ceo] = employee[:name]
-      elsif (title.include?('cto') || title.include?('chief technology')) && !key_contacts[:cto]
+      elsif (title.include?("cto") || title.include?("chief technology")) && !key_contacts[:cto]
         key_contacts[:cto] = employee[:name]
-      elsif (title.include?('cfo') || title.include?('chief financial')) && !key_contacts[:cfo]
+      elsif (title.include?("cfo") || title.include?("chief financial")) && !key_contacts[:cfo]
         key_contacts[:cfo] = employee[:name]
       end
     end
-    
+
     key_contacts
   end
 
   def valid_email?(email)
     return false if email.blank?
-    email.include?('@') && email.include?('.')
+    email.include?("@") && email.include?(".")
   end
 
   def valid_employee_data?(data)
@@ -312,12 +312,12 @@ class CompanyEmployeeDiscoveryService < ApplicationService
       error: message,
       data: extra_attributes
     }
-    
+
     # Add any extra attributes directly to the result
     extra_attributes.each do |key, value|
       result_attributes[key] = value unless result_attributes.key?(key)
     end
-    
+
     OpenStruct.new(result_attributes)
   end
 end

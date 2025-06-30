@@ -51,7 +51,7 @@ class DomainImportService < ApplicationService
         )
 
         Rails.logger.info "🔍 IMPORT DEBUG: About to return result"
-        
+
         # Return appropriate result based on whether the import was successful
         if @result.success?
           success_result("Domain import completed successfully",
@@ -166,14 +166,14 @@ class DomainImportService < ApplicationService
     begin
       Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process for validation"
       first_row = nil
-      
+
       # Get just the first row to check headers
       SmarterCSV.process(file.path, { chunk_size: 1 }) do |chunk|
         Rails.logger.info "🔍 IMPORT DEBUG: Got chunk: #{chunk.inspect}"
         first_row = chunk.first if chunk && !chunk.empty?
         break # Only need the first chunk
       end
-      
+
       Rails.logger.info "🔍 IMPORT DEBUG: first_row: #{first_row.inspect}"
 
       if first_row.nil? || !first_row.is_a?(Hash)

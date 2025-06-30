@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe CompanyFinancialsService, type: :service do
   let(:company) { create(:company, registration_number: '123456789') }
   let(:service) { described_class.new(company: company) }
-  
+
   before do
     # Create service configuration to make the service active
     create(:service_configuration, service_name: 'company_financials', active: true)
@@ -30,7 +30,7 @@ RSpec.describe CompanyFinancialsService, type: :service do
     )
     # Check metadata structure
     expect(audit_log.metadata).to include(
-      'changed_fields' => ['revenue'],
+      'changed_fields' => [ 'revenue' ],
       'organization_number' => company.registration_number
     )
     expect(result.success?).to be true

@@ -253,7 +253,7 @@ RSpec.describe DomainImportResult do
       # Set up time mock before creating the result
       start_time = Time.current
       allow(Time).to receive(:current).and_return(start_time, start_time + 2.0)
-      
+
       test_result = DomainImportResult.new
       domain1 = create(:domain)
       domain2 = create(:domain)

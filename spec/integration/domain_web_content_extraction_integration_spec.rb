@@ -60,7 +60,7 @@ RSpec.describe "Domain Web Content Extraction Integration", type: :request do
           "url" => "https://needs-test.com",
           "statusCode" => 200
         },
-        links: ["https://example.com/about", "https://example.com/contact"],
+        links: [ "https://example.com/about", "https://example.com/contact" ],
         screenshot_url: nil
       )
     end

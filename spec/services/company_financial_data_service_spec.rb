@@ -264,7 +264,7 @@ RSpec.describe CompanyFinancialDataService do
     stub_request(:get, "https://api.brreg.no/regnskapsregisteret/regnskap/#{registration_number}")
       .to_return(
         status: 200,
-        body: [{
+        body: [ {
           regnskapsperiode: { fraDato: "2023-01-01" },
           resultatregnskapResultat: {
             driftsresultat: {
@@ -284,7 +284,7 @@ RSpec.describe CompanyFinancialDataService do
             omloepsmidler: { sumOmloepsmidler: response_data[:current_assets] },
             anleggsmidler: { sumAnleggsmidler: response_data[:fixed_assets] }
           }
-        }].to_json,
+        } ].to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
   end

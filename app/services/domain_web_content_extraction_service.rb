@@ -78,7 +78,7 @@ class DomainWebContentExtractionService < ApplicationService
       status: :pending,
       table_name: domain.class.table_name,
       record_id: domain.id.to_s,
-      columns_affected: ["web_content_data"],
+      columns_affected: [ "web_content_data" ],
       metadata: { "status" => "initialized" },
       started_at: Time.current
     )
@@ -95,7 +95,7 @@ class DomainWebContentExtractionService < ApplicationService
           content_length: result[:data]["content"]&.length || 0,
           extraction_success: true
         },
-        ["web_content_data"]
+        [ "web_content_data" ]
       )
 
       success_result("Web content extracted successfully", result: result)
@@ -108,7 +108,7 @@ class DomainWebContentExtractionService < ApplicationService
           error: result[:error],
           extraction_success: false
         },
-        ["web_content_data"]
+        [ "web_content_data" ]
       )
 
       error_result(result[:error])
@@ -122,7 +122,7 @@ class DomainWebContentExtractionService < ApplicationService
     Firecrawl.api_key firecrawl_api_key
 
     # Scrape with markdown format
-    response = Firecrawl.scrape(url, { formats: ["markdown", "html", "links"] })
+    response = Firecrawl.scrape(url, { formats: [ "markdown", "html", "links" ] })
 
     if response.success?
       validate_and_normalize_content(response)
@@ -136,7 +136,7 @@ class DomainWebContentExtractionService < ApplicationService
 
   def validate_and_normalize_content(result)
     return { success: false, error: "Invalid content data" } unless result.respond_to?(:markdown)
-    
+
     # Ensure we have at least markdown or html content
     content = result.markdown || result.html
     return { success: false, error: "No content found" } if content.blank?
@@ -178,7 +178,7 @@ class DomainWebContentExtractionService < ApplicationService
           next
         end
 
-        # Create the audit log manually  
+        # Create the audit log manually
         audit_log = ServiceAuditLog.create!(
           auditable: domain,
           service_name: service_name,
@@ -186,7 +186,7 @@ class DomainWebContentExtractionService < ApplicationService
           status: :pending,
           table_name: domain.class.table_name,
           record_id: domain.id.to_s,
-          columns_affected: ["web_content_data"],
+          columns_affected: [ "web_content_data" ],
           metadata: { "status" => "initialized" },
           started_at: Time.current
         )
@@ -197,7 +197,7 @@ class DomainWebContentExtractionService < ApplicationService
 
         if result[:success]
           store_web_content_data(domain, result[:data])
-          
+
           audit_log.mark_success!(
             {
               domain_name: domain.domain,
@@ -205,9 +205,9 @@ class DomainWebContentExtractionService < ApplicationService
               content_length: result[:data]["content"]&.length || 0,
               extraction_success: true
             },
-            ["web_content_data"]
+            [ "web_content_data" ]
           )
-          
+
           results[:successful] += 1
         else
           audit_log.mark_failed!(
@@ -218,7 +218,7 @@ class DomainWebContentExtractionService < ApplicationService
               error: result[:error],
               extraction_success: false
             },
-            ["web_content_data"]
+            [ "web_content_data" ]
           )
           results[:failed] += 1
         end
@@ -244,7 +244,7 @@ class DomainWebContentExtractionService < ApplicationService
     Firecrawl.api_key firecrawl_api_key
 
     # Scrape with markdown format
-    response = Firecrawl.scrape(url, { formats: ["markdown", "html", "links"] })
+    response = Firecrawl.scrape(url, { formats: [ "markdown", "html", "links" ] })
 
     if response.success?
       validate_and_normalize_content(response)

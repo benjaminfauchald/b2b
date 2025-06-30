@@ -176,7 +176,7 @@ class ApplicationService
       # Check if this is a rate limit error with retry_after
       metadata = { "error" => e.message }
       status = :failed
-      
+
       if e.message.include?("rate limit") && e.respond_to?(:retry_after)
         metadata["rate_limited"] = true
         metadata["retry_after"] = e.retry_after
@@ -191,7 +191,7 @@ class ApplicationService
         metadata: audit_log.metadata.merge(metadata),
         execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
       )
-      
+
       raise e
     end
   end

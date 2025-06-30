@@ -245,7 +245,7 @@ RSpec.describe Domain, type: :model do
             active: true,
             refresh_interval_hours: 24
           )
-          
+
           # Create old successful extraction
           create(:service_audit_log,
             auditable: domain_with_content,
@@ -265,7 +265,7 @@ RSpec.describe Domain, type: :model do
             active: true,
             refresh_interval_hours: 24
           )
-          
+
           # Create recent successful extraction (within refresh interval)
           create(:service_audit_log,
             auditable: domain_with_content,

@@ -28,7 +28,7 @@ guard :rspec, cmd: "bundle exec rspec", notification: true do
   require "guard/rspec/dsl"
   require_relative "lib/guard_claude_helper"
   dsl = Guard::RSpec::Dsl.new(self)
-  
+
   # Callback for when tests fail
   callback(:run_on_modifications_end) do |guard_class, event, result|
     if result&.failure_count && result.failure_count > 0

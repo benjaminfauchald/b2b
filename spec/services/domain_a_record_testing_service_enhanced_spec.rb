@@ -246,7 +246,7 @@ RSpec.describe DomainARecordTestingService, type: :service do
       context "when domain is nil" do
         let(:service) { described_class.new(domain: nil) }
 
-        it "returns error result", :skip => "Service is designed to handle batch processing when domain is nil" do
+        it "returns error result", skip: "Service is designed to handle batch processing when domain is nil" do
           result = service.perform
           expect(result.success?).to be false
           expect(result.error).to match(/domain.*required/i)

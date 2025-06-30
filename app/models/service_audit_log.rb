@@ -72,7 +72,7 @@ class ServiceAuditLog < ApplicationRecord
     now = Time.current
     # Merge the existing metadata with the new metadata, ensuring error key exists
     merged_metadata = self.metadata.merge(metadata).merge("error" => error_message)
-    
+
     update_columns(
       status: STATUS_FAILED,
       error_message: error_message,

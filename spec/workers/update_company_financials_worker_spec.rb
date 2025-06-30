@@ -20,9 +20,9 @@ RSpec.describe CompanyFinancialsWorker do
     allow_any_instance_of(described_class).to receive(:log_to_sct)
 
     # Mock ServiceAuditLog creation
-    audit_log_double = double('ServiceAuditLog', 
-      mark_success!: true, 
-      mark_failed!: true, 
+    audit_log_double = double('ServiceAuditLog',
+      mark_success!: true,
+      mark_failed!: true,
       add_metadata: true,
       update!: true,
       started_at: Time.current

@@ -12,7 +12,7 @@ RSpec.describe CompaniesController, type: :request do
   describe "Country filtering" do
     before do
       # Create companies for different countries that meet financial data criteria
-      create_list(:company, 3, source_country: "NO", company_name: "Norwegian Company", 
+      create_list(:company, 3, source_country: "NO", company_name: "Norwegian Company",
                   source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")
       create_list(:company, 2, source_country: "SE", company_name: "Swedish Company",
                   source_registry: "brreg", ordinary_result: nil, organization_form_code: "AS")

@@ -2,7 +2,7 @@
 
 module PhantomBusterHelpers
   # Standard PhantomBuster API stubs for testing
-  
+
   def stub_phantombuster_config_fetch(phantom_id: 'test_phantom_id', api_key: 'test_api_key', current_config: {})
     stub_request(:get, "https://api.phantombuster.com/api/v2/agents/fetch?id=#{phantom_id}")
       .with(
@@ -99,15 +99,15 @@ module PhantomBusterHelpers
 
   def stub_phantombuster_api_error(endpoint: 'agents/fetch', phantom_id: 'test_phantom_id', api_key: 'test_api_key', status: 500)
     url = case endpoint
-          when 'agents/fetch'
+    when 'agents/fetch'
             "https://api.phantombuster.com/api/v2/agents/fetch?id=#{phantom_id}"
-          when 'agents/save'
+    when 'agents/save'
             "https://api.phantombuster.com/api/v2/agents/save"
-          when 'agents/launch'
+    when 'agents/launch'
             "https://api.phantombuster.com/api/v2/agents/launch"
-          else
+    else
             raise "Unknown endpoint: #{endpoint}"
-          end
+    end
 
     stub_request(:any, url)
       .with(
@@ -120,15 +120,15 @@ module PhantomBusterHelpers
 
   def stub_phantombuster_rate_limit(endpoint: 'agents/launch', phantom_id: 'test_phantom_id', api_key: 'test_api_key', retry_after: 60)
     url = case endpoint
-          when 'agents/fetch'
+    when 'agents/fetch'
             "https://api.phantombuster.com/api/v2/agents/fetch?id=#{phantom_id}"
-          when 'agents/save'
+    when 'agents/save'
             "https://api.phantombuster.com/api/v2/agents/save"
-          when 'agents/launch'
+    when 'agents/launch'
             "https://api.phantombuster.com/api/v2/agents/launch"
-          else
+    else
             raise "Unknown endpoint: #{endpoint}"
-          end
+    end
 
     stub_request(:any, url)
       .with(
@@ -139,7 +139,7 @@ module PhantomBusterHelpers
       .to_return(
         status: 429,
         body: { error: 'Rate limit exceeded', retry_after: retry_after }.to_json,
-        headers: { 
+        headers: {
           'Content-Type' => 'application/json',
           'Retry-After' => retry_after.to_s
         }

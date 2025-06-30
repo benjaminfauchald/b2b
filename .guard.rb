@@ -13,16 +13,16 @@ Guard::Notifier.turn_on
 # Custom notification configuration for macOS
 if RUBY_PLATFORM.downcase.include?('darwin')
   require 'terminal-notifier-guard'
-  
+
   # Configure terminal-notifier-guard for traffic light notifications
   TerminalNotifier::Guard.setup do
     # Green light for passing tests
     success_image = "✅"
-    # Red light for failing tests  
+    # Red light for failing tests
     failure_image = "❌"
     # Yellow light for pending/warnings
     pending_image = "⚠️"
-    
+
     # Set notification sounds
     success_sound = "Glass"
     failure_sound = "Basso"
