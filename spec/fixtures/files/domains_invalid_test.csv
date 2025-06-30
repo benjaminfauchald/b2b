@@ -1,5 +1,5 @@
 domain,dns,www,mx
-valid-import-1751306118-3296.com,true,true,false
+test-valid-import-001.com,true,true,false
 ,false,false,true
 invalid..domain,true,false,true
-valid-import-1751306118-9547.org,false,true,false
+test-valid-import-002.org,false,true,false

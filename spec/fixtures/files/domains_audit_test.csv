@@ -1,3 +1,3 @@
 domain,dns,www,mx
-import-test-1751306119-2635.com,true,true,false
-import-test-1751306119-6488.org,false,false,true
+test-audit-import-001.com,true,true,false
+test-audit-import-002.org,false,false,true
