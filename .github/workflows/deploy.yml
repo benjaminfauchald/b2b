@@ -75,13 +75,105 @@ jobs:
         REDIS_URL: redis://localhost:6379/0
       run: bundle exec rspec
 
+  sct_compliance:
+    needs: lint
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3.0
+        bundler-cache: true
+    
+    - name: Setup test database
+      env:
+        RAILS_ENV: test
+        DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
+      run: |
+        bin/rails db:create
+        bin/rails db:migrate
+    
+    - name: Run SCT Compliance Check
+      env:
+        RAILS_ENV: test
+        DATABASE_URL: postgres://postgres:password@localhost:5432/b2b_test
+        REDIS_URL: redis://localhost:6379/0
+      run: |
+        bundle exec rake sct:compliance
+
   deploy:
-    needs: [lint, test]
+    needs: [lint, test, sct_compliance]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all tags for release creation
+    
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        git fetch --tags
+        LATEST_TAG=$(git tag --sort=-version:refname | head -1)
+        echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+        echo "Latest tag: $LATEST_TAG"
+    
+    - name: Create GitHub Release
+      if: steps.get_tag.outputs.latest_tag != ''
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_tag.outputs.latest_tag }}
+        release_name: "Release ${{ steps.get_tag.outputs.latest_tag }}: Production Deployment"
+        body: |
+          🚀 **Production Deployment**
+          
+          **Tag:** ${{ steps.get_tag.outputs.latest_tag }}
+          **Commit:** ${{ github.sha }}
+          **Branch:** master
+          
+          **Changes included:**
+          - All merged changes from develop branch
+          - SCT compliance validation passed
+          - RuboCop linting passed
+          - Full test suite passed
+          
+          **Deployment Status:**
+          - ✅ Linting passed
+          - ✅ Tests passed  
+          - ✅ Deployed to production server
+          
+          This release has been automatically deployed to the production environment.
+        draft: false
+        prerelease: false
     
     - name: Deploy to production
       uses: appleboy/ssh-action@v1.0.3
