@@ -54,7 +54,14 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpq-dev google-chrome-stable
+          sudo apt-get install -y \
+            libpq-dev \
+            google-chrome-stable \
+            libjemalloc2 \
+            libvips \
+            libyaml-dev \
+            build-essential \
+            nodejs
 
       - name: Setup test database
         env:
@@ -67,12 +74,6 @@ jobs:
         run: |
           bin/rails db:create
           bin/rails db:schema:load
-          
-      - name: Precompile assets
-        env:
-          RAILS_ENV: test
-        run: |
-          bin/rails assets:precompile
 
       - name: Run RuboCop
         run: bundle exec rubocop --parallel
@@ -100,8 +101,9 @@ jobs:
           GOOGLE_SEARCH_API_KEY: test_google_search_key
           GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID: test_engine_id
           GOOGLE_SEARCH_ENGINE_WEB_ID: test_web_engine_id
-          # Test environment doesn't need master key
-          RAILS_ENV: test
+          # Additional settings for ViewComponent
+          RAILS_SERVE_STATIC_FILES: true
+          DISABLE_SPRING: true
         run: |
           bundle exec rspec --format documentation
 

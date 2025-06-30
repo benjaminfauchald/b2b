@@ -14,11 +14,13 @@ end
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
 require 'shoulda/matchers'
-require 'view_component/test_helpers'
 require 'capybara/rspec'
 require 'webmock/rspec'
 require_relative 'support/latest_service_run_stub'
 require 'sidekiq/testing'
+
+# Load ViewComponent test setup early
+require_relative 'support/view_component_test_setup'
 
 # Load support files
 Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
@@ -76,11 +78,6 @@ RSpec.configure do |config|
   config.include ViewComponent::SystemTestHelpers, type: :component
   config.include Capybara::RSpecMatchers, type: :component
   config.include Rails.application.routes.url_helpers, type: :component
-
-  # Configure Capybara for component tests
-  config.before(:each, type: :component) do
-    driven_by(:rack_test)
-  end
 
   # Set default host for route helpers in tests
   config.before(:each) do
