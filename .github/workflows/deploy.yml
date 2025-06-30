@@ -3,6 +3,8 @@ name: Deploy to Production
 on:
   push:
     branches: [ master ]
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.4.8
 
 jobs:
   lint:
@@ -135,7 +137,7 @@ jobs:
   deploy:
     needs: [lint, test, sct_compliance]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - uses: actions/checkout@v4
