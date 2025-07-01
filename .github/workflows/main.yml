@@ -202,8 +202,14 @@ jobs:
           
           # Setup SSH
           mkdir -p ~/.ssh
-          # Write the private key with proper line endings preserved
-          echo "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
+          # Try to decode from base64 first (if it's base64 encoded)
+          if echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa 2>/dev/null; then
+            echo "SSH key decoded from base64"
+          else
+            # If not base64, write directly with line ending fixes
+            echo "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
+            echo "SSH key written directly"
+          fi
           chmod 600 ~/.ssh/id_rsa
           
           # Debug: Check key format
