@@ -1,0 +1,40 @@
+#!/bin/bash
+# Setup script to add claude alias to shell configuration
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLAUDE_PATH="$PROJECT_DIR/bin/claude"
+
+# Function to add alias to a file if it doesn't exist
+add_alias_to_file() {
+    local file="$1"
+    local alias_line="alias /claude='$CLAUDE_PATH'"
+    
+    if [ -f "$file" ]; then
+        if ! grep -q "/claude=" "$file"; then
+            echo "" >> "$file"
+            echo "# Claude CLI alias" >> "$file"
+            echo "$alias_line" >> "$file"
+            echo "Added claude alias to $file"
+        else
+            echo "Claude alias already exists in $file"
+        fi
+    fi
+}
+
+# Add to various shell configs
+add_alias_to_file "$HOME/.bashrc"
+add_alias_to_file "$HOME/.zshrc"
+add_alias_to_file "$HOME/.bash_profile"
+
+# Also create a function that works in the current shell
+echo ""
+echo "To use /claude command immediately in this shell, run:"
+echo "  alias /claude='$CLAUDE_PATH'"
+echo ""
+echo "Or reload your shell configuration:"
+echo "  source ~/.bashrc  # for bash"
+echo "  source ~/.zshrc   # for zsh"
+echo ""
+echo "After that, you can use:"
+echo "  /claude guard     # Generate Claude prompt for failing tests"
+echo "  /claude help      # Show all available commands"

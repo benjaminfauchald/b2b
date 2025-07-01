@@ -49,13 +49,7 @@
               elsif linkedin_discovery_service?
                 number_with_delimiter(Company.linkedin_discovery_potential.count)
               elsif financial_data_service? || service_name == "company_financials"
-                number_with_delimiter(Company.where(
-                  source_country: "NO",
-                  source_registry: "brreg",
-                  organization_form_code: ["AS", "ASA", "DA", "ANS"]
-                ).count)
-              else
-                number_with_delimiter(Company.needs_financial_update.count)
+                number_with_delimiter(Company.financial_data_eligible.count)
               end
             %> companies processed
           </p>
@@ -81,7 +75,7 @@
              id="<%= service_name %>_count"
              value="<%= [companies_needing_service_raw, 100].min %>" 
              min="1" 
-             max="<%= [companies_needing_service_raw, 1000].min %>"
+             max="<%= companies_needing_service_raw > 0 ? [companies_needing_service_raw, 1000].min : 1000 %>"
              class="<%= input_classes %>"
              data-service-queue-target="countInput"
              data-max-available="<%= companies_needing_service_raw %>" />
@@ -89,7 +83,8 @@
     
     <button type="submit" 
             class="<%= button_classes %>"
-            data-service-queue-target="submitButton">
+            data-service-queue-target="submitButton"
+            <%= companies_needing_service_raw == 0 ? 'disabled' : '' %>>
       Queue Processing
     </button>
   </form>

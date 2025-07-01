@@ -43,8 +43,13 @@ class CompanyRowComponent < ViewComponent::Base
 
     # Extract company name from LinkedIn URL
     if url.match(/\/company\/([^\/\?]+)/)
-      company_slug = $1.gsub(/-/, " ").titleize
-      company_slug.length > 25 ? "#{company_slug[0..22]}..." : company_slug
+      company_slug = $1
+      # Truncate if too long to fit with confidence score
+      if company_slug.length > 20
+        "linkedin.com/#{company_slug[0..17]}..."
+      else
+        "linkedin.com/#{company_slug}"
+      end
     else
       "LinkedIn Profile"
     end
@@ -74,6 +79,20 @@ class CompanyRowComponent < ViewComponent::Base
       "bg-gray-50 dark:bg-gray-800/50"
     else
       "bg-white dark:bg-gray-900"
+    end
+  end
+
+  def revenue_display
+    return nil unless company.operating_revenue.present?
+
+    if company.operating_revenue >= 1_000_000_000
+      "#{(company.operating_revenue / 1_000_000_000.0).round(1)}B NOK"
+    elsif company.operating_revenue >= 1_000_000
+      "#{(company.operating_revenue / 1_000_000.0).round(1)}M NOK"
+    elsif company.operating_revenue >= 1_000
+      "#{(company.operating_revenue / 1_000.0).round(0)}K NOK"
+    else
+      "#{number_with_delimiter(company.operating_revenue)} NOK"
     end
   end
 end

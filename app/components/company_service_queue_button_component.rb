@@ -64,12 +64,11 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
       # Return total unique count (some companies might have websites AND be in audit log)
       companies_with_websites
     when "company_financial_data", "company_financials"
-      # Count companies that have actually been successfully processed by financial data service
-      # Use the correct service name: company_financials
-      ServiceAuditLog
-        .where(service_name: "company_financials", status: "success")
-        .distinct
-        .count(:auditable_id)
+      # Count eligible companies that have financial data (indicating they've been processed)
+      # The service actually populates ordinary_result and annual_result
+      Company.financial_data_eligible
+        .where.not(ordinary_result: nil)
+        .count
     when "company_linkedin_discovery"
       # Count companies that have actually been successfully processed by LinkedIn discovery service
       ServiceAuditLog
@@ -90,12 +89,8 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
       # Total companies with revenue > 10M (regardless of website status)
       Company.where("operating_revenue > ?", 10_000_000).count
     when "company_financial_data", "company_financials"
-      # Total eligible companies for financial data (AS, ASA, DA, ANS)
-      Company.where(
-        source_country: "NO",
-        source_registry: "brreg",
-        organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
-      ).count
+      # Use the consistent financial_data_eligible scope
+      Company.financial_data_eligible.count
     when "company_linkedin_discovery"
       Company.linkedin_discovery_potential.count
     else

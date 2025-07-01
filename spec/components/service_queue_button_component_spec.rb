@@ -54,6 +54,9 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
     end
 
     it "renders submit button with Flowbite styling" do
+      # Mock domains needing service to enable the button
+      allow(Domain).to receive_message_chain(:needing_service, :count).and_return(10)
+
       render_inline(component)
 
       expect(page).to have_button("Queue Testing")

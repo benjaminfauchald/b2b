@@ -36,14 +36,72 @@
     </div>
   <% end %>
 
+  <!-- Web Discovery Summary (for web_discovery service with existing website) -->
+  <% if service == :web_discovery && test_status == :not_eligible && company.website.present? %>
+    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+      <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Existing Website</h5>
+      <div class="text-xs">
+        <span class="text-gray-500 dark:text-gray-400">Website:</span>
+        <a href="<%= company.website %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate block">
+          <%= company.website %>
+        </a>
+      </div>
+      <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+        Web discovery finds websites for companies without one. This company already has a website listed.
+      </p>
+    </div>
+  <% end %>
+
+  <!-- LinkedIn Discovery Summary (for linkedin_discovery service) -->
+  <% if service == :linkedin_discovery %>
+    <div class="mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg" data-service-button-target="linkedinData">
+      <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">LinkedIn Discovery</h5>
+      <div class="space-y-2 text-xs">
+        <% if company.linkedin_url.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Manual URL:</span>
+            <a href="<%= company.linkedin_url %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate block">
+              <%= company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+            </a>
+          </div>
+        <% end %>
+        <% if company.linkedin_ai_url.present? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">AI URL (Confidence: <%= company.linkedin_ai_confidence || 0 %>%):</span>
+            <a href="<%= company.linkedin_ai_url %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate block">
+              <%= company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+            </a>
+          </div>
+        <% end %>
+        <% if company.linkedin_alternatives.present? && company.linkedin_alternatives.any? %>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Alternative suggestions:</span>
+            <ul class="mt-1 space-y-1">
+              <% company.linkedin_alternatives.each do |alt| %>
+                <li>
+                  <a href="<%= alt['url'] || alt %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline text-xs truncate block">
+                    <%= (alt['url'] || alt).gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+                    <% if alt.is_a?(Hash) && alt['confidence'] %>
+                      <span class="text-gray-500">(confidence: <%= alt['confidence'] %>%)</span>
+                    <% end %>
+                  </a>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Status Badge -->
-  <div class="flex items-center justify-between mb-2">
+  <div class="flex items-center justify-between mb-3">
     <span class="<%= status_badge_classes %> inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
           data-service-button-target="statusBadge">
       <%= service == :financial_data && test_status == :has_data ? "Has Data" : status_text %>
     </span>
     <% if last_tested_time %>
-      <span class="text-xs text-gray-500">
+      <span class="text-xs text-gray-500 dark:text-gray-400">
         <%= time_ago_in_words(last_tested_time) %> ago
       </span>
     <% end %>

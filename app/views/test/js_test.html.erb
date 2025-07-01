@@ -1,0 +1,43 @@
+<div class="max-w-4xl mx-auto p-8">
+  <h1 class="text-2xl font-bold mb-8">JavaScript Test</h1>
+  
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-lg font-semibold mb-4">Testing Stimulus Controllers</h2>
+    
+    <div class="space-y-4">
+      <!-- Test that basic Stimulus is working -->
+      <div data-controller="hello">
+        <button data-action="click->hello#greet" class="bg-blue-500 text-white px-4 py-2 rounded">
+          Test Hello Controller
+        </button>
+      </div>
+      
+      <!-- Test inline-edit controller -->
+      <div data-controller="inline-edit" class="mt-8 p-4 border rounded">
+        <p class="font-semibold mb-2">Inline Edit Controller Test</p>
+        <div data-inline-edit-target="display">
+          <span>Click edit to change this text</span>
+          <button data-action="click->inline-edit#edit" class="ml-2 text-blue-600">Edit</button>
+        </div>
+        <div data-inline-edit-target="form" class="hidden">
+          <input type="text" data-inline-edit-target="input" value="Test value" class="border px-2 py-1">
+          <button data-action="click->inline-edit#cancel" class="ml-2 text-red-600">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-8 p-4 bg-gray-100 rounded">
+    <h3 class="font-semibold mb-2">Debug Info:</h3>
+    <p>Open browser console (F12) to see any JavaScript errors.</p>
+    <p>If controllers aren't loading, check the console for error messages.</p>
+  </div>
+  
+  <script>
+    // Add some debug logging
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM loaded');
+      console.log('Stimulus controllers registered:', Stimulus.controllers);
+    });
+  </script>
+</div>

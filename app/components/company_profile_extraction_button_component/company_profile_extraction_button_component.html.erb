@@ -5,8 +5,8 @@
   <% if can_extract_profiles? %>
     <%= form_with url: profile_extraction_path, 
                   method: :post,
+                  local: false,
                   data: { 
-                    turbo: false,
                     profile_extraction_target: "form",
                     action: "submit->profile-extraction#submit"
                   } do |f| %>

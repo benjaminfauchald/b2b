@@ -61,7 +61,7 @@
              id="count"
              value="<%= [domains_needing_service_raw, 10].min %>" 
              min="1" 
-             max="<%= [domains_needing_service_raw, 1000].min %>"
+             max="<%= domains_needing_service_raw > 0 ? [domains_needing_service_raw, 1000].min : 1000 %>"
              class="<%= input_classes %>"
              data-service-queue-target="countInput"
              data-max-available="<%= domains_needing_service_raw %>" />
@@ -69,7 +69,8 @@
     
     <button type="submit" 
             class="<%= button_classes %>"
-            data-service-queue-target="submitButton">
+            data-service-queue-target="submitButton"
+            <%= domains_needing_service_raw == 0 ? 'disabled' : '' %>>
       Queue Testing
     </button>
   </form>

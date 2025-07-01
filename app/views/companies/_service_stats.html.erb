@@ -33,20 +33,17 @@
     <!-- Financial Data Completion percentage display -->
     <div class="mb-3">
       <%
-        # Calculate companies that have actually been successfully processed by financial data service
-        companies_completed = ServiceAuditLog
-          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-          .where(service_name: "company_financial_data", status: "success")
-          .where("companies.source_country = 'NO'")
-          .where("companies.source_registry = 'brreg'") 
-          .where("companies.ordinary_result IS NULL")
-          .where("companies.organization_form_code IN ('AS', 'ASA', 'DA', 'ANS')")
+        # Use consistent calculation with the queue button component
+        # Total eligible companies (doesn't change as we process)
+        financial_total = Company.financial_data_eligible.count
+        
+        # Count companies that have been successfully processed
+        # Count eligible companies that have financial data (ordinary_result populated)
+        companies_completed = Company.financial_data_eligible
+          .where.not(ordinary_result: nil)
           .count
         
-        # Get total potential companies for financial data
-        financial_potential = Company.needs_financial_update.count
-        
-        completion_percentage = financial_potential > 0 ? (companies_completed.to_f / financial_potential.to_f) * 100 : 0
+        completion_percentage = financial_total > 0 ? (companies_completed.to_f / financial_total.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
       %>
       <div class="flex items-center justify-between mb-1">
@@ -57,7 +54,7 @@
         <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
       </div>
       <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(financial_potential) %> companies processed
+        <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(financial_total) %> companies processed
       </p>
     </div>
   <% elsif service_name == "company_linkedin_discovery" && defined?(companies_potential) %>

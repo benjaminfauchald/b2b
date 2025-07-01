@@ -20,6 +20,24 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
     people.count
   end
 
+  def email_count
+    people.where.not(email: [nil, '']).count
+  end
+
+  def phone_count
+    people.where.not(phone: [nil, '']).count
+  end
+
+  def summary_stats
+    return nil unless has_profiles?
+    
+    {
+      people: profile_count,
+      emails: email_count,
+      phones: phone_count
+    }
+  end
+
   def grouped_by_title
     # Group people by their role level for better organization
     executives = people.select { |p| executive?(p) }
@@ -57,8 +75,15 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
     latest_log&.completed_at
   end
 
+  def extraction_in_progress?
+    company.service_audit_logs
+      .where(service_name: "person_profile_extraction", status: "pending")
+      .where("created_at > ?", 10.minutes.ago)
+      .exists?
+  end
+
   def card_classes
-    "p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700"
+    "bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700"
   end
 
   def heading_classes

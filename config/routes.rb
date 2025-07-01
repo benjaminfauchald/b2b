@@ -49,6 +49,8 @@ Rails.application.routes.draw do
       post :queue_single_linkedin_discovery
       post :queue_single_employee_discovery
       get :financial_data
+      get :profile_extraction_status
+      get :linkedin_profiles
     end
   end
 
@@ -90,6 +92,8 @@ Rails.application.routes.draw do
     post "test/run_web_discovery", to: "test#run_web_discovery"
     get "test/linkedin_discovery", to: "test#linkedin_discovery_test"
     post "test/run_linkedin_discovery", to: "test#run_linkedin_discovery"
+    get "test/inline_edit", to: "test#inline_edit_test"
+    get "test/js_test", to: "test#js_test"
   end
 
   # Defines the root path route ("/")

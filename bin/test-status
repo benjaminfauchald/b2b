@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+# Script to check current test status from Guard logs
+
+require 'json'
+require 'colorize'
+
+LOG_DIR = 'tmp/guard_logs'
+CURRENT_FAILURES_FILE = File.join(LOG_DIR, 'current_failures.json')
+FAILURE_SUMMARY_FILE = File.join(LOG_DIR, 'failure_summary.md')
+
+def check_test_status
+  unless File.exist?(CURRENT_FAILURES_FILE)
+    puts "No test run data found. Start Guard to begin monitoring tests.".yellow
+    exit 0
+  end
+  
+  data = JSON.parse(File.read(CURRENT_FAILURES_FILE))
+  
+  if data['failure_count'] == 0
+    puts "✅ All tests passing!".green.bold
+    puts "Last updated: #{data['last_updated']}".gray
+  else
+    puts "❌ #{data['failure_count']} test(s) failing!".red.bold
+    puts "Last updated: #{data['last_updated']}".gray
+    puts
+    
+    data['failures'].each_with_index do |failure, index|
+      puts "#{index + 1}. #{failure['description']}".red
+      puts "   #{failure['file_path']}:#{failure['line_number']}".gray
+    end
+    
+    puts
+    puts "View detailed report: cat #{FAILURE_SUMMARY_FILE}".yellow
+    puts "Run failing tests: bundle exec rspec #{data['failures'].map { |f| "#{f['file_path']}:#{f['line_number']}" }.join(' ')}".cyan
+  end
+end
+
+# Add command options
+case ARGV[0]
+when 'details', '-d'
+  if File.exist?(FAILURE_SUMMARY_FILE)
+    puts File.read(FAILURE_SUMMARY_FILE)
+  else
+    puts "No failure summary found.".yellow
+  end
+when 'json', '-j'
+  if File.exist?(CURRENT_FAILURES_FILE)
+    puts File.read(CURRENT_FAILURES_FILE)
+  else
+    puts "No failure data found.".yellow
+  end
+when 'watch', '-w'
+  puts "Watching for test status changes... (Press Ctrl+C to stop)".cyan
+  last_content = nil
+  
+  loop do
+    if File.exist?(CURRENT_FAILURES_FILE)
+      current_content = File.read(CURRENT_FAILURES_FILE)
+      if current_content != last_content
+        system('clear')
+        check_test_status
+        last_content = current_content
+      end
+    end
+    sleep 1
+  end
+else
+  check_test_status
+end

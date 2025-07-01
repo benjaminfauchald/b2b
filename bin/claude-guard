@@ -1,117 +1,137 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
-# Claude-Guard Integration Script
-# This script provides easy commands to work with Claude when tests fail
+# Claude + Guard integration helper
 
 require 'json'
 require 'fileutils'
 
-class ClaudeGuardIntegration
-  FAILURE_FILE = "tmp/test_failures.md"
+class ClaudeGuard
+  LOG_DIR = 'tmp/guard_logs'
+  CURRENT_FAILURES_FILE = File.join(LOG_DIR, 'current_failures.json')
+  FAILURE_SUMMARY_FILE = File.join(LOG_DIR, 'failure_summary.md')
+  CLAUDE_PROMPT_FILE = 'tmp/claude_fix_prompt.md'
   
-  def self.show_help
-    puts <<~HELP
-      🤖 Claude-Guard Integration Commands:
-      
-      ./bin/claude-guard status    - Show current test status
-      ./bin/claude-guard failures  - Show failure report (if any)
-      ./bin/claude-guard prompt    - Generate Claude prompt for failures
-      ./bin/claude-guard clean     - Clean up failure reports
-      ./bin/claude-guard watch     - Watch for test failures and auto-generate prompts
-      
-      💡 Typical workflow:
-      1. Start Guard: ./bin/guard
-      2. In another terminal: ./bin/claude-guard watch
-      3. When tests fail, copy the generated prompt to Claude
-      4. Claude fixes the tests
-      5. Guard automatically re-runs tests
-    HELP
-  end
-  
-  def self.show_status
-    if File.exist?(FAILURE_FILE)
-      content = File.read(FAILURE_FILE)
-      failure_count = content.scan(/^### \d+\./).length
-      puts "❌ #{failure_count} test(s) currently failing"
-      puts "📝 Failure report available: #{FAILURE_FILE}"
-    else
-      puts "✅ No test failures detected"
+  def self.status
+    unless File.exist?(CURRENT_FAILURES_FILE)
+      puts "No test data found. Start Guard first: bundle exec guard"
+      return
     end
-  end
-  
-  def self.show_failures
-    if File.exist?(FAILURE_FILE)
-      puts File.read(FAILURE_FILE)
-    else
-      puts "✅ No test failures found"
-    end
-  end
-  
-  def self.generate_claude_prompt
-    if File.exist?(FAILURE_FILE)
-      content = File.read(FAILURE_FILE)
-      
-      # Extract the quick Claude prompt section
-      if content.include?("## Quick Claude Prompt")
-        prompt_section = content.split("## Quick Claude Prompt").last
-        puts "📋 Copy this prompt to Claude:"
-        puts "=" * 50
-        puts prompt_section.strip
-        puts "=" * 50
-        
-        # Copy to clipboard on macOS
-        if RUBY_PLATFORM.include?('darwin')
-          IO.popen('pbcopy', 'w') { |f| f << prompt_section.strip }
-          puts "📋 Prompt copied to clipboard!"
-        end
-      end
-    else
-      puts "✅ No failures to fix"
-    end
-  end
-  
-  def self.clean_reports
-    FileUtils.rm_f(FAILURE_FILE)
-    puts "🧹 Cleaned up failure reports"
-  end
-  
-  def self.watch_for_failures
-    puts "👁️  Watching for test failures..."
-    puts "Press Ctrl+C to stop"
     
-    last_mtime = nil
+    data = JSON.parse(File.read(CURRENT_FAILURES_FILE))
+    
+    if data['failure_count'] == 0
+      puts "✅ All tests passing!"
+    else
+      puts "❌ #{data['failure_count']} test(s) failing"
+      puts "Run: bin/claude-guard prompt"
+    end
+  end
+  
+  def self.prompt
+    unless File.exist?(CURRENT_FAILURES_FILE)
+      puts "No test failures found."
+      return
+    end
+    
+    data = JSON.parse(File.read(CURRENT_FAILURES_FILE))
+    
+    if data['failure_count'] == 0
+      puts "All tests are passing! Nothing to fix."
+      return
+    end
+    
+    # Generate Claude-optimized prompt
+    prompt = "# Fix Failing Tests\n\n"
+    prompt += "I have #{data['failure_count']} failing test(s) that need to be fixed:\n\n"
+    
+    data['failures'].each_with_index do |failure, index|
+      prompt += "## Test #{index + 1}: #{failure['description']}\n"
+      prompt += "- File: `#{failure['file_path']}:#{failure['line_number']}`\n"
+      prompt += "- Error: ```\n#{failure['exception']}\n```\n\n"
+    end
+    
+    prompt += "\nPlease analyze these failures and fix the code to make the tests pass."
+    
+    File.write(CLAUDE_PROMPT_FILE, prompt)
+    
+    puts "Claude prompt generated: #{CLAUDE_PROMPT_FILE}"
+    puts "\nPrompt content:"
+    puts "=" * 80
+    puts prompt
+    puts "=" * 80
+    
+    # Copy to clipboard on macOS
+    if RUBY_PLATFORM.include?('darwin')
+      IO.popen('pbcopy', 'w') { |io| io.write(prompt) }
+      puts "\n✅ Prompt copied to clipboard!"
+    end
+  end
+  
+  def self.watch
+    puts "Watching for test failures... (Press Ctrl+C to stop)"
+    
+    last_failure_count = nil
+    
+    Signal.trap("INT") do
+      puts "\nStopped watching."
+      exit 0
+    end
     
     loop do
-      if File.exist?(FAILURE_FILE)
-        current_mtime = File.mtime(FAILURE_FILE)
+      if File.exist?(CURRENT_FAILURES_FILE)
+        data = JSON.parse(File.read(CURRENT_FAILURES_FILE))
+        current_failure_count = data['failure_count']
         
-        if last_mtime != current_mtime
-          puts "\n🚨 New test failures detected!"
-          generate_claude_prompt
-          last_mtime = current_mtime
+        if current_failure_count != last_failure_count
+          system('clear')
+          
+          if current_failure_count == 0
+            puts "✅ All tests passing! 🎉"
+          else
+            puts "❌ #{current_failure_count} test(s) failing!"
+            puts "\nFailing tests:"
+            data['failures'].each_with_index do |failure, index|
+              puts "  #{index + 1}. #{failure['description']}"
+              puts "     #{failure['file_path']}:#{failure['line_number']}"
+            end
+            puts "\nGenerate Claude prompt: bin/claude-guard prompt"
+          end
+          
+          last_failure_count = current_failure_count
         end
       end
       
-      sleep 1
+      sleep 2
     end
-  rescue Interrupt
-    puts "\n👋 Stopped watching"
+  end
+  
+  def self.reset
+    FileUtils.rm_rf(LOG_DIR)
+    puts "Test logs cleared."
   end
 end
 
-# Main command handler
+# Command line interface
 case ARGV[0]
-when 'status'
-  ClaudeGuardIntegration.show_status
-when 'failures'
-  ClaudeGuardIntegration.show_failures
-when 'prompt'
-  ClaudeGuardIntegration.generate_claude_prompt
-when 'clean'
-  ClaudeGuardIntegration.clean_reports
-when 'watch'
-  ClaudeGuardIntegration.watch_for_failures
+when 'prompt', 'p'
+  ClaudeGuard.prompt
+when 'watch', 'w'
+  ClaudeGuard.watch
+when 'status', 's'
+  ClaudeGuard.status
+when 'reset', 'r'
+  ClaudeGuard.reset
 else
-  ClaudeGuardIntegration.show_help
+  puts "Claude + Guard Test Integration"
+  puts
+  puts "Commands:"
+  puts "  bin/claude-guard status  - Check current test status"
+  puts "  bin/claude-guard prompt  - Generate Claude prompt for failures"
+  puts "  bin/claude-guard watch   - Watch for test changes"
+  puts "  bin/claude-guard reset   - Clear test logs"
+  puts
+  puts "Shortcuts:"
+  puts "  s - status"
+  puts "  p - prompt"
+  puts "  w - watch"
+  puts "  r - reset"
 end

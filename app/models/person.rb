@@ -7,24 +7,22 @@ class Person < ApplicationRecord
   validates :profile_url, uniqueness: { allow_blank: true }
 
   scope :needs_profile_extraction, -> {
-    left_joins(:service_audit_logs)
+    # Get people with no profile extraction logs
+    without_logs = left_joins(:service_audit_logs)
+      .where(service_audit_logs: { id: nil })
+    
+    # Get people with failed/error logs older than 24 hours
+    with_old_failures = joins(:service_audit_logs)
       .where(
-        service_audit_logs: { id: nil }
+        service_audit_logs: {
+          service_name: "person_profile_extraction",
+          status: [ "failed", "error" ]
+        }
       )
-      .or(
-        joins(:service_audit_logs)
-          .where(
-            service_audit_logs: {
-              service_name: "person_profile_extraction",
-              status: [ "failed", "error" ]
-            }
-          )
-          .where(
-            "service_audit_logs.created_at < ?",
-            24.hours.ago
-          )
-      )
-      .distinct
+      .where("service_audit_logs.created_at < ?", 24.hours.ago)
+    
+    # Combine using where(id: ...) to avoid incompatible OR
+    where(id: without_logs).or(where(id: with_old_failures)).distinct
   }
 
   scope :needs_email_extraction, -> {

@@ -27,6 +27,10 @@ RSpec.describe PersonServiceQueueButtonComponent, type: :component do
 
   describe "rendering" do
     it "renders the component with title and form" do
+      # Create companies that need profile extraction
+      create(:company, linkedin_url: "https://linkedin.com/company/test1")
+      create(:company, linkedin_ai_url: "https://linkedin.com/company/test2", linkedin_ai_confidence: 85)
+
       render_inline(component)
 
       expect(page).to have_text(title)

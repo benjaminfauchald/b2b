@@ -1,20 +1,20 @@
 FactoryBot.define do
   factory :person do
-    name { "MyString" }
-    profile_url { "MyString" }
-    title { "MyString" }
-    company_name { "MyString" }
-    location { "MyString" }
-    email { "MyString" }
-    phone { "MyString" }
+    sequence(:name) { |n| "Person #{n}" }
+    sequence(:profile_url) { |n| "https://linkedin.com/in/person-#{n}" }
+    title { "Software Engineer" }
+    company_name { "Example Corp" }
+    location { "San Francisco, CA" }
+    sequence(:email) { |n| "person#{n}@example.com" }
+    phone { "+1-555-0100" }
     connection_degree { 1 }
-    phantom_run_id { "MyString" }
+    phantom_run_id { "phantom-run-123" }
     company { nil }
-    profile_extracted_at { "2025-06-26 01:17:14" }
-    email_extracted_at { "2025-06-26 01:17:14" }
-    social_media_extracted_at { "2025-06-26 01:17:14" }
-    profile_data { "" }
-    email_data { "" }
-    social_media_data { "" }
+    profile_extracted_at { nil }
+    email_extracted_at { nil }
+    social_media_extracted_at { nil }
+    profile_data { {} }
+    email_data { {} }
+    social_media_data { {} }
   end
 end

@@ -181,12 +181,35 @@ bundle exec rspec spec/models/person_spec.rb
 ./bin/claude-guard status
 ```
 
-## Guard + Claude Integration
-- Guard is set up to automatically run tests and generate failure reports
-- When tests fail, check `tmp/test_failures.md` for detailed failure information
-- Use `./bin/claude-guard prompt` to get a formatted prompt for Claude to fix failures
-- Use `./bin/claude-guard watch` to automatically detect new failures and generate prompts
-- **Workflow**: Start Guard → Make changes → Guard detects failures → Copy generated prompt to Claude → Claude fixes tests → Guard auto-reruns
+## Guard + Claude Integration (Enhanced Test Monitoring)
+Guard automatically monitors tests and logs failures for easy fixing:
+
+### Quick Commands
+- `./bin/claude-guard status` - Check current test status
+- `./bin/claude-guard prompt` - Generate Claude prompt for failures (auto-copies to clipboard)
+- `./bin/claude-guard watch` - Live monitor test status
+- `./bin/test-status` - Quick test status check
+
+### How It Works
+1. **Start Guard**: `bundle exec guard` - Monitors file changes and runs tests
+2. **Make Changes**: Edit your code
+3. **Automatic Logging**: Guard logs all test results to `tmp/guard_logs/`
+4. **Check Failures**: Run `./bin/claude-guard status` anytime
+5. **Get Fix Prompt**: Run `./bin/claude-guard prompt` to generate and copy Claude prompt
+6. **Paste to Claude**: The prompt is auto-copied, just paste here for fixes
+
+### Log Files
+- `tmp/guard_logs/current_failures.json` - Current test failures in JSON
+- `tmp/guard_logs/failure_summary.md` - Human-readable failure report
+- `tmp/guard_logs/failure_history.log` - Historical failure log
+- `tmp/test_failures.md` - Legacy failure report (still generated)
+
+### Benefits
+- No need to run full test suite manually
+- Failures are automatically tracked
+- Easy integration with Claude for fixes
+- Historical tracking of test failures
+- Live monitoring with `watch` command
 
 ## Git Commit Guidelines
 - When creating commits, DO NOT include the "Generated with Claude Code" or "Co-Authored-By: Claude" lines

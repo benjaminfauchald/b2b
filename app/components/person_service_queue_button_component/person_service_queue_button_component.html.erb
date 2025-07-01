@@ -57,7 +57,7 @@
              id="<%= service_name %>_count"
              value="<%= [companies_needing_service, 100].min %>" 
              min="1" 
-             max="<%= [companies_needing_service, 1000].min %>"
+             max="<%= companies_needing_service > 0 ? [companies_needing_service, 1000].min : 1000 %>"
              class="<%= input_classes %>"
              data-service-queue-target="countInput"
              data-max-available="<%= companies_needing_service %>" />
@@ -65,7 +65,8 @@
     
     <button type="submit" 
             class="<%= button_classes %>"
-            data-service-queue-target="submitButton">
+            data-service-queue-target="submitButton"
+            <%= companies_needing_service == 0 ? 'disabled' : '' %>>
       Queue Processing
     </button>
   </form>

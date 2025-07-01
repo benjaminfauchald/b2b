@@ -1,14 +1,45 @@
 <div class="<%= card_classes %>" id="company_linkedin_profiles">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="<%= heading_classes %>">LinkedIn Profiles</h3>
-    <% if has_profiles? %>
-      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-        <%= profile_count %> <%= 'profile'.pluralize(profile_count) %>
-      </span>
-    <% end %>
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">LinkedIn Profiles</h2>
+    <div class="flex items-center space-x-3">
+      <% if extraction_in_progress? %>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+          <svg class="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-yellow-800 dark:text-yellow-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Extracting profiles...
+        </span>
+      <% end %>
+      <% if has_profiles? %>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <%= profile_count %> <%= 'profile'.pluralize(profile_count) %>
+        </span>
+      <% end %>
+    </div>
   </div>
 
   <% if has_profiles? %>
+    <% if summary_stats %>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white"><%= summary_stats[:people] %></div>
+            <div class="text-sm text-gray-500 dark:text-gray-400"><%= 'Person'.pluralize(summary_stats[:people]) %></div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white"><%= summary_stats[:emails] %></div>
+            <div class="text-sm text-gray-500 dark:text-gray-400"><%= 'Email'.pluralize(summary_stats[:emails]) %></div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white"><%= summary_stats[:phones] %></div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Phone <%= 'Number'.pluralize(summary_stats[:phones]) %></div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
     <% if last_extraction_date %>
       <p class="<%= text_muted_classes %> mb-4">
         Last updated <%= time_ago_in_words(last_extraction_date) %> ago
@@ -106,4 +137,5 @@
       </p>
     </div>
   <% end %>
+  </div>
 </div>

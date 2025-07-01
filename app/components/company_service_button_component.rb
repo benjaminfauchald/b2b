@@ -48,12 +48,30 @@ class CompanyServiceButtonComponent < ViewComponent::Base
   end
 
   def test_status
-    value = company.send(service_config[:column])
-    case value
-    when nil
-      :never_tested
+    if service == :linkedin_discovery
+      # For LinkedIn, check both manual and AI URLs
+      if company.linkedin_url.present? || company.linkedin_ai_url.present?
+        :has_data
+      else
+        :never_tested
+      end
+    elsif service == :web_discovery
+      # For web discovery, check if company already has a website
+      if company.website.present?
+        :not_eligible  # Company already has a website
+      elsif company.web_pages.present? && company.web_pages != {}
+        :has_data  # Found web pages through discovery
+      else
+        :never_tested  # No website and no discovery done
+      end
     else
-      :has_data
+      value = company.send(service_config[:column])
+      case value
+      when nil
+        :never_tested
+      else
+        :has_data
+      end
     end
   end
 
@@ -98,6 +116,8 @@ class CompanyServiceButtonComponent < ViewComponent::Base
       "Fetch #{service_config[:name]}"
     when :has_data
       "Update #{service_config[:name]}"
+    when :not_eligible
+      "Website Exists"
     end
   end
 
@@ -121,6 +141,8 @@ class CompanyServiceButtonComponent < ViewComponent::Base
                        "bg-blue-600 hover:bg-blue-700 text-white"
                      when :has_data
                        "bg-green-600 hover:bg-green-700 text-white"
+                     when :not_eligible
+                       "bg-gray-300 text-gray-600 cursor-not-allowed"
                      end
     end
 
@@ -128,7 +150,7 @@ class CompanyServiceButtonComponent < ViewComponent::Base
   end
 
   def button_disabled?
-    pending_test? || !service_active?
+    pending_test? || !service_active? || test_status == :not_eligible
   end
 
   def action_path
@@ -138,9 +160,11 @@ class CompanyServiceButtonComponent < ViewComponent::Base
   def status_badge_classes
     case test_status
     when :never_tested
-      "bg-gray-100 text-gray-800"
+      "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
     when :has_data
-      "bg-green-100 text-green-800"
+      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+    when :not_eligible
+      "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
     end
   end
 
@@ -154,8 +178,16 @@ class CompanyServiceButtonComponent < ViewComponent::Base
       when :has_data
         if service == :financial_data
           financial_summary
+        elsif service == :linkedin_discovery
+          linkedin_summary
         else
           "Has Data"
+        end
+      when :not_eligible
+        if service == :web_discovery
+          "Has Website"
+        else
+          "Not Eligible"
         end
       end
     end
@@ -171,6 +203,19 @@ class CompanyServiceButtonComponent < ViewComponent::Base
     parts << "Annual: #{format_currency(company.annual_result)}" if company.annual_result.present?
 
     parts.any? ? parts.join(" • ") : "Financial data available"
+  end
+
+  def linkedin_summary
+    parts = []
+    parts << "Manual" if company.linkedin_url.present?
+    parts << "AI (#{company.linkedin_ai_confidence}%)" if company.linkedin_ai_url.present? && company.linkedin_ai_confidence.present?
+    parts << "AI" if company.linkedin_ai_url.present? && company.linkedin_ai_confidence.blank?
+    
+    if parts.any?
+      parts.join(" + ")
+    else
+      "Has Data"
+    end
   end
 
   def format_currency(amount)

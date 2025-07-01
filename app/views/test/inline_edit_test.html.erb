@@ -1,0 +1,48 @@
+<div class="max-w-4xl mx-auto p-8">
+  <h1 class="text-2xl font-bold mb-8">Inline Edit Test</h1>
+  
+  <div class="bg-white p-6 rounded shadow">
+    <h2 class="text-lg font-semibold mb-4">Test Company</h2>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
+        <div data-controller="inline-edit"
+             data-inline-edit-url-value="/companies/1"
+             data-inline-edit-field-value="website"
+             data-inline-edit-company-id-value="1"
+             class="group">
+          
+          <div data-inline-edit-target="display" class="flex items-center space-x-2">
+            <span class="text-blue-600">https://example.com</span>
+            <button data-action="click->inline-edit#edit"
+                    class="text-gray-400 hover:text-gray-700">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <form data-inline-edit-target="form" 
+                data-action="submit->inline-edit#save"
+                class="hidden">
+            <input type="url"
+                   data-inline-edit-target="input"
+                   data-action="keydown->inline-edit#handleKeydown"
+                   value="https://example.com"
+                   class="border rounded px-2 py-1">
+            <button type="submit" class="text-green-600">Save</button>
+            <button type="button" data-action="click->inline-edit#cancel" class="text-red-600">Cancel</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-8 p-4 bg-gray-100 rounded">
+    <h3 class="font-semibold mb-2">Debug Info:</h3>
+    <p>Check browser console for any JavaScript errors.</p>
+    <p>This page tests if the inline-edit Stimulus controller is loading properly.</p>
+  </div>
+</div>

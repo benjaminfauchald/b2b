@@ -16,6 +16,15 @@ class Company < ApplicationRecord
   # Scopes for financial data
   scope :with_financial_data, -> { where.not(ordinary_result: nil, annual_result: nil) }
   scope :without_financial_data, -> { where(ordinary_result: nil, annual_result: nil) }
+
+  # Base eligibility for financial data service (used for calculating totals/percentages)
+  scope :financial_data_eligible, -> {
+    where(
+      source_country: "NO",
+      source_registry: "brreg",
+      organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
+    )
+  }
   scope :needs_financial_update, -> {
     service_config = ServiceConfiguration.find_by(service_name: "company_financial_data")
     refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
@@ -32,12 +41,8 @@ class Company < ApplicationRecord
       .distinct
       .pluck(:auditable_id)
 
-    # Return companies that match criteria and don't have recent successful audits
-    query = where(
-      source_registry: "brreg",
-      ordinary_result: nil,
-      organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
-    )
+    # Start with eligible companies and exclude those with recent successful audits
+    query = financial_data_eligible
 
     # Only exclude if there are actually IDs to exclude
     if recent_success_ids.any?

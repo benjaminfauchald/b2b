@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# Wrapper for RSpec that logs test results for Guard
+
+require 'open3'
+require 'json'
+require 'time'
+require_relative '../lib/guard_test_logger'
+
+# Run RSpec with all arguments passed through
+cmd = "bundle exec rspec #{ARGV.join(' ')}"
+puts "Running: #{cmd}"
+
+stdout, stderr, status = Open3.capture3(cmd)
+
+# Output to console so Guard can see it
+print stdout
+print stderr
+
+# Parse results and update logs
+output = stdout + stderr
+if match = output.match(/(\d+) examples?, (\d+) failures?(?:, (\d+) pending)?/)
+  total = match[1].to_i
+  failures = match[2].to_i
+  pending = match[3]&.to_i || 0
+  
+  # Create result object
+  result = OpenStruct.new(
+    example_count: total,
+    failure_count: failures,
+    pending_count: pending,
+    duration: 0
+  )
+  
+  # Extract failed examples
+  failed_specs = []
+  output.scan(/rspec ([^:]+):(\d+) # (.+)/).each do |file, line, desc|
+    failed_specs << {
+      file_path: file,
+      line_number: line.to_i,
+      description: desc,
+      exception: "Test failed",
+      full_description: desc
+    }
+  end
+  
+  # Log the results
+  GuardTestLogger.log_test_run(result, failed_specs)
+end
+
+# Exit with same status as RSpec
+exit status.exitstatus

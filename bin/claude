@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+# Main Claude CLI command with subcommands
+
+require 'pathname'
+
+# Get the project root directory
+PROJECT_ROOT = Pathname.new(File.dirname(__FILE__)).parent
+
+# Available commands
+COMMANDS = {
+  'guard' => {
+    description: 'Generate Claude prompt for failing tests',
+    action: -> { system("#{PROJECT_ROOT}/bin/claude-guard prompt") }
+  },
+  'guard-status' => {
+    description: 'Check current test status',
+    action: -> { system("#{PROJECT_ROOT}/bin/claude-guard status") }
+  },
+  'guard-watch' => {
+    description: 'Watch for test status changes',
+    action: -> { system("#{PROJECT_ROOT}/bin/claude-guard watch") }
+  },
+  'test-status' => {
+    description: 'Quick test status check',
+    action: -> { system("#{PROJECT_ROOT}/bin/test-status") }
+  },
+  'help' => {
+    description: 'Show this help message',
+    action: -> { show_help }
+  }
+}
+
+def show_help
+  puts "Claude CLI - Development Assistant"
+  puts
+  puts "Usage: claude [COMMAND]"
+  puts "   or: /claude [COMMAND] (as a slash command)"
+  puts
+  puts "Available commands:"
+  COMMANDS.each do |cmd, info|
+    puts "  #{cmd.ljust(15)} - #{info[:description]}"
+  end
+  puts
+  puts "Examples:"
+  puts "  claude guard         # Generate prompt for failing tests"
+  puts "  /claude guard        # Same as above (slash command style)"
+  puts "  claude guard-status  # Check test status"
+  puts "  claude help          # Show this help"
+end
+
+# Parse command
+command = ARGV[0]&.downcase
+
+# Handle slash command style
+if command&.start_with?('/')
+  command = command[1..-1]
+end
+
+# Default to help if no command
+command ||= 'help'
+
+# Execute command
+if COMMANDS.key?(command)
+  COMMANDS[command][:action].call
+else
+  puts "Unknown command: #{command}"
+  puts "Run 'claude help' for available commands"
+  exit 1
+end

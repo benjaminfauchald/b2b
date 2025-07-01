@@ -2,7 +2,7 @@
 
 class PeopleController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_person, only: %i[show edit update destroy queue_single_profile_extraction queue_single_email_extraction queue_single_social_media_extraction]
+  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction]
   skip_before_action :verify_authenticity_token, only: [ :queue_profile_extraction, :queue_email_extraction, :queue_social_media_extraction, :queue_single_profile_extraction, :queue_single_email_extraction, :queue_single_social_media_extraction ]
 
   def index
@@ -335,19 +335,33 @@ class PeopleController < ApplicationController
       # Invalidate cache immediately when queue changes
       Rails.cache.delete("person_service_stats_data")
 
-      render json: {
-        success: true,
-        message: "Profile extraction queued for #{company.company_name}",
-        company_id: company.id,
-        service: "profile_extraction",
-        job_id: job_id,
-        worker: "PersonProfileExtractionWorker"
-      }
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: true,
+            message: "Profile extraction queued for #{company.company_name}",
+            company_id: company.id,
+            service: "profile_extraction",
+            job_id: job_id,
+            worker: "PersonProfileExtractionWorker"
+          }
+        end
+        format.html do
+          redirect_to company_path(company), notice: "Profile extraction queued for #{company.company_name}"
+        end
+      end
     rescue => e
-      render json: {
-        success: false,
-        message: "Failed to queue profile extraction: #{e.message}"
-      }
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: false,
+            message: "Failed to queue profile extraction: #{e.message}"
+          }
+        end
+        format.html do
+          redirect_to company_path(company), alert: "Failed to queue profile extraction: #{e.message}"
+        end
+      end
     end
   end
 

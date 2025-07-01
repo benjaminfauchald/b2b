@@ -24,23 +24,32 @@
 #  * zeus: 'zeus rspec' (requires the server to be started separately)
 #  * 'just' rspec: 'rspec'
 
-guard :rspec, cmd: "bundle exec rspec", notification: true do
+guard :rspec, cmd: "./bin/guard-rspec-wrapper", notification: true do
   require "guard/rspec/dsl"
   require_relative "lib/guard_claude_helper"
+  require_relative "lib/guard_test_logger"
   dsl = Guard::RSpec::Dsl.new(self)
 
-  # Callback for when tests fail
+  # Callback for when tests complete
   callback(:run_on_modifications_end) do |guard_class, event, result|
-    if result&.failure_count && result.failure_count > 0
-      failed_specs = result.failed_examples.map do |example|
-        {
-          description: example.description,
-          file_path: example.metadata[:file_path],
-          line_number: example.metadata[:line_number],
-          exception: example.exception.message
-        }
+    if result
+      failed_specs = []
+
+      if result.failure_count > 0
+        failed_specs = result.failed_examples.map do |example|
+          {
+            description: example.description,
+            file_path: example.metadata[:file_path],
+            line_number: example.metadata[:line_number],
+            exception: example.exception.message,
+            full_description: example.full_description
+          }
+        end
+        GuardClaudeHelper.on_test_failure(failed_specs)
       end
-      GuardClaudeHelper.on_test_failure(failed_specs)
+
+      # Always log the test run
+      GuardTestLogger.log_test_run(result, failed_specs)
     end
   end
 

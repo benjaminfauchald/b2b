@@ -12,12 +12,16 @@ export default class extends Controller {
 
   async submit(event) {
     console.log("Submit event triggered!", event)
+    console.log("Service name:", this.serviceNameValue)
     event.preventDefault()
     event.stopPropagation()
     
     const form = this.formTarget
     const submitButton = this.submitButtonTarget
     const countInput = this.countInputTarget
+    
+    console.log("Form action URL:", form.action)
+    console.log("Form method:", form.method)
     
     // Make sure we get the current value from the input field
     const count = parseInt(countInput.value) || 0

@@ -3,13 +3,12 @@
 class CompaniesController < ApplicationController
   before_action :authenticate_user!
   before_action :set_selected_country
-  before_action :set_company, only: %i[show edit update destroy queue_single_financial_data queue_single_web_discovery queue_single_linkedin_discovery queue_single_employee_discovery]
+  before_action :set_company, only: %i[show edit update destroy queue_single_financial_data queue_single_web_discovery queue_single_linkedin_discovery queue_single_employee_discovery profile_extraction_status linkedin_profiles]
   skip_before_action :verify_authenticity_token, only: [ :queue_financial_data, :queue_web_discovery, :queue_linkedin_discovery, :queue_employee_discovery, :queue_single_financial_data, :queue_single_web_discovery, :queue_single_linkedin_discovery, :queue_single_employee_discovery, :set_country ]
 
   def index
     companies_scope = Company.by_country(@selected_country)
                             .includes(:service_audit_logs)
-                            .order(created_at: :desc)
 
     if params[:search].present?
       companies_scope = companies_scope.where(
@@ -22,8 +21,13 @@ class CompaniesController < ApplicationController
       companies_scope = companies_scope.with_financial_data
     elsif params[:filter] == "with_website"
       companies_scope = companies_scope.where.not(website: [ nil, "" ])
+      # Order by revenue descending for with_website filter
+      companies_scope = companies_scope.order(Arel.sql("COALESCE(operating_revenue, 0) DESC"))
     elsif params[:filter] == "with_linkedin"
       companies_scope = companies_scope.where.not(linkedin_url: [ nil, "" ]).or(companies_scope.where.not(linkedin_ai_url: [ nil, "" ]))
+    else
+      # Default order by created_at desc
+      companies_scope = companies_scope.order(created_at: :desc)
     end
 
     @pagy, @companies = pagy(companies_scope)
@@ -51,6 +55,36 @@ class CompaniesController < ApplicationController
     end
   end
 
+  def profile_extraction_status
+    # Check if there's a pending or recently completed profile extraction
+    recent_log = @company.service_audit_logs
+                         .where(service_name: "person_profile_extraction")
+                         .where("created_at > ?", 5.minutes.ago)
+                         .order(created_at: :desc)
+                         .first
+
+    has_pending = recent_log && recent_log.status == "pending"
+    recently_completed = recent_log && recent_log.status == "success" && recent_log.completed_at > 30.seconds.ago
+
+    render json: {
+      has_pending: has_pending,
+      recently_completed: recently_completed,
+      status: recent_log&.status,
+      created_at: recent_log&.created_at
+    }
+  end
+
+  def linkedin_profiles
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "company_linkedin_profiles_#{@company.id}",
+          CompanyLinkedinProfilesComponent.new(company: @company)
+        )
+      end
+    end
+  end
+
   def new
     @company = Company.new
   end
@@ -69,10 +103,90 @@ class CompaniesController < ApplicationController
   end
 
   def update
-    if @company.update(company_params)
-      redirect_to @company, notice: "Company was successfully updated."
+    # Check if this is an inline edit (AJAX request)
+    if request.xhr? || request.format.json?
+      # Handle inline editing with audit logging
+      allowed_fields = %w[website linkedin_url linkedin_ai_url email phone]
+      field_to_update = company_params.keys.first.to_s
+      
+      if allowed_fields.include?(field_to_update)
+        old_value = @company.send(field_to_update)
+        new_value = company_params[field_to_update]
+        
+        if @company.update(company_params)
+          # Log the user update to ServiceAuditLog
+          ServiceAuditLog.create!(
+            auditable: @company,
+            service_name: "user_update",
+            status: :success,
+            started_at: Time.current,
+            completed_at: Time.current,
+            table_name: "companies",
+            record_id: @company.id.to_s,
+            operation_type: "update",
+            columns_affected: [field_to_update],
+            execution_time_ms: 0,
+            metadata: {
+              field: field_to_update,
+              old_value: old_value,
+              new_value: new_value,
+              updated_by: current_user.email,
+              updated_at: Time.current.iso8601
+            }
+          )
+          
+          render json: { success: true, message: "Field updated successfully" }
+        else
+          render json: { success: false, error: @company.errors.full_messages.join(", ") }, status: :unprocessable_entity
+        end
+      else
+        render json: { success: false, error: "Field not allowed for inline editing" }, status: :forbidden
+      end
     else
-      render :edit, status: :unprocessable_entity
+      # Regular form update - log all changed fields
+      changed_fields = []
+      allowed_fields = %w[website linkedin_url email phone]
+      changes_metadata = {}
+      
+      allowed_fields.each do |field|
+        if company_params.key?(field) && @company.send(field) != company_params[field]
+          old_value = @company.send(field)
+          new_value = company_params[field]
+          changed_fields << field
+          changes_metadata[field] = {
+            old_value: old_value,
+            new_value: new_value
+          }
+        end
+      end
+      
+      if @company.update(company_params)
+        # Log user updates if any allowed fields were changed
+        if changed_fields.any?
+          ServiceAuditLog.create!(
+            auditable: @company,
+            service_name: "user_update",
+            status: :success,
+            started_at: Time.current,
+            completed_at: Time.current,
+            table_name: "companies",
+            record_id: @company.id.to_s,
+            operation_type: "update",
+            columns_affected: changed_fields,
+            execution_time_ms: 0,
+            metadata: {
+              fields_changed: changed_fields,
+              changes: changes_metadata,
+              updated_by: current_user.email,
+              updated_at: Time.current.iso8601
+            }
+          )
+        end
+        
+        redirect_to @company, notice: "Company was successfully updated."
+      else
+        render :edit, status: :unprocessable_entity
+      end
     end
   end
 
@@ -83,6 +197,9 @@ class CompaniesController < ApplicationController
 
   # POST /companies/queue_financial_data
   def queue_financial_data
+    Rails.logger.info "========== queue_financial_data called =========="
+    Rails.logger.info "Params: #{params.inspect}"
+    
     unless ServiceConfiguration.active?("company_financial_data")
       render json: { success: false, message: "Financial data service is disabled" }
       return
@@ -146,6 +263,9 @@ class CompaniesController < ApplicationController
 
   # POST /companies/queue_web_discovery
   def queue_web_discovery
+    Rails.logger.info "========== queue_web_discovery called =========="
+    Rails.logger.info "Params: #{params.inspect}"
+    
     unless ServiceConfiguration.active?("company_web_discovery")
       render json: { success: false, message: "Web discovery service is disabled" }
       return
@@ -209,6 +329,9 @@ class CompaniesController < ApplicationController
 
   # POST /companies/queue_linkedin_discovery
   def queue_linkedin_discovery
+    Rails.logger.info "========== queue_linkedin_discovery called =========="
+    Rails.logger.info "Params: #{params.inspect}"
+    
     unless ServiceConfiguration.active?("company_linkedin_discovery")
       render json: { success: false, message: "LinkedIn discovery service is disabled" }
       return
@@ -610,7 +733,7 @@ class CompaniesController < ApplicationController
     params.require(:company).permit(
       :registration_number, :company_name, :organization_form_code,
       :organization_form_description, :source_country, :source_registry,
-      :website, :email, :phone, :mobile,
+      :website, :email, :phone, :mobile, :linkedin_url, :linkedin_ai_url,
       :postal_address, :postal_code, :postal_city, :postal_municipality,
       :postal_municipality_no, :postal_country_code,
       :business_address, :business_code, :business_city, :business_municipality,

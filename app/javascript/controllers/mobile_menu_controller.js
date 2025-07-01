@@ -4,7 +4,6 @@ export default class extends Controller {
   static targets = ["menu", "button"]
   
   connect() {
-    this.menuTarget = document.getElementById('mobile-menu')
     this.isOpen = false
   }
   
