@@ -61,7 +61,7 @@
           <div>
             <span class="text-gray-500 dark:text-gray-400">Manual URL:</span>
             <a href="<%= company.linkedin_url %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate block">
-              <%= company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+              <%= company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'company/') %>
             </a>
           </div>
         <% end %>
@@ -69,7 +69,7 @@
           <div>
             <span class="text-gray-500 dark:text-gray-400">AI URL (Confidence: <%= company.linkedin_ai_confidence || 0 %>%):</span>
             <a href="<%= company.linkedin_ai_url %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate block">
-              <%= company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+              <%= company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'company/') %>
             </a>
           </div>
         <% end %>
@@ -80,7 +80,7 @@
               <% company.linkedin_alternatives.each do |alt| %>
                 <li>
                   <a href="<%= alt['url'] || alt %>" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline text-xs truncate block">
-                    <%= (alt['url'] || alt).gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/') %>
+                    <%= (alt['url'] || alt).gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'company/') %>
                     <% if alt.is_a?(Hash) && alt['confidence'] %>
                       <span class="text-gray-500">(confidence: <%= alt['confidence'] %>%)</span>
                     <% end %>

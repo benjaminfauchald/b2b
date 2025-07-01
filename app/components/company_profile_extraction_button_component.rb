@@ -36,6 +36,32 @@ class CompanyProfileExtractionButtonComponent < ViewComponent::Base
       .exists?
   end
 
+  def has_extracted_profiles?
+    company.service_audit_logs
+      .where(service_name: "person_profile_extraction", status: "success")
+      .exists? && company.people.any?
+  end
+
+  def profile_summary
+    return nil unless has_extracted_profiles?
+    
+    people = company.people
+    {
+      total: people.count,
+      emails: people.where.not(email: [nil, '']).count,
+      phones: people.where.not(phone: [nil, '']).count
+    }
+  end
+
+  def last_extraction_date
+    latest_log = company.service_audit_logs
+      .where(service_name: "person_profile_extraction", status: "success")
+      .order(completed_at: :desc)
+      .first
+
+    latest_log&.completed_at
+  end
+
   def disabled_reason
     if company.linkedin_url.blank? && company.linkedin_ai_url.blank?
       "No LinkedIn URL available"

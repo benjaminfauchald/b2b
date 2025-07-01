@@ -25,6 +25,11 @@ class Company < ApplicationRecord
       organization_form_code: [ "AS", "ASA", "DA", "ANS" ]
     )
   }
+
+  # Scope for companies that need financial data processing (eligible + no data yet)
+  scope :financial_data_needing, -> {
+    financial_data_eligible.where(ordinary_result: nil)
+  }
   scope :needs_financial_update, -> {
     service_config = ServiceConfiguration.find_by(service_name: "company_financial_data")
     refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
@@ -41,8 +46,8 @@ class Company < ApplicationRecord
       .distinct
       .pluck(:auditable_id)
 
-    # Start with eligible companies and exclude those with recent successful audits
-    query = financial_data_eligible
+    # Start with companies that need financial data (eligible + no data yet)
+    query = financial_data_needing
 
     # Only exclude if there are actually IDs to exclude
     if recent_success_ids.any?
