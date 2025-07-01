@@ -235,13 +235,41 @@ jobs:
           # Deploy using git pull on production
           echo "SSH connection successful, proceeding with deployment..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PRODUCTION_USER}@${PRODUCTION_HOST}" << 'ENDSSH'
-            cd /var/www/b2b
+            # Ensure the directory exists and clone if needed
+            if [ ! -d /var/www/b2b ]; then
+              echo "Creating /var/www/b2b directory and cloning repository..."
+              sudo mkdir -p /var/www
+              sudo chown ${USER}:${USER} /var/www
+              cd /var/www
+              git clone git@github.com:benjaminfauchald/b2b.git
+              cd b2b
+            else
+              cd /var/www/b2b
+            fi
+            
+            # Update the code
             git fetch --all --tags
             git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
-            bundle install --deployment
+            
+            # Install dependencies
+            bundle config set deployment true
+            bundle install
+            
+            # Run migrations
             RAILS_ENV=production bundle exec rails db:migrate
+            
+            # Compile assets
             RAILS_ENV=production bundle exec rails assets:precompile
-            sudo systemctl restart b2b-rails
+            
+            # Restart the service (using systemctl without sudo if possible)
+            if systemctl --user status b2b-rails >/dev/null 2>&1; then
+              systemctl --user restart b2b-rails
+            elif sudo -n systemctl status b2b-rails >/dev/null 2>&1; then
+              sudo systemctl restart b2b-rails
+            else
+              echo "Warning: Could not restart b2b-rails service. You may need to restart it manually."
+              echo "The code has been deployed successfully."
+            fi
           ENDSSH
 
       - name: Notify deployment success
