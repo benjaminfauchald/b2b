@@ -1,102 +1,157 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <!-- Page Header -->
-  <div class="mb-8">
+  <div class="mb-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white"><%= @company.company_name %></h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white"><%= @company.company_name %></h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Registration #: <%= @company.registration_number %> • 
           <%= @company.organization_form_description %>
         </p>
       </div>
-      <div class="flex space-x-3">
-        <%= link_to "Edit", edit_company_path(@company), 
-            class: "text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700" %>
-        <%= link_to "Back to List", companies_path, 
-            class: "text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800" %>
+      <div class="flex items-center space-x-3">
+        <%= link_to edit_company_path(@company), 
+            class: "text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600" do %>
+          Edit
+        <% end %>
+        <%= link_to companies_path, 
+            class: "text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700" do %>
+          Back to List
+        <% end %>
       </div>
     </div>
   </div>
 
-  <!-- Company Info Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <!-- Basic Information -->
-    <div class="lg:col-span-2">
-      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Company Information</h3>
+  <!-- Company Information -->
+  <div class="mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Company Information</h2>
+          <button type="button" 
+                  onclick="toggleCompanyEdit()"
+                  class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+            Edit
+          </button>
+        </div>
         
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-gray-900 dark:text-gray-100">
-          <% if @company.website.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Website</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <dl id="company-info-display" class="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
+          <!-- Contact Information -->
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Website</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <% if @company.website.present? %>
                 <%= link_to @company.website, @company.website, target: "_blank", 
-                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
-              </dd>
-            </div>
-          <% end %>
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
+              <% end %>
+            </dd>
+          </div>
           
-          <% if @company.email.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Email</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <% if @company.email.present? %>
                 <%= mail_to @company.email, @company.email, 
-                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
-              </dd>
-            </div>
-          <% end %>
+                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
+              <% end %>
+            </dd>
+          </div>
           
-          <% if @company.phone.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.phone %></dd>
-            </div>
-          <% end %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Phone</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <% if @company.phone.present? %>
+                <%= @company.phone %>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
+              <% end %>
+            </dd>
+          </div>
           
-          <% if @company.linkedin_url.present? || @company.linkedin_ai_url.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">LinkedIn</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <% if @company.linkedin_url.present? %>
-                  <%= link_to @company.linkedin_url, @company.linkedin_url, target: "_blank", 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
-                  <span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+          <!-- LinkedIn -->
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">LinkedIn</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <% if @company.linkedin_url.present? %>
+                <div class="space-y-2">
+                  <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                      @company.linkedin_url, 
+                      target: "_blank", 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
+                  <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
                     Confirmed
                   </span>
-                <% elsif @company.linkedin_ai_url.present? %>
-                  <%= link_to @company.linkedin_ai_url, @company.linkedin_ai_url, target: "_blank", 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
-                  <span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                </div>
+              <% elsif @company.linkedin_ai_url.present? %>
+                <div class="space-y-2">
+                  <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                      @company.linkedin_ai_url, 
+                      target: "_blank", 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
+                  <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
                     AI (<%= @company.linkedin_ai_confidence %>% confidence)
                   </span>
+                </div>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
+              <% end %>
+            </dd>
+          </div>
+          
+          <!-- Employees -->
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Employees</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <% if @company.employee_count.present? %>
+                <%= number_with_delimiter(@company.employee_count) %>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
+              <% end %>
+            </dd>
+          </div>
+          
+          <!-- Registration Info -->
+          <div>
+            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Registry</dt>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">
+              <div class="space-y-1">
+                <div><%= @company.source_registry || "Brreg" %> (<%= @company.source_country || "Norway" %>)</div>
+                <% if @company.registration_date.present? %>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Registered <%= @company.registration_date.strftime("%B %d, %Y") %>
+                  </div>
                 <% end %>
-              </dd>
-            </div>
-          <% end %>
+                <% if @company.vat_registered? %>
+                  <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                    VAT Registered
+                  </span>
+                <% end %>
+              </div>
+            </dd>
+          </div>
           
-          <% if @company.employee_count.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Employees</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= number_with_delimiter(@company.employee_count) %></dd>
-            </div>
-          <% end %>
-          
+          <!-- Industry - Full Width -->
           <% if @company.primary_industry_description.present? %>
-            <div class="sm:col-span-2">
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Industry</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+            <div class="lg:col-span-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Industry</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">
                 <%= @company.primary_industry_description %>
                 <% if @company.primary_industry_code.present? %>
-                  <span class="text-gray-500 dark:text-gray-400">(#<%= @company.primary_industry_code %>)</span>
+                  <span class="text-gray-500 dark:text-gray-400 ml-2">(Code: <%= @company.primary_industry_code %>)</span>
                 <% end %>
               </dd>
             </div>
           <% end %>
           
+          <!-- Address - Full Width -->
           <% if @company.postal_address.present? %>
-            <div class="sm:col-span-2">
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Address</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+            <div class="lg:col-span-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Address</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">
                 <%= @company.postal_address %><br>
                 <%= [@company.postal_code, @company.postal_city].compact.join(" ") %><br>
                 <%= @company.postal_country %>
@@ -104,68 +159,68 @@
             </div>
           <% end %>
         </dl>
-      </div>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="lg:col-span-1">
-      <div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Registration Details</h3>
         
-        <dl class="space-y-4 text-gray-900 dark:text-gray-100">
-          <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Country</dt>
-            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.source_country || "Norway" %></dd>
-          </div>
-          
-          <div>
-            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Registry</dt>
-            <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @company.source_registry || "Brreg" %></dd>
-          </div>
-          
-          <% if @company.registration_date.present? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Registered</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <%= @company.registration_date.strftime("%B %d, %Y") %>
-              </dd>
+        <!-- Edit Form (Hidden by default) -->
+        <div id="company-edit-form" class="hidden mt-6">
+          <%= form_with model: @company, local: false, html: { class: "space-y-4" } do |form| %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <%= form.label :website, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+                <%= form.url_field :website, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "https://example.com" %>
+              </div>
+              
+              <div>
+                <%= form.label :email, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+                <%= form.email_field :email, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "contact@example.com" %>
+              </div>
+              
+              <div>
+                <%= form.label :phone, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+                <%= form.text_field :phone, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "+47 123 45 678" %>
+              </div>
+              
+              <div>
+                <%= form.label :linkedin_url, "LinkedIn URL", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
+                <%= form.url_field :linkedin_url, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "https://linkedin.com/company/example" %>
+              </div>
+            </div>
+            
+            <div class="flex items-center space-x-3 pt-4">
+              <%= form.submit "Save Changes", class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" %>
+              <button type="button" onclick="toggleCompanyEdit()" class="text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                Cancel
+              </button>
             </div>
           <% end %>
-          
-          <% if @company.vat_registered? %>
-            <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">VAT Status</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <span class="bg-green-100 text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                  VAT Registered
-                </span>
-              </dd>
-            </div>
-          <% end %>
-        </dl>
+        </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Service Testing Buttons -->
-  <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Enhancement Services</h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div>
-        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Financial Data</h4>
-        <%= render CompanyServiceButtonComponent.new(company: @company, service: :financial_data) %>
-      </div>
-      <div>
-        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Web Discovery</h4>
-        <%= render CompanyServiceButtonComponent.new(company: @company, service: :web_discovery) %>
-      </div>
-      <div>
-        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn Discovery</h4>
-        <%= render CompanyServiceButtonComponent.new(company: @company, service: :linkedin_discovery) %>
-      </div>
-      <div>
-        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Profile Extraction</h4>
-        <%= render CompanyProfileExtractionButtonComponent.new(company: @company) %>
+  <!-- Enhancement Services -->
+  <div class="mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="p-6">
+        <h2 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Enhancement Services</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <h3 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Financial Data</h3>
+            <%= render CompanyServiceButtonComponent.new(company: @company, service: :financial_data) %>
+          </div>
+          <div>
+            <h3 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Web Discovery</h3>
+            <%= render CompanyServiceButtonComponent.new(company: @company, service: :web_discovery) %>
+          </div>
+          <div>
+            <h3 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">LinkedIn Discovery</h3>
+            <%= render CompanyServiceButtonComponent.new(company: @company, service: :linkedin_discovery) %>
+          </div>
+          <div>
+            <h3 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Profile Extraction</h3>
+            <%= render CompanyProfileExtractionButtonComponent.new(company: @company) %>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -174,7 +229,7 @@
   <%= render CompanyEnhancementStatusComponent.new(company: @company) %>
 
   <!-- Financial Data -->
-  <div class="mt-6" 
+  <div class="mb-6" 
        data-controller="company-financials" 
        data-company-financials-company-id-value="<%= @company.id %>"
        data-company-financials-fallback-interval-value="30000">
@@ -184,14 +239,20 @@
   </div>
 
   <!-- LinkedIn Profiles -->
-  <div class="mt-6">
-    <%= render CompanyLinkedinProfilesComponent.new(company: @company) %>
+  <div class="mb-6" 
+       data-controller="linkedin-profiles-refresh"
+       data-linkedin-profiles-refresh-company-id-value="<%= @company.id %>"
+       data-linkedin-profiles-refresh-refresh-interval-value="5000">
+    <div id="company_linkedin_profiles_<%= @company.id %>">
+      <%= render CompanyLinkedinProfilesComponent.new(company: @company) %>
+    </div>
   </div>
 
   <!-- Service Audit Logs -->
-  <div class="mt-6">
-    <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
-      <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Recent Service Activity</h3>
+  <div class="mb-6">
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="p-6">
+        <h2 class="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Recent Service Activity</h2>
       
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -230,6 +291,42 @@
           </tbody>
         </table>
       </div>
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+function toggleCompanyEdit() {
+  const displaySection = document.getElementById('company-info-display');
+  const editForm = document.getElementById('company-edit-form');
+  
+  if (editForm.classList.contains('hidden')) {
+    // Show edit form
+    if (displaySection) displaySection.classList.add('hidden');
+    editForm.classList.remove('hidden');
+  } else {
+    // Hide edit form
+    if (displaySection) displaySection.classList.remove('hidden');
+    editForm.classList.add('hidden');
+  }
+}
+
+// Handle form submission with AJAX
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.querySelector('#company-edit-form form');
+  if (form) {
+    form.addEventListener('ajax:success', function(event) {
+      // Hide the form and show the display section
+      toggleCompanyEdit();
+      // Reload the page to show updated data
+      window.location.reload();
+    });
+    
+    form.addEventListener('ajax:error', function(event) {
+      const [data, status, xhr] = event.detail;
+      alert('Error updating company: ' + xhr.responseText);
+    });
+  }
+});
+</script>
