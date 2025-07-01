@@ -202,19 +202,34 @@ jobs:
           
           # Setup SSH
           mkdir -p ~/.ssh
-          # Write the private key, ensuring proper line endings
-          printf "%s" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          # Write the private key with proper line endings preserved
+          echo "$SSH_PRIVATE_KEY" | sed 's/\\n/\n/g' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Also create the public key file which some SSH clients expect
-          ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub || {
+          # Debug: Check key format
+          echo "Checking SSH key format..."
+          head -n 1 ~/.ssh/id_rsa
+          tail -n 1 ~/.ssh/id_rsa
+          
+          # Try to validate the key
+          if ! ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
             echo "Error: Invalid SSH private key format"
-            echo "Please ensure the SSH_PRIVATE_KEY secret contains the complete private key including:"
-            echo "- -----BEGIN RSA PRIVATE KEY----- (or BEGIN OPENSSH PRIVATE KEY)"
-            echo "- The key content"
-            echo "- -----END RSA PRIVATE KEY----- (or END OPENSSH PRIVATE KEY)"
-            exit 1
-          }
+            echo "Attempting to fix key format..."
+            # Try to fix potential formatting issues
+            echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            
+            # Try again
+            if ! ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
+              echo "Still failing. Key details:"
+              echo "First line: $(head -n 1 ~/.ssh/id_rsa)"
+              echo "Last line: $(tail -n 1 ~/.ssh/id_rsa)"
+              echo "Line count: $(wc -l < ~/.ssh/id_rsa)"
+              exit 1
+            fi
+          fi
+          
+          echo "SSH key validated successfully"
           
           if [ -n "$SSH_KNOWN_HOSTS" ]; then
             echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
