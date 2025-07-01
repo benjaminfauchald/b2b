@@ -326,12 +326,12 @@ jobs:
             RAILS_ENV=production bundle exec rails assets:precompile
             
             # Restart the service (using systemctl without sudo if possible)
-            if systemctl --user status b2b-rails >/dev/null 2>&1; then
-              systemctl --user restart b2b-rails
-            elif sudo -n systemctl status b2b-rails >/dev/null 2>&1; then
-              sudo systemctl restart b2b-rails
+            if systemctl --user status puma.service >/dev/null 2>&1; then
+              systemctl --user restart puma.service
+            elif sudo -n systemctl status puma.service >/dev/null 2>&1; then
+              sudo systemctl restart puma.service
             else
-              echo "Warning: Could not restart b2b-rails service. You may need to restart it manually."
+              echo "Warning: Could not restart puma.service. You may need to restart it manually."
               echo "The code has been deployed successfully."
             fi
           ENDSSH

@@ -13,6 +13,38 @@ The deploy script is now super simple to use:
 - `./bin/deploy minor "New feature"` - Minor version bump
 - `./bin/deploy major "Breaking change"` - Major version bump
 
+## Production Server Commands
+
+### Systemd Service Management
+- **Service name**: `puma.service` (NOT b2b-rails)
+- `sudo systemctl restart puma.service` - Restart Rails/Puma server
+- `sudo systemctl status puma.service` - Check service status
+- `sudo systemctl stop puma.service` - Stop the service
+- `sudo systemctl start puma.service` - Start the service
+- `sudo journalctl -u puma.service -f` - View real-time logs
+- `sudo journalctl -u puma.service -n 100` - View last 100 log lines
+
+### SSH Access
+- **Production server**: `app.connectica.no`
+- **SSH user**: `benjamin`
+- **App directory**: `~/b2b`
+- **Environment file**: `~/b2b/.env.production`
+
+Example commands:
+```bash
+# SSH into production
+ssh benjamin@app.connectica.no
+
+# Restart Rails after config changes
+ssh benjamin@app.connectica.no "sudo systemctl restart puma.service"
+
+# Upload environment file
+scp .env.production benjamin@app.connectica.no:~/b2b/
+
+# Check logs
+ssh benjamin@app.connectica.no "sudo journalctl -u puma.service -n 50"
+```
+
 ## Development Commands
 
 ### Rails Server & Development Stack

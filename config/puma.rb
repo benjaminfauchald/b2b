@@ -15,7 +15,7 @@ worker_timeout 3600 if ENV.fetch("RAILS_ENV", "development") == "development"
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 #
-port ENV.fetch("PORT") { 3000 }
+#port ENV.fetch("PORT") { 3000 }
 
 # Specifies the `environment` that Puma will run in.
 #
@@ -39,8 +39,6 @@ pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 #
 # preload_app!
 
-# Bind to all interfaces for external access (needed for Azure/remote connections)
-bind "tcp://#{ENV.fetch('BINDING', '0.0.0.0')}:#{ENV.fetch('PORT', 3000)}"
 
 # Bind to all interfaces for external access (needed for Azure/remote connections)
 bind "tcp://#{ENV.fetch('BINDING', '0.0.0.0')}:#{ENV.fetch('PORT', 3000)}"
