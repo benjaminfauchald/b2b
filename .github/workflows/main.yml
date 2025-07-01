@@ -298,17 +298,13 @@ jobs:
           # Deploy using git pull on production
           echo "SSH connection successful, proceeding with deployment..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PRODUCTION_USER}@${PRODUCTION_HOST}" << 'ENDSSH'
-            # Ensure the directory exists and clone if needed
-            if [ ! -d /var/www/b2b ]; then
-              echo "Creating /var/www/b2b directory and cloning repository..."
-              sudo mkdir -p /var/www
-              sudo chown ${USER}:${USER} /var/www
-              cd /var/www
-              git clone git@github.com:benjaminfauchald/b2b.git
-              cd b2b
-            else
-              cd /var/www/b2b
-            fi
+            # Navigate to the application directory in home folder
+            cd ~/b2b || {
+              echo "Error: ~/b2b directory not found"
+              echo "Cloning repository to ~/b2b..."
+              git clone git@github.com:benjaminfauchald/b2b.git ~/b2b
+              cd ~/b2b
+            }
             
             # Update the code
             git fetch --all --tags
