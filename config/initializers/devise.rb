@@ -293,7 +293,7 @@ Devise.setup do |config|
     ENV["GITHUB_CLIENT_SECRET"],
     {
       scope: "user:email",
-      redirect_uri: "https://local.connectica.no/users/auth/github/callback"
+      redirect_uri: "#{ENV.fetch('APP_HOST', 'https://local.connectica.no')}/users/auth/github/callback"
     }
 
   # ==> Warden configuration

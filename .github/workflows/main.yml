@@ -307,8 +307,13 @@ jobs:
             }
             
             # Update the code
-            git fetch --all --tags
-            git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
+            echo "Current version: $(git describe --tags 2>/dev/null || echo 'no tags')"
+            git fetch --all --tags --prune
+            git fetch origin master:master
+            LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+            echo "Deploying version: $LATEST_TAG"
+            git checkout -f $LATEST_TAG
+            git clean -fd
             
             # Install dependencies
             bundle config set deployment true
