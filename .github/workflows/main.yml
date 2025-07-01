@@ -188,8 +188,16 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
           
+          # Verify environment variables are set
+          if [ -z "$PRODUCTION_USER" ] || [ -z "$PRODUCTION_HOST" ]; then
+            echo "Error: PRODUCTION_USER or PRODUCTION_HOST not set"
+            echo "PRODUCTION_USER is set: $([[ -n $PRODUCTION_USER ]] && echo 'yes' || echo 'no')"
+            echo "PRODUCTION_HOST is set: $([[ -n $PRODUCTION_HOST ]] && echo 'yes' || echo 'no')"
+            exit 1
+          fi
+          
           # Deploy using git pull on production
-          ssh ${PRODUCTION_USER}@${PRODUCTION_HOST} << 'EOF'
+          ssh -o StrictHostKeyChecking=no "${PRODUCTION_USER}@${PRODUCTION_HOST}" << 'EOF'
             cd /var/www/b2b
             git fetch --all --tags
             git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
