@@ -202,14 +202,38 @@ jobs:
           
           # Setup SSH
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          # Write the private key, ensuring proper line endings
+          printf "%s" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          
+          # Also create the public key file which some SSH clients expect
+          ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub || {
+            echo "Error: Invalid SSH private key format"
+            echo "Please ensure the SSH_PRIVATE_KEY secret contains the complete private key including:"
+            echo "- -----BEGIN RSA PRIVATE KEY----- (or BEGIN OPENSSH PRIVATE KEY)"
+            echo "- The key content"
+            echo "- -----END RSA PRIVATE KEY----- (or END OPENSSH PRIVATE KEY)"
+            exit 1
+          }
           
           if [ -n "$SSH_KNOWN_HOSTS" ]; then
             echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
           fi
           
+          # Test SSH connection first
+          echo "Testing SSH connection..."
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 \
+              "${PRODUCTION_USER}@${PRODUCTION_HOST}" "echo 'SSH connection test successful'" || {
+            echo "Error: Failed to establish SSH connection"
+            echo "Please verify:"
+            echo "1. The SSH key is authorized on the production server"
+            echo "2. The PRODUCTION_USER and PRODUCTION_HOST are correct"
+            echo "3. The server is accessible from GitHub Actions"
+            exit 1
+          }
+          
           # Deploy using git pull on production
+          echo "SSH connection successful, proceeding with deployment..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PRODUCTION_USER}@${PRODUCTION_HOST}" << 'ENDSSH'
             cd /var/www/b2b
             git fetch --all --tags
