@@ -10,12 +10,25 @@ class PersonEmailExtractionService < ApplicationService
   def perform
     return error_result("Service is disabled") unless service_active?
     return error_result("Person not found or not provided") unless @person
+    return error_result("Hunter.io API key not configured") unless hunter_api_key.present?
 
     audit_service_operation(@person) do |audit_log|
-      Rails.logger.info "🚀 Starting Email Extraction for #{@person.name}"
+      Rails.logger.info "🚀 Starting Hunter.io Email Extraction for #{@person.name}"
 
-      # Simulate email discovery using mock patterns
-      email_result = simulate_email_discovery(@person)
+      # Extract email using Hunter.io API
+      email_result = extract_email_from_hunter_io(@person)
+
+      # Check if there was an error in the extraction
+      if email_result[:error_code].present?
+        audit_log.add_metadata(
+          email_found: false,
+          error_code: email_result[:error_code],
+          error_details: email_result[:error_details] || email_result[:reason]
+        )
+        
+        # Don't return here, instead raise an error to be caught by audit_service_operation
+        raise StandardError.new(email_result[:reason] || "Hunter.io API error")
+      end
 
       if email_result[:email].present?
         # Update person with discovered email
@@ -26,21 +39,25 @@ class PersonEmailExtractionService < ApplicationService
           email: email_result[:email],
           confidence: email_result[:confidence],
           sources: email_result[:sources],
-          verification_status: email_result[:verification_status]
+          verification_status: email_result[:verification_status],
+          hunter_score: email_result[:hunter_data]&.dig(:score),
+          hunter_position: email_result[:hunter_data]&.dig(:position)
         )
 
-        success_result("Email extraction completed",
+        success_result("Email extraction completed via Hunter.io",
                       email: email_result[:email],
                       confidence: email_result[:confidence])
       else
         audit_log.add_metadata(
           email_found: false,
-          reason: "No email patterns matched"
+          reason: email_result[:reason] || "Hunter.io found no email for this person"
         )
 
-        success_result("No email found for person")
+        success_result("No email found for person via Hunter.io")
       end
     end
+  rescue Timeout::Error => e
+    error_result("Request timeout: #{e.message}")
   rescue StandardError => e
     error_result("Service error: #{e.message}")
   end
@@ -53,40 +70,112 @@ class PersonEmailExtractionService < ApplicationService
     config.active?
   end
 
-  def simulate_email_discovery(person)
-    # Simulate realistic email discovery patterns based on real services
-    scenarios = [
-      { probability: 0.65, type: "company_domain_pattern" },
-      { probability: 0.15, type: "public_profile" },
-      { probability: 0.10, type: "social_media_discovery" },
-      { probability: 0.05, type: "contact_database_match" },
-      { probability: 0.05, type: "no_email_found" }
-    ]
+  def extract_email_from_hunter_io(person)
+    # Validate prerequisites
+    domain = extract_domain(person.company&.website)
+    return { email: nil, reason: "Company and website required for Hunter.io lookup" } unless domain
 
-    # Select scenario based on probability
-    random_val = rand
-    cumulative_prob = 0
-    selected_scenario = nil
+    first_name, last_name = parse_person_name(person.name)
+    return { email: nil, reason: "Valid first and last name required for Hunter.io lookup" } unless first_name && last_name
 
-    scenarios.each do |scenario|
-      cumulative_prob += scenario[:probability]
-      if random_val <= cumulative_prob
-        selected_scenario = scenario[:type]
-        break
-      end
-    end
+    # Prepare Hunter.io API request
+    params = {
+      query: {
+        domain: domain,
+        first_name: first_name,
+        last_name: last_name,
+        api_key: hunter_api_key
+      },
+      timeout: 30
+    }
 
-    case selected_scenario
-    when "company_domain_pattern"
-      generate_company_email(person)
-    when "public_profile"
-      generate_public_profile_email(person)
-    when "social_media_discovery"
-      generate_social_media_email(person)
-    when "contact_database_match"
-      generate_database_email(person)
+    Rails.logger.info "🔍 Querying Hunter.io for #{first_name} #{last_name} at #{domain}"
+
+    # Make API request
+    response = HTTParty.get("https://api.hunter.io/v2/email-finder", params)
+
+    # Handle API response
+    if response.success?
+      process_hunter_response(response.parsed_response, person)
     else
-      { email: nil, confidence: 0, sources: [], verification_status: "not_found" }
+      handle_hunter_error(response)
+    end
+  rescue JSON::ParserError => e
+    { email: nil, reason: "Invalid response format from Hunter.io: #{e.message}", error_code: "json_parse_error" }
+  rescue Timeout::Error => e
+    raise e # Re-raise timeout to be handled by the main rescue block
+  rescue => e
+    { email: nil, reason: "Hunter.io API request failed: #{e.message}", error_code: "api_request_error" }
+  end
+
+  def hunter_api_key
+    ENV['HUNTER_API_KEY']
+  end
+
+  def parse_person_name(full_name)
+    return nil unless full_name.present?
+
+    # Clean and split name, removing titles and suffixes
+    cleaned_name = full_name.gsub(/\b(Dr|Mr|Mrs|Ms|Prof|Jr|Sr|III|II)\b\.?/i, '').strip
+    parts = cleaned_name.split(/\s+/)
+    
+    return nil if parts.length < 2
+
+    first_name = parts.first
+    last_name = parts.last
+    
+    [first_name, last_name]
+  end
+
+  def process_hunter_response(hunter_data, person)
+    data = hunter_data['data']
+    return { email: nil, reason: "Hunter.io returned no data" } unless data
+
+    email = data['email']
+    return { email: nil, reason: "Hunter.io found no email for this person" } unless email.present?
+
+    # Extract Hunter.io metadata
+    hunter_metadata = {
+      score: data['score'],
+      domain: data['domain'],
+      accept_all: data['accept_all'],
+      position: data['position'],
+      company: data['company'],
+      sources: data['sources'] || [],
+      verification: data['verification'] || {}
+    }
+
+    verification_status = data.dig('verification', 'status') || 'unknown'
+    
+    {
+      email: email,
+      confidence: data['score'] || 0,
+      verification_status: verification_status,
+      sources: ["hunter_io"],
+      hunter_data: hunter_metadata
+    }
+  end
+
+  def handle_hunter_error(response)
+    error_data = response.parsed_response
+    
+    if error_data.is_a?(Hash) && error_data['errors']
+      error = error_data['errors'].first
+      error_code = error['code'] || response.code
+      error_details = error['details'] || error['id'] || 'Unknown error'
+      
+      { 
+        email: nil, 
+        reason: "Hunter.io API error (#{error_code}): #{error_details}",
+        error_code: error_code,
+        error_details: error_details
+      }
+    else
+      { 
+        email: nil, 
+        reason: "Hunter.io API error (#{response.code}): #{response.message}",
+        error_code: response.code
+      }
     end
   end
 
@@ -188,9 +277,10 @@ class PersonEmailExtractionService < ApplicationService
       email: email_result[:email],
       confidence: email_result[:confidence],
       extracted_at: Time.current,
-      source: "mock_email_service",
+      source: "hunter_io",
       verification_status: email_result[:verification_status],
-      sources: email_result[:sources]
+      sources: email_result[:sources],
+      hunter_data: email_result[:hunter_data] || {}
     }
 
     @person.update!(
@@ -199,7 +289,7 @@ class PersonEmailExtractionService < ApplicationService
       email_data: email_data
     )
 
-    Rails.logger.info "📧 Updated person with email: #{email_result[:email]} (#{email_result[:confidence]}% confidence)"
+    Rails.logger.info "📧 Updated person with Hunter.io email: #{email_result[:email]} (#{email_result[:confidence]}% confidence)"
   end
 
   def success_result(message, data = {})

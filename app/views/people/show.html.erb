@@ -46,8 +46,34 @@
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
               <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <%= mail_to @person.email, @person.email, 
-                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                <div class="flex items-center space-x-2">
+                  <%= mail_to @person.email, @person.email, 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                  
+                  <% if @person.email_data&.dig('source') == 'hunter_io' %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      Hunter.io <%= @person.email_data['confidence'] %>%
+                    </span>
+                    
+                    <% verification_status = @person.email_data&.dig('verification_status') %>
+                    <% if verification_status.present? && verification_status != 'unknown' %>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= 
+                        case verification_status
+                        when 'valid' then 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        when 'invalid' then 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        else 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        end %>">
+                        <%= verification_status.humanize %>
+                      </span>
+                    <% end %>
+                  <% end %>
+                </div>
+                
+                <% if @person.email_data&.dig('hunter_data', 'position').present? %>
+                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Position: <%= @person.email_data['hunter_data']['position'] %>
+                  </div>
+                <% end %>
               </dd>
             </div>
           <% end %>
@@ -172,7 +198,10 @@
         <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Email Extraction</h4>
         <button onclick="queuePersonService('<%= @person.id %>', 'email_extraction')"
                 class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-          Extract Email
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          Hunter.io Extract
         </button>
       </div>
       <div>
