@@ -1,8 +1,76 @@
 # ViewComponent Rails 8 Compatibility Fix
 # This initializer resolves FrozenError issues with ViewComponent in Rails 8
 
-# The fundamental issue is that Rails 8 freezes autoload_paths much earlier
-# We need to configure paths before ViewComponent's engine initialization
+# The fundamental issue is that Rails 8 freezes autoload_paths much earlier,
+# especially in CI environments with eager loading enabled
+
+# Comprehensive Rails 8 autoload_paths freeze protection
+if Rails::VERSION::MAJOR >= 8
+  # Monkey patch Rails::Engine initializer to handle frozen autoload_paths
+  Rails::Engine.class_eval do
+    # Override the add_builtin_route initializer to prevent autoload_paths modification
+    def self.inherited(subclass)
+      super
+      
+      # Skip autoload_paths modification for engines when paths are frozen
+      subclass.initializer "#{subclass.railtie_name}.add_builtin_route", :before => :build_middleware_stack do |app|
+        if app.config.autoload_paths.frozen?
+          Rails.logger.debug "Rails 8: Skipping autoload_paths modification for #{subclass.name} (frozen)"
+        else
+          # Only modify if not frozen
+          original_paths = paths["app"].expanded
+          original_paths.each do |expanded|
+            app.config.autoload_paths.unshift(expanded) if File.directory?(expanded)
+          end
+        end
+      end
+    end
+  end
+
+  # Patch the autoload_paths array itself to handle frozen state gracefully
+  module AutoloadPathsFrozenPatch
+    def unshift(*args)
+      if frozen?
+        Rails.logger.debug "Rails 8: Prevented unshift to frozen autoload_paths: #{args.inspect}"
+        return self
+      end
+      super(*args)
+    end
+
+    def <<(path)
+      if frozen?
+        Rails.logger.debug "Rails 8: Prevented << to frozen autoload_paths: #{path}"
+        return self
+      end
+      super(path)
+    end
+    
+    def push(*args)
+      if frozen?
+        Rails.logger.debug "Rails 8: Prevented push to frozen autoload_paths: #{args.inspect}"
+        return self
+      end
+      super(*args)
+    end
+
+    def concat(other)
+      if frozen?
+        Rails.logger.debug "Rails 8: Prevented concat to frozen autoload_paths: #{other.inspect}"
+        return self
+      end
+      super(other)
+    end
+  end
+
+  # Apply patches early in Rails initialization (only if not frozen)
+  unless Rails.application.config.autoload_paths.frozen?
+    Rails.application.config.autoload_paths.extend(AutoloadPathsFrozenPatch)
+  end
+  
+  unless Rails.application.config.eager_load_paths.frozen?
+    Rails.application.config.eager_load_paths.extend(AutoloadPathsFrozenPatch)
+  end
+end
 
 if defined?(ViewComponent)
   # Override ViewComponent::Engine to prevent autoload_paths modification

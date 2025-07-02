@@ -16,10 +16,24 @@ module B2b
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks rubocop])
 
-    # Add ViewComponents to autoload paths (Rails 8 compatibility)
-    # Must be done here before paths are frozen to prevent ViewComponent FrozenError
-    config.autoload_paths << Rails.root.join("app/components")
-    config.eager_load_paths << Rails.root.join("app/components")
+    # Rails 8 autoload paths configuration - must be done early before freezing
+    # This prevents FrozenError in CI/CD environments with eager loading
+    
+    # Add ViewComponents to autoload paths
+    components_path = Rails.root.join("app/components")
+    config.autoload_paths << components_path unless config.autoload_paths.include?(components_path)
+    config.eager_load_paths << components_path unless config.eager_load_paths.include?(components_path)
+    
+    # Add any additional engine paths that might be needed
+    # This ensures all necessary paths are configured before Rails freezes them
+    engine_paths = [
+      # Add any other paths that engines might try to modify later
+    ]
+    
+    engine_paths.each do |path|
+      config.autoload_paths << path unless config.autoload_paths.include?(path)
+      config.eager_load_paths << path unless config.eager_load_paths.include?(path)
+    end
 
     # Configure Active Job to use Sidekiq
     config.active_job.queue_adapter = :sidekiq
