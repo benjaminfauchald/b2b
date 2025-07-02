@@ -136,22 +136,31 @@ ssh benjamin@app.connectica.no "sudo journalctl -u puma.service -n 50"
 - **ALWAYS use enhanced deployment scripts** - never push manually without quality checks
 
 ## Rails 8 + ViewComponent Compatibility (CRITICAL)
-**SOLVED**: This application uses a comprehensive ViewComponent Rails 8 compatibility solution:
+**SOLVED**: This application uses a comprehensive ViewComponent Rails 8 compatibility solution.
+
+### Full Documentation
+📚 **See `docs/VIEWCOMPONENT_RAILS8_COMPATIBILITY.md` for complete details on:**
+- The core problem and solution architecture
+- CI/CD test requirements and common issues
+- Debugging and monitoring procedures
+- Quick checklist for new components
 
 ### Key Files & Configuration:
 - `config/initializers/viewcomponent_rails8_compatibility.rb` - Core Rails 8 compatibility patch
 - `config/application.rb` - Manual autoload_paths configuration BEFORE freezing
 - `config/environments/production.rb` - Production-specific ViewComponent settings
 - `lib/tasks/viewcomponent_rails8.rake` - Verification and precompilation tasks
+- `config/boot.rb` - CI environment Array monkey patch
 
-### The Problem:
-Rails 8 freezes autoload_paths much earlier than previous versions, but ViewComponent's engine still tries to modify them during initialization, causing `FrozenError` in production deployments.
+### CI Test Requirements:
+**IMPORTANT**: All ViewComponent instantiations in CI must include required parameters:
+```ruby
+# ❌ WRONG - Will fail CI tests
+ButtonComponent.new
 
-### The Solution:
-1. **Engine Patching**: `ViewComponent::Engine.prepend(ViewComponentRails8Patch)` overrides `set_autoload_paths` to prevent modification
-2. **Early Path Configuration**: Autoload paths configured in `application.rb` before Rails freezes them
-3. **Production Template Precompilation**: Templates compiled during deployment for Propshaft compatibility
-4. **Verification Tasks**: `rake viewcomponent:verify` and `rake viewcomponent:precompile` for debugging
+# ✅ CORRECT - Include all required parameters
+ButtonComponent.new(text: 'Test Button')
+```
 
 ### Testing Status:
 - ✅ All 183 ViewComponent specs pass (0 failures, 1 pending)
