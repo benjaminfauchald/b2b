@@ -13,7 +13,7 @@ if defined?(ViewComponent)
       Rails.logger.debug "ViewComponent: Skipping autoload_paths modification for Rails 8 compatibility"
     end
   end
-  
+
   # Patch ViewComponent::Engine to prevent FrozenError
   ViewComponent::Engine.prepend(ViewComponentRails8Patch)
 end
@@ -23,17 +23,17 @@ Rails.application.config.after_initialize do
   if defined?(ViewComponent::Base)
     # Log ViewComponent initialization
     Rails.logger.info "ViewComponent initialized with Rails 8 compatibility patch"
-    
+
     # Force early compilation of ViewComponent templates in production
     if Rails.env.production?
       Rails.logger.info "Precompiling ViewComponent templates for production..."
-      
+
       # Precompile all ViewComponent templates to prevent runtime compilation issues
       Dir.glob(Rails.root.join("app/components/**/*_component.rb")).each do |component_file|
         begin
           component_name = File.basename(component_file, ".rb").camelize
           component_class = component_name.constantize
-          
+
           # Trigger template compilation if the component has templates
           if component_class < ViewComponent::Base && component_class.respond_to?(:compile_template)
             component_class.compile_template
@@ -43,7 +43,7 @@ Rails.application.config.after_initialize do
           Rails.logger.warn "ViewComponent compilation warning for #{component_file}: #{e.message}"
         end
       end
-      
+
       Rails.logger.info "ViewComponent template precompilation completed"
     end
   end
