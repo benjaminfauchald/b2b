@@ -87,6 +87,35 @@ RSpec.configure do |config|
     end
   end
 
+  # Specific cleanup for service_stats_consistency_spec.rb Business Logic Rules tests
+  config.before(:each) do |example|
+    if example.metadata[:file_path].include?("service_stats_consistency_spec.rb") &&
+       example.metadata[:full_description].include?("Service Stats Business Logic Rules")
+
+      # Complete database cleanup for business logic tests to prevent data pollution from earlier tests
+      begin
+        Company.destroy_all
+        ServiceAuditLog.destroy_all
+        ServiceConfiguration.destroy_all
+        Domain.destroy_all
+        Person.destroy_all
+        User.destroy_all
+      rescue => e
+        # If regular cleanup fails, try database truncation
+        begin
+          DatabaseCleaner[:active_record].clean
+        rescue => truncation_error
+          puts "Business logic test cleanup failed: #{truncation_error.message}"
+        end
+      end
+
+      # Clear all caches and state
+      Rails.cache.clear rescue nil
+      Sidekiq::Worker.clear_all if defined?(Sidekiq::Worker)
+      Sidekiq::Testing.fake!
+    end
+  end
+
   # Cleanup after worker tests to prevent Sidekiq state pollution
   config.after(:each, type: :worker) do
     Sidekiq::Worker.clear_all if defined?(Sidekiq::Worker)

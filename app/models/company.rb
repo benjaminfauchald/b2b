@@ -167,7 +167,7 @@ class Company < ApplicationRecord
   # Check if financial data is stale
   def financial_data_stale?
     last_successful_audit = service_audit_logs
-      .where(service_name: "company_financials", status: :success)
+      .where(service_name: "company_financial_data", status: :success)
       .order(completed_at: :desc)
       .first
 
@@ -212,14 +212,14 @@ class Company < ApplicationRecord
 
   # Returns the status of the most recent financial data update via SCT
   def financial_data_status
-    audit = ServiceAuditLog.where(auditable: self, service_name: "company_financials").order(completed_at: :desc).first
+    audit = ServiceAuditLog.where(auditable: self, service_name: "company_financial_data").order(completed_at: :desc).first
     return "pending" if audit.nil?
     audit.success? ? "success" : "failed"
   end
 
   # Returns the completed_at timestamp of the most recent financial data update via SCT
   def last_financial_update_at
-    ServiceAuditLog.where(auditable: self, service_name: "company_financials", status: ServiceAuditLog.statuses[:success])
+    ServiceAuditLog.where(auditable: self, service_name: "company_financial_data", status: ServiceAuditLog.statuses[:success])
       .order(completed_at: :desc)
       .limit(1)
       .pick(:completed_at)
@@ -228,7 +228,7 @@ class Company < ApplicationRecord
   # For backward compatibility
   def last_financial_audit
     @last_financial_audit ||= ServiceAuditLog
-      .where(auditable: self, service_name: "company_financials")
+      .where(auditable: self, service_name: "company_financial_data")
       .order(completed_at: :desc)
       .first
   end
