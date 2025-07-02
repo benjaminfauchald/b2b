@@ -133,6 +133,9 @@ RSpec.describe People::LocalEmailVerifyService do
           allow(Net::SMTP).to receive(:start).and_yield(smtp_mock)
           allow(smtp_mock).to receive(:mailfrom)
           allow(smtp_mock).to receive(:rcptto)
+
+          # Mock catch-all detection to return false for example.com
+          allow(service).to receive(:detect_catch_all_domain?).and_return(false)
         end
 
         it 'marks email as valid' do

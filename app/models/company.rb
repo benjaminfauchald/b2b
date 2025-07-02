@@ -245,18 +245,18 @@ class Company < ApplicationRecord
     # 1. linkedin_url is blank OR it was previously auto-populated from AI
     # 2. AI URL exists with high confidence (>= 80%)
     # 3. AI confidence has changed or AI URL has changed
-    
+
     # Check if linkedin_url was auto-populated (matches old AI URL)
-    was_auto_populated = linkedin_url.present? && 
-                        linkedin_ai_url_was.present? && 
+    was_auto_populated = linkedin_url.present? &&
+                        linkedin_ai_url_was.present? &&
                         linkedin_url == linkedin_ai_url_was
-    
+
     if (linkedin_url.blank? || was_auto_populated) &&
-       linkedin_ai_url.present? && 
-       linkedin_ai_confidence.present? && 
+       linkedin_ai_url.present? &&
+       linkedin_ai_confidence.present? &&
        linkedin_ai_confidence >= 80 &&
        (linkedin_ai_confidence_changed? || linkedin_ai_url_changed?)
-      
+
       self.linkedin_url = linkedin_ai_url
       Rails.logger.info "Auto-populated linkedin_url from AI for company #{id}: #{linkedin_ai_url} (confidence: #{linkedin_ai_confidence}%)"
     end

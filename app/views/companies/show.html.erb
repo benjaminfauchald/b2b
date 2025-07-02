@@ -91,9 +91,10 @@
                   <% if url_safe?(linkedin_url) %>
                     <div class="space-y-1">
                       <div class="flex items-center gap-2">
-                        <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                        <%= link_to sanitize(@company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/')), 
                             linkedin_url, 
                             target: "_blank", 
+                            rel: "noopener",
                             class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
                         <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
                           ✓ Active
@@ -110,9 +111,10 @@
                   <% if url_safe?(linkedin_ai_url) %>
                     <div class="space-y-1">
                       <div class="flex items-center gap-2">
-                        <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                        <%= link_to sanitize(@company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/')), 
                             linkedin_ai_url, 
                             target: "_blank", 
+                            rel: "noopener",
                             class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
                         <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
                           AI (<%= @company.linkedin_ai_confidence %>% confidence)

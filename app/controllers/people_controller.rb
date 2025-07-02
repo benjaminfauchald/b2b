@@ -74,7 +74,7 @@ class PeopleController < ApplicationController
               email_verification_metadata: {}
             )
           end
-          
+
           # Log the user update to ServiceAuditLog
           ServiceAuditLog.create!(
             auditable: @person,
@@ -131,7 +131,7 @@ class PeopleController < ApplicationController
             email_verification_metadata: {}
           )
         end
-        
+
         # Create audit log only if allowed fields were changed
         if changed_fields.any?
           metadata = {
