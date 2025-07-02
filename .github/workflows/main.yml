@@ -152,7 +152,7 @@ jobs:
             puts 'Testing ViewComponent rendering...'
             begin
               # Test basic component instantiation
-              ButtonComponent.new
+              ButtonComponent.new(text: 'Test Button')
               CardComponent.new(title: 'Test')
               puts '✅ ViewComponent instantiation successful'
               
