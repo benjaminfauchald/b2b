@@ -65,8 +65,8 @@ class CompanyProfileExtractionButtonComponent < ViewComponent::Base
   def disabled_reason
     if company.linkedin_url.blank? && company.linkedin_ai_url.blank?
       "No LinkedIn URL available"
-    elsif company.linkedin_ai_confidence.present? && company.linkedin_ai_confidence < 50
-      "LinkedIn confidence too low (#{company.linkedin_ai_confidence}%)"
+    elsif company.linkedin_url.blank? && company.linkedin_ai_url.present? && company.linkedin_ai_confidence.present? && company.linkedin_ai_confidence < 80
+      "LinkedIn AI confidence too low (#{company.linkedin_ai_confidence}%) - check the box above to use anyway"
     else
       "LinkedIn URL required"
     end

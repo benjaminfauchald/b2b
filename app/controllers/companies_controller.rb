@@ -210,9 +210,15 @@ class CompaniesController < ApplicationController
           end
         end
 
-        redirect_to @company, notice: "Company was successfully updated."
+        respond_to do |format|
+          format.html { redirect_to @company, notice: "Company was successfully updated." }
+          format.json { render json: { success: true, company: @company.as_json } }
+        end
       else
-        render :edit, status: :unprocessable_entity
+        respond_to do |format|
+          format.html { render :edit, status: :unprocessable_entity }
+          format.json { render json: { success: false, errors: @company.errors.full_messages }, status: :unprocessable_entity }
+        end
       end
     end
   end

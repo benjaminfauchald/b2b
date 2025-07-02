@@ -84,35 +84,82 @@
           <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">LinkedIn</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
-              <% if @company.linkedin_url.present? %>
-                <% linkedin_url = @company.linkedin_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_url : "https://#{@company.linkedin_url}" %>
-                <% if url_safe?(linkedin_url) %>
-                  <div class="space-y-2">
-                    <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
-                        linkedin_url, 
-                        target: "_blank", 
-                        class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
-                    <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                      Confirmed
-                    </span>
-                  </div>
+              <div class="space-y-3" data-controller="linkedin-override">
+                <!-- Manual LinkedIn URL (Primary) -->
+                <% if @company.linkedin_url.present? %>
+                  <% linkedin_url = @company.linkedin_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_url : "https://#{@company.linkedin_url}" %>
+                  <% if url_safe?(linkedin_url) %>
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-2">
+                        <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                            linkedin_url, 
+                            target: "_blank", 
+                            class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                        <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                          ✓ Active
+                        </span>
+                      </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">Manual URL (used for profile extraction)</p>
+                    </div>
+                  <% end %>
                 <% end %>
-              <% elsif @company.linkedin_ai_url.present? %>
-                <% linkedin_ai_url = @company.linkedin_ai_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_ai_url : "https://#{@company.linkedin_ai_url}" %>
-                <% if url_safe?(linkedin_ai_url) %>
-                  <div class="space-y-2">
-                    <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
-                        linkedin_ai_url, 
-                        target: "_blank", 
-                        class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
-                    <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
-                      AI (<%= @company.linkedin_ai_confidence %>% confidence)
-                    </span>
-                  </div>
+                
+                <!-- AI LinkedIn URL -->
+                <% if @company.linkedin_ai_url.present? %>
+                  <% linkedin_ai_url = @company.linkedin_ai_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_ai_url : "https://#{@company.linkedin_ai_url}" %>
+                  <% if url_safe?(linkedin_ai_url) %>
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-2">
+                        <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                            linkedin_ai_url, 
+                            target: "_blank", 
+                            class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+                        <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                          AI (<%= @company.linkedin_ai_confidence %>% confidence)
+                        </span>
+                        <% if @company.linkedin_url.blank? && @company.linkedin_ai_confidence && @company.linkedin_ai_confidence >= 80 %>
+                          <span class="inline-flex text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                            Auto-use
+                          </span>
+                        <% end %>
+                      </div>
+                      <% if @company.linkedin_url.blank? %>
+                        <% if @company.linkedin_ai_confidence && @company.linkedin_ai_confidence >= 80 %>
+                          <p class="text-xs text-gray-500 dark:text-gray-400">AI URL with high confidence (≥80%) - automatically used</p>
+                        <% elsif @company.linkedin_ai_confidence && @company.linkedin_ai_confidence < 80 %>
+                          <div class="mt-2">
+                            <label class="inline-flex items-center">
+                              <input type="checkbox" 
+                                     id="use-low-confidence-linkedin" 
+                                     class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600"
+                                     data-company-id="<%= @company.id %>"
+                                     data-linkedin-url="<%= @company.linkedin_ai_url %>">
+                              <span class="ml-2 text-xs text-gray-600 dark:text-gray-400">Use this URL despite low confidence</span>
+                            </label>
+                          </div>
+                        <% end %>
+                      <% else %>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">AI discovered URL (not used - manual URL exists)</p>
+                      <% end %>
+                    </div>
+                  <% end %>
                 <% end %>
-              <% else %>
-                <span class="text-gray-400 dark:text-gray-500">Not provided</span>
-              <% end %>
+                
+                <!-- No LinkedIn URL -->
+                <% if @company.linkedin_url.blank? && @company.linkedin_ai_url.blank? %>
+                  <span class="text-gray-400 dark:text-gray-500">Not available</span>
+                <% end %>
+                
+                <!-- Help text -->
+                <div class="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
+                  <p class="font-medium mb-1">LinkedIn URL Usage:</p>
+                  <ul class="list-disc list-inside space-y-1">
+                    <li>Manual URL is always used when present</li>
+                    <li>AI URL with ≥80% confidence is automatically used if no manual URL exists</li>
+                    <li>AI URL with <80% confidence requires manual approval</li>
+                  </ul>
+                </div>
+              </div>
             </dd>
           </div>
           

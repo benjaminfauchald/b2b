@@ -45,9 +45,9 @@ class Person < ApplicationRecord
   scope :recent_extractions, -> { where("profile_extracted_at > ?", 7.days.ago) }
 
   # Service extraction scopes for consistency with button component
-  scope :needing_profile_extraction, -> { needs_profile_extraction }
-  scope :needing_email_extraction, -> { needs_email_extraction }
-  scope :needing_social_media_extraction, -> { needs_social_media_extraction }
+  scope :needing_profile_extraction, -> { where(profile_data: nil) }
+  scope :needing_email_extraction, -> { where(email: [ nil, "" ]) }
+  scope :needing_social_media_extraction, -> { where(social_media_data: nil) }
 
   # Potential scopes for completion percentage calculations
   scope :profile_extraction_potential, -> { all }

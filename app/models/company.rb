@@ -11,6 +11,9 @@ class Company < ApplicationRecord
   # Validations
   validates :registration_number, presence: true, uniqueness: true
 
+  # Callbacks
+  before_save :auto_populate_linkedin_url_from_ai
+
   # Country filtering scope
   scope :by_country, ->(country_code) { where(source_country: country_code) if country_code.present? }
 
@@ -232,5 +235,30 @@ class Company < ApplicationRecord
       .where(auditable: self, service_name: "company_financial_data")
       .order(completed_at: :desc)
       .first
+  end
+
+  private
+
+  # Auto-populate linkedin_url from AI when confidence is high enough
+  def auto_populate_linkedin_url_from_ai
+    # Only auto-populate if:
+    # 1. linkedin_url is blank OR it was previously auto-populated from AI
+    # 2. AI URL exists with high confidence (>= 80%)
+    # 3. AI confidence has changed or AI URL has changed
+    
+    # Check if linkedin_url was auto-populated (matches old AI URL)
+    was_auto_populated = linkedin_url.present? && 
+                        linkedin_ai_url_was.present? && 
+                        linkedin_url == linkedin_ai_url_was
+    
+    if (linkedin_url.blank? || was_auto_populated) &&
+       linkedin_ai_url.present? && 
+       linkedin_ai_confidence.present? && 
+       linkedin_ai_confidence >= 80 &&
+       (linkedin_ai_confidence_changed? || linkedin_ai_url_changed?)
+      
+      self.linkedin_url = linkedin_ai_url
+      Rails.logger.info "Auto-populated linkedin_url from AI for company #{id}: #{linkedin_ai_url} (confidence: #{linkedin_ai_confidence}%)"
+    end
   end
 end

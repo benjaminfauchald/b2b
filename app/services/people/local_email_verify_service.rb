@@ -379,18 +379,18 @@ module People
 
     def detect_catch_all_domain?(domain, mx_host)
       settings = service_configuration.settings.symbolize_keys
-      
+
       # Skip detection for already known catch-all domains
       return false if (settings[:catch_all_domains] || []).include?(domain)
-      
+
       # Generate a random test email
       test_email = "test_#{SecureRandom.hex(8)}_#{Time.now.to_i}@#{domain}"
-      
+
       begin
         Timeout.timeout(5) do
           Net::SMTP.start(mx_host, 25, settings[:helo_domain] || "connectica.no") do |smtp|
             smtp.mailfrom(settings[:mail_from] || "noreply@connectica.no")
-            
+
             begin
               smtp.rcptto(test_email)
               # If random email is accepted, it's a catch-all
@@ -405,18 +405,18 @@ module People
       rescue => e
         Rails.logger.warn "Catch-all detection failed for #{domain}: #{e.message}"
         # If detection fails, assume not catch-all
-        return false
+        false
       end
     end
 
     def add_to_catch_all_domains(domain)
       config = service_configuration
       settings = config.settings
-      catch_all_domains = settings['catch_all_domains'] || []
-      
+      catch_all_domains = settings["catch_all_domains"] || []
+
       unless catch_all_domains.include?(domain)
         catch_all_domains << domain
-        settings['catch_all_domains'] = catch_all_domains
+        settings["catch_all_domains"] = catch_all_domains
         config.update!(settings: settings)
         Rails.logger.info "Added #{domain} to catch-all domains list"
       end
