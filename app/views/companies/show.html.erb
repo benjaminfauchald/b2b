@@ -10,10 +10,6 @@
         </p>
       </div>
       <div class="flex items-center space-x-3">
-        <%= link_to edit_company_path(@company), 
-            class: "text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600" do %>
-          Edit
-        <% end %>
         <%= link_to companies_path, 
             class: "text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700" do %>
           Back to List
@@ -40,9 +36,14 @@
           <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Website</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
-              <% if @company.website.present? && url_safe?(@company.website) %>
-                <%= link_to @company.website, @company.website, target: "_blank", 
-                    class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
+              <% if @company.website.present? %>
+                <% website_url = @company.website.match?(/\Ahttps?:\/\//i) ? @company.website : "https://#{@company.website}" %>
+                <% if url_safe?(website_url) %>
+                  <%= link_to @company.website, website_url, target: "_blank", 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
+                <% else %>
+                  <span class="text-gray-900 dark:text-gray-100"><%= @company.website %></span>
+                <% end %>
               <% else %>
                 <span class="text-gray-400 dark:text-gray-500">Not provided</span>
               <% end %>
@@ -76,26 +77,32 @@
           <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">LinkedIn</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
-              <% if @company.linkedin_url.present? && url_safe?(@company.linkedin_url) %>
-                <div class="space-y-2">
-                  <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
-                      @company.linkedin_url, 
-                      target: "_blank", 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
-                  <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                    Confirmed
-                  </span>
-                </div>
-              <% elsif @company.linkedin_ai_url.present? && url_safe?(@company.linkedin_ai_url) %>
-                <div class="space-y-2">
-                  <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
-                      @company.linkedin_ai_url, 
-                      target: "_blank", 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
-                  <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
-                    AI (<%= @company.linkedin_ai_confidence %>% confidence)
-                  </span>
-                </div>
+              <% if @company.linkedin_url.present? %>
+                <% linkedin_url = @company.linkedin_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_url : "https://#{@company.linkedin_url}" %>
+                <% if url_safe?(linkedin_url) %>
+                  <div class="space-y-2">
+                    <%= link_to @company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                        linkedin_url, 
+                        target: "_blank", 
+                        class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
+                    <span class="inline-flex text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                      Confirmed
+                    </span>
+                  </div>
+                <% end %>
+              <% elsif @company.linkedin_ai_url.present? %>
+                <% linkedin_ai_url = @company.linkedin_ai_url.match?(/\Ahttps?:\/\//i) ? @company.linkedin_ai_url : "https://#{@company.linkedin_ai_url}" %>
+                <% if url_safe?(linkedin_ai_url) %>
+                  <div class="space-y-2">
+                    <%= link_to @company.linkedin_ai_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'), 
+                        linkedin_ai_url, 
+                        target: "_blank", 
+                        class: "font-medium text-blue-600 dark:text-blue-500 hover:underline block" %>
+                    <span class="inline-flex text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                      AI (<%= @company.linkedin_ai_confidence %>% confidence)
+                    </span>
+                  </div>
+                <% end %>
               <% else %>
                 <span class="text-gray-400 dark:text-gray-500">Not provided</span>
               <% end %>
@@ -166,7 +173,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <%= form.label :website, class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-                <%= form.url_field :website, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "https://example.com" %>
+                <%= form.text_field :website, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "example.com" %>
               </div>
               
               <div>
@@ -181,7 +188,7 @@
               
               <div>
                 <%= form.label :linkedin_url, "LinkedIn URL", class: "block mb-2 text-sm font-medium text-gray-900 dark:text-white" %>
-                <%= form.url_field :linkedin_url, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "https://linkedin.com/company/example" %>
+                <%= form.text_field :linkedin_url, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500", placeholder: "linkedin.com/company/example" %>
               </div>
             </div>
             
