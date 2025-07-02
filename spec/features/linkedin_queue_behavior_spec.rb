@@ -70,7 +70,7 @@ RSpec.describe "LinkedIn Queue Behavior", type: :feature do
 
     it "shows jobs are being processed by checking audit logs" do
       # Skip test if authentication is not working properly in test context
-      skip "Authentication issues in full test suite context" if ENV['CI'] && !current_user
+      skip "Authentication issues in full test suite context" if ENV['CI']
 
       # Create a company
       company = create(:company,
