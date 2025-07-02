@@ -26,7 +26,7 @@ RSpec.configure do |config|
     # Clear all jobs and reset to consistent state
     Sidekiq::Worker.clear_all
     Sidekiq::Testing.fake! # Consistent mode across all test types
-    
+
     # Clear all queue-specific state
     clear_sidekiq_queues
   end
@@ -37,7 +37,7 @@ RSpec.configure do |config|
     Sidekiq::Worker.clear_all
     Sidekiq::Testing.fake!
     clear_sidekiq_queues
-    
+
     # Clear any Redis-based queue state
     Sidekiq::Queue.new.clear rescue nil
     Sidekiq::RetrySet.new.clear rescue nil
@@ -49,12 +49,12 @@ RSpec.configure do |config|
     if example.metadata[:full_description].include?("queue") ||
        example.metadata[:full_description].include?("Queue") ||
        example.metadata[:file_path].include?("queue")
-      
+
       # Complete Sidekiq state reset for queue-related system tests
       Sidekiq::Worker.clear_all
       Sidekiq::Testing.fake!
       clear_sidekiq_queues
-      
+
       # Clear actual Redis queues that system tests might interact with
       begin
         Sidekiq.redis { |conn| conn.flushdb }

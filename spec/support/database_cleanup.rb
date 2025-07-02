@@ -29,24 +29,24 @@ RSpec.configure do |config|
         puts "Database cleanup failed: #{truncation_error.message}"
       end
     end
-    
+
     # Clear all Sidekiq state
     Sidekiq::Worker.clear_all if defined?(Sidekiq::Worker)
     Sidekiq::Testing.fake! # Reset to consistent mode
-    
+
     # Clear Redis cache and queues
     if defined?(Redis.current)
       Redis.current.flushdb rescue nil
     end
-    
+
     # Clear Rails cache
     Rails.cache.clear rescue nil
-    
+
     # Reset authentication state
     if defined?(Warden) && Warden.respond_to?(:test_reset!)
       Warden.test_reset!
     end
-    
+
     # Clear ActionCable connections
     ActionCable.server.restart if defined?(ActionCable) rescue nil
   end
@@ -77,11 +77,11 @@ RSpec.configure do |config|
        example.metadata[:file_path].include?("service_stats_consistency_spec.rb") ||
        example.metadata[:file_path].include?("queue") ||
        example.metadata[:file_path].include?("worker")
-      
+
       # Ensure clean state for sensitive tests
       Sidekiq::Worker.clear_all if defined?(Sidekiq::Worker)
       Sidekiq::Testing.fake! # Consistent mode
-      
+
       # Clear any cached service data
       Rails.cache.clear rescue nil
     end
