@@ -26,19 +26,25 @@ export default class extends Controller {
         'Accept': 'application/json'
       }
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
+      }
+      return response.json()
+    })
     .then(data => {
+      console.log('Verification response:', data)
+      
       if (data.success) {
-        // Reload the component or update the UI
-        if (data.html) {
-          // Replace the entire component HTML
-          this.element.outerHTML = data.html
-        } else {
-          // Show success message
-          this.showNotification('Email verification completed', 'success')
-          // Reload page after short delay
-          setTimeout(() => window.location.reload(), 1500)
-        }
+        // Show detailed success message with status
+        const statusText = data.status === 'valid' ? 'Valid' : data.status
+        const confidenceText = data.confidence ? ` (${Math.round(data.confidence * 100)}% confidence)` : ''
+        this.showNotification(`Email verified: ${statusText}${confidenceText}`, 'success')
+        
+        // Reload the page to show updated status
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
       } else {
         this.showNotification(data.error || 'Verification failed', 'error')
         // Re-enable button
@@ -72,19 +78,40 @@ export default class extends Controller {
   }
 
   showNotification(message, type) {
+    console.log(`Showing notification: ${message} (${type})`)
+    
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('.email-verification-notification')
+    existingNotifications.forEach(n => n.remove())
+    
     // Create notification element
     const notification = document.createElement('div')
-    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${
+    notification.className = `email-verification-notification fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white transition-all duration-300 ${
       type === 'success' ? 'bg-green-500' : 'bg-red-500'
     }`
-    notification.textContent = message
+    notification.style.minWidth = '250px'
+    notification.innerHTML = `
+      <div class="flex items-center">
+        ${type === 'success' ? 
+          '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' :
+          '<svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>'
+        }
+        <span>${message}</span>
+      </div>
+    `
     
     // Add to body
     document.body.appendChild(notification)
     
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = 'translateX(0)'
+    }, 10)
+    
     // Remove after 3 seconds
     setTimeout(() => {
-      notification.remove()
+      notification.style.opacity = '0'
+      setTimeout(() => notification.remove(), 300)
     }, 3000)
   }
 }
