@@ -2,7 +2,7 @@ require "ostruct"
 require "csv"
 
 class DomainsController < ApplicationController
-  before_action :set_domain, only: %i[ show edit update destroy queue_single_dns queue_single_mx queue_single_www queue_single_web_content ]
+  before_action :set_domain, only: %i[ show edit update destroy queue_single_dns queue_single_mx queue_single_www queue_single_web_content test_status ]
   skip_before_action :verify_authenticity_token, only: [ :queue_testing, :queue_dns_testing, :queue_mx_testing, :queue_a_record_testing, :queue_web_content_extraction, :queue_single_dns, :queue_single_mx, :queue_single_www, :queue_single_web_content ]
 
   # GET /domains or /domains.json

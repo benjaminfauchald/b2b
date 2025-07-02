@@ -6,6 +6,7 @@ class Company < ApplicationRecord
   # Associations
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
   has_many :people, dependent: :destroy
+  has_one :domain, dependent: :destroy
 
   # Validations
   validates :registration_number, presence: true, uniqueness: true

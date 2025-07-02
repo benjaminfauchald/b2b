@@ -1,0 +1,14 @@
+<div id="domain-test-status-<%= domain.id %>"
+     class="inline-flex items-center gap-2"
+     data-controller="domain-test-status"
+     data-domain-test-status-domain-id-value="<%= domain.id %>"
+     data-domain-test-status-testing-value="<%= any_testing? %>"
+     data-domain-test-status-refresh-interval-value="1000">
+  
+  <% test_statuses.each do |test_name, test_data| %>
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= status_classes(test_data[:status]) %>">
+      <span class="mr-1"><%= test_data[:icon] %></span>
+      <%= test_data[:label] %>
+    </span>
+  <% end %>
+</div>

@@ -135,6 +135,16 @@ class CompaniesController < ApplicationController
             }
           )
 
+          # Handle domain creation/update if website was changed
+          if field_to_update == "website" && new_value.present?
+            domain_service = CompanyDomainService.new(@company, new_value)
+            domain_result = domain_service.execute
+            
+            unless domain_result.success?
+              Rails.logger.error "Failed to process domain: #{domain_result.error_message}"
+            end
+          end
+
           render json: { success: true, message: "Field updated successfully" }
         else
           render json: { success: false, error: @company.errors.full_messages.join(", ") }, status: :unprocessable_entity
@@ -188,6 +198,16 @@ class CompaniesController < ApplicationController
               updated_at: Time.current.iso8601
             }
           )
+        end
+
+        # Handle domain creation/update if website was changed
+        if changed_fields.include?("website") && company_params["website"].present?
+          domain_service = CompanyDomainService.new(@company, company_params["website"])
+          domain_result = domain_service.execute
+          
+          unless domain_result.success?
+            Rails.logger.error "Failed to process domain: #{domain_result.error_message}"
+          end
         end
 
         redirect_to @company, notice: "Company was successfully updated."

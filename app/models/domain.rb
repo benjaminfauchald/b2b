@@ -1,8 +1,11 @@
 class Domain < ApplicationRecord
   include ServiceAuditable
 
+  # Associations
+  belongs_to :company, optional: true
+
   # Validations
-  validates :domain, presence: true, uniqueness: true
+  validates :domain, presence: true, uniqueness: { scope: :company_id }
   validates :mx, inclusion: { in: [ true, false ] }, allow_nil: true
 
   # Scopes for domain testing

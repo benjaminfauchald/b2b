@@ -714,6 +714,7 @@ DEPENDENCIES
   pg (~> 1.1)
   propshaft
   pry-rails
+  public_suffix (~> 6.0)
   puma (>= 5.0)
   rails (~> 8.0.2)
   redis (~> 5.0)

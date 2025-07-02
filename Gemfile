@@ -130,6 +130,7 @@ gem "smarter_csv", "~> 1.8"  # CSV parsing and import functionality
 gem "google-api-client"     # Google Custom Search API
 gem "ruby-openai"           # OpenAI API for content validation
 gem "firecrawl"             # Firecrawl API for web content extraction
+gem "public_suffix", "~> 6.0"  # Domain name validation and parsing
 
 # Console enhancements for all environments
 gem "pry-rails"

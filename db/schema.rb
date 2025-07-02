@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_29_161736) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_02_170035) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -376,7 +376,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_29_161736) do
     t.string "mx_error"
     t.string "a_record_ip"
     t.jsonb "web_content_data"
+    t.bigint "company_id"
     t.index ["a_record_ip"], name: "index_domains_on_a_record_ip"
+    t.index ["company_id", "domain"], name: "index_domains_on_company_id_and_domain", unique: true
+    t.index ["company_id"], name: "index_domains_on_company_id"
     t.index ["dns", "mx"], name: "index_domains_on_dns_and_mx"
     t.index ["dns", "www"], name: "index_domains_on_dns_and_www"
     t.index ["dns"], name: "index_domains_on_dns"
@@ -496,4 +499,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_29_161736) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "domains", "companies"
 end
