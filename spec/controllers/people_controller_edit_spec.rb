@@ -123,6 +123,49 @@ RSpec.describe PeopleController, type: :controller do
       end
     end
 
+    context 'when email is changed' do
+      before do
+        person.update!(
+          email: 'verified@example.com',
+          email_verification_status: 'valid',
+          email_verification_confidence: 0.95,
+          email_verification_checked_at: 1.day.ago,
+          email_verification_metadata: { checks: { smtp: { passed: true } } }
+        )
+      end
+
+      it 'clears email verification status when email changes' do
+        patch :update, params: { id: person.id, person: { email: 'newemail@example.com' } }
+
+        person.reload
+        expect(person.email).to eq('newemail@example.com')
+        expect(person.email_verification_status).to eq('unverified')
+        expect(person.email_verification_confidence).to eq(0.0)
+        expect(person.email_verification_checked_at).to be_nil
+        expect(person.email_verification_metadata).to eq({})
+      end
+
+      it 'does not clear verification when email remains the same' do
+        patch :update, params: { id: person.id, person: { phone: '+47 999 88 777' } }
+
+        person.reload
+        expect(person.email_verification_status).to eq('valid')
+        expect(person.email_verification_confidence).to eq(0.95)
+        expect(person.email_verification_checked_at).not_to be_nil
+        expect(person.email_verification_metadata).not_to be_empty
+      end
+
+      it 'clears verification for AJAX requests when email changes' do
+        patch :update, params: { id: person.id, person: { email: 'ajax@example.com' } }, xhr: true
+
+        person.reload
+        expect(person.email).to eq('ajax@example.com')
+        expect(person.email_verification_status).to eq('unverified')
+        expect(person.email_verification_confidence).to eq(0.0)
+        expect(person.email_verification_checked_at).to be_nil
+      end
+    end
+
     context 'when updating via AJAX (inline edit)' do
       it 'updates single field and creates audit log' do
         expect {

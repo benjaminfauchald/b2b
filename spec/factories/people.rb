@@ -16,5 +16,11 @@ FactoryBot.define do
     profile_data { {} }
     email_data { {} }
     social_media_data { {} }
+    
+    # Email verification attributes
+    email_verification_status { "unverified" }
+    email_verification_confidence { 0.0 }
+    email_verification_checked_at { nil }
+    email_verification_metadata { {} }
   end
 end

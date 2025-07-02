@@ -65,6 +65,16 @@ class PeopleController < ApplicationController
         new_value = person_params[field_to_update]
 
         if @person.update(person_params)
+          # Clear email verification if email was changed
+          if field_to_update == "email" && old_value != new_value
+            @person.update_columns(
+              email_verification_status: "unverified",
+              email_verification_confidence: 0.0,
+              email_verification_checked_at: nil,
+              email_verification_metadata: {}
+            )
+          end
+          
           # Log the user update to ServiceAuditLog
           ServiceAuditLog.create!(
             auditable: @person,
@@ -112,6 +122,16 @@ class PeopleController < ApplicationController
       end
 
       if @person.update(person_params)
+        # Clear email verification if email was changed
+        if changed_fields.include?("email")
+          @person.update_columns(
+            email_verification_status: "unverified",
+            email_verification_confidence: 0.0,
+            email_verification_checked_at: nil,
+            email_verification_metadata: {}
+          )
+        end
+        
         # Create audit log only if allowed fields were changed
         if changed_fields.any?
           metadata = {
