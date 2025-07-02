@@ -49,7 +49,7 @@ RSpec.describe "LinkedIn Queue Behavior", type: :feature do
 
   describe "How to verify LinkedIn Discovery is working", type: :request do
     include Devise::Test::IntegrationHelpers
-    
+
     let(:admin_user) { create(:user, email: "admin@example.com") }
 
     before do
