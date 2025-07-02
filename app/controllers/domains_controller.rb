@@ -921,6 +921,12 @@ class DomainsController < ApplicationController
 
   # GET /domains/:id/test_status
   def test_status
+    # Reload domain to ensure we have the latest data
+    @domain.reload
+    
+    # Log the current state for debugging
+    Rails.logger.info "Domain test status for #{@domain.domain}: DNS=#{@domain.dns.inspect}, MX=#{@domain.mx.inspect}, WWW=#{@domain.www.inspect}"
+    
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: turbo_stream.replace(

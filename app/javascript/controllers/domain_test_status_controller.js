@@ -48,19 +48,28 @@ export default class extends Controller {
       return response.text()
     })
     .then(html => {
+      // Log the response for debugging
+      console.log("Received Turbo Stream response for domain", this.domainIdValue)
+      
       // Render the Turbo Stream response
       Turbo.renderStreamMessage(html)
       
-      // Check if we should stop polling by looking at the updated DOM
-      // This ensures polling stops even if the data attribute doesn't update properly
-      const updatedElement = document.getElementById(`domain-test-status-${this.domainIdValue}`)
-      if (updatedElement) {
-        const stillTesting = updatedElement.dataset.domainTestStatusTestingValue === 'true'
-        if (!stillTesting && this.refreshTimer) {
-          console.log("All tests complete, stopping polling for domain", this.domainIdValue)
-          this.stopPolling()
+      // Force a small delay to ensure DOM is updated
+      setTimeout(() => {
+        // Check if we should stop polling by looking at the updated DOM
+        const updatedElement = document.getElementById(`domain-test-status-${this.domainIdValue}`)
+        if (updatedElement) {
+          const stillTesting = updatedElement.dataset.domainTestStatusTestingValue === 'true'
+          console.log("Domain", this.domainIdValue, "testing status:", stillTesting)
+          
+          if (!stillTesting && this.refreshTimer) {
+            console.log("All tests complete, stopping polling for domain", this.domainIdValue)
+            this.stopPolling()
+          }
+        } else {
+          console.warn("Could not find updated element for domain", this.domainIdValue)
         }
-      }
+      }, 100)
     })
     .catch(error => {
       console.error("Error checking domain test status:", error)
