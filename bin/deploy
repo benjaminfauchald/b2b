@@ -69,7 +69,17 @@ if ! git diff-index --quiet HEAD --; then
     git add -A
 fi
 
-# 2. Run critical tests (domain CSV import tests)
+# 2. Run Brakeman security scan
+echo "🔒 Running Brakeman security scan..."
+if bundle exec brakeman --no-pager --quiet; then
+    echo "✅ Brakeman security scan passed"
+else
+    echo "❌ Brakeman found security issues. Please fix before deploying."
+    echo "Run 'bundle exec brakeman' to see detailed security warnings."
+    exit 1
+fi
+
+# 3. Run critical tests (domain CSV import tests)
 echo "🧪 Running critical domain CSV import tests..."
 if bundle exec rspec spec/requests/domains_csv_import_spec.rb --fail-fast; then
     echo "✅ Critical tests passed"
@@ -78,7 +88,7 @@ else
     exit 1
 fi
 
-# 3. Run full test suite (optional with timeout)
+# 4. Run full test suite (optional with timeout)
 echo "🧪 Running full test suite (optional)..."
 # Use gtimeout on macOS, timeout on Linux
 if command -v gtimeout >/dev/null 2>&1; then
@@ -104,14 +114,14 @@ else
     echo "⚠️  No timeout command available. Skipping full test suite."
 fi
 
-# 4. Commit any changes
+# 5. Commit any changes
 if ! git diff-index --quiet HEAD --; then
     echo "📝 Committing changes..."
     git add -A
     git commit -m "$MESSAGE"
 fi
 
-# 5. Deploy based on mode
+# 6. Deploy based on mode
 if [ "$DEPLOY_MODE" = "simple" ]; then
     # Simple mode: push to master and create tag
     echo "📤 Pushing to master..."
@@ -141,7 +151,7 @@ elif [ "$DEPLOY_MODE" = "full" ]; then
     git stash pop 2>/dev/null || true
 fi
 
-# 6. Create and push version tag
+# 7. Create and push version tag
 RELEASE_NAME="Release $NEW_VERSION: $MESSAGE"
 echo "🏷️  Creating tag: $NEW_VERSION"
 git tag -a "$NEW_VERSION" -m "$RELEASE_NAME"
@@ -155,6 +165,7 @@ echo "📊 Summary:"
 echo "   ✅ Version: $NEW_VERSION"
 echo "   ✅ Message: $MESSAGE"
 echo "   ✅ RuboCop: Passed"
+echo "   ✅ Brakeman: Passed"
 echo "   ✅ Critical Tests: Passed"
 echo "   ✅ Deployment: Triggered"
 echo ""

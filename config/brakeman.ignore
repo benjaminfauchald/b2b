@@ -5,26 +5,26 @@
       "note": "Development-only tool for Guard notifications - count variable is controlled internally"
     },
     {
-      "fingerprint": "d01fe866889247db38c2b00ede5c21361f69c02f044b750dab4fd8ec3d467696",
-      "note": "Rails automatically escapes output in views - XSS protection is enabled for website URLs"
+      "fingerprint": "d52bb4d8c367069e437160eed7156ecd66d238bf0f58dc6c397ccd71fa9bed39",
+      "note": "Website URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
-      "fingerprint": "e3f764645500da2ff740ff0e19c686c73fc8dcc0f8950a7b068d2c875636ceb7",
-      "note": "Rails automatically escapes output in views - XSS protection is enabled for LinkedIn URLs"
+      "fingerprint": "664f72d696060d42390f87560094e07b8ff63a476ec9f33feb5bb6afbcf50067",
+      "note": "LinkedIn URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
-      "fingerprint": "45432eca6b1c6c7d935f35228118a5ddb51d08a3353d710445ece7dbd1ee1f2e",
-      "note": "Rails automatically escapes output in views - XSS protection is enabled for LinkedIn AI URLs"
+      "fingerprint": "89c485375ef7bf75b68a43694c44c0670c5fa2be499bd1a2f7a33a5052a71710",
+      "note": "LinkedIn AI URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
       "fingerprint": "386dff1f882598db68f00de75773557c11d9ca1e7ecd8ed118ccd7ab497f4bca",
-      "note": "Rails automatically escapes output in views - XSS protection is enabled for profile URLs"
+      "note": "Profile URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
       "fingerprint": "0ef8149021b597bdf7d9dff1253a4e53d9b7845432b64a947aad6d45c4801d0e",
       "note": "Filename is sanitized with File.basename and gsub to prevent path traversal"
     }
   ],
-  "updated": "2025-06-30 17:54:00 +0000",
+  "updated": "2025-07-02 04:59:00 +0000",
   "brakeman_version": "7.0.2"
 }
