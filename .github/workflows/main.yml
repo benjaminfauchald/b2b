@@ -315,9 +315,43 @@ jobs:
             git checkout -f $LATEST_TAG
             git clean -fd
             
-            # Install dependencies
-            bundle config set deployment true
-            bundle install
+            # Enhanced bundle install with proper configuration
+            echo "🔍 Verifying Ruby environment..."
+            source ~/.bashrc || true
+            export RAILS_ENV=production
+            
+            # Load environment variables
+            if [ -f .env.production ]; then
+              set -a
+              source .env.production
+              set +a
+            fi
+            
+            echo "📦 Installing gems with enhanced configuration..."
+            # Clear any problematic bundle config
+            rm -f .bundle/config
+            
+            # Set proper bundle configuration
+            bundle config set --local deployment true
+            bundle config set --local without 'development test'
+            bundle config set --local path 'vendor/bundle'
+            
+            # Install with retry logic and better error handling
+            for i in {1..3}; do
+              if bundle install --deployment --local; then
+                echo "✅ Bundle install successful on attempt $i"
+                break
+              else
+                echo "⚠️ Bundle install attempt $i failed, cleaning and retrying..."
+                rm -rf vendor/bundle .bundle
+                bundle config unset deployment
+                sleep 5
+                if [ $i -eq 3 ]; then
+                  echo "❌ Bundle install failed after 3 attempts"
+                  exit 1
+                fi
+              fi
+            done
             
             # Run migrations
             RAILS_ENV=production bundle exec rails db:migrate
@@ -325,14 +359,47 @@ jobs:
             # Compile assets
             RAILS_ENV=production bundle exec rails assets:precompile
             
-            # Restart the service (using systemctl without sudo if possible)
-            if systemctl --user status puma.service >/dev/null 2>&1; then
-              systemctl --user restart puma.service
-            elif sudo -n systemctl status puma.service >/dev/null 2>&1; then
-              sudo systemctl restart puma.service
+            # Enhanced service restart with health checks
+            echo "🔄 Restarting application services..."
+            
+            # Stop service gracefully first
+            if sudo -n systemctl stop puma.service 2>/dev/null; then
+              echo "✅ Puma service stopped gracefully"
+              sleep 5
             else
-              echo "Warning: Could not restart puma.service. You may need to restart it manually."
-              echo "The code has been deployed successfully."
+              echo "⚠️ Could not stop puma.service gracefully"
+            fi
+            
+            # Verify process is fully stopped
+            if pgrep -f puma >/dev/null 2>&1; then
+              echo "⚠️ Puma process still running, force killing..."
+              sudo pkill -f puma || true
+              sleep 3
+            fi
+            
+            # Start service
+            if sudo systemctl start puma.service; then
+              echo "✅ Puma service started"
+              
+              # Health check with timeout
+              echo "🏥 Running health checks..."
+              for i in {1..30}; do
+                if curl -f -s http://localhost:3000/up >/dev/null 2>&1; then
+                  echo "✅ Application is healthy and responding"
+                  break
+                elif [ $i -eq 30 ]; then
+                  echo "❌ Application failed health check after 5 minutes"
+                  sudo journalctl -u puma.service -n 20 --no-pager
+                  exit 1
+                else
+                  echo "⏳ Waiting for application to start... ($i/30)"
+                  sleep 10
+                fi
+              done
+            else
+              echo "❌ Failed to start puma.service"
+              sudo journalctl -u puma.service -n 20 --no-pager
+              exit 1
             fi
           ENDSSH
 
