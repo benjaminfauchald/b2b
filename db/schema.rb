@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_02_170035) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_02_172625) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -397,6 +397,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_02_170035) do
     t.text "c1"
   end
 
+  create_table "email_verification_attempts", force: :cascade do |t|
+    t.bigint "person_id", null: false
+    t.string "email", null: false
+    t.string "domain", null: false
+    t.string "status", null: false
+    t.integer "response_code"
+    t.text "response_message"
+    t.datetime "attempted_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attempted_at"], name: "index_email_verification_attempts_on_attempted_at"
+    t.index ["domain"], name: "index_email_verification_attempts_on_domain"
+    t.index ["email"], name: "index_email_verification_attempts_on_email"
+    t.index ["person_id"], name: "index_email_verification_attempts_on_person_id"
+  end
+
   create_table "people", force: :cascade do |t|
     t.string "name"
     t.string "title"
@@ -421,6 +437,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_02_170035) do
     t.datetime "updated_at", null: false
     t.jsonb "profile_data"
     t.jsonb "email_data"
+    t.string "email_verification_status", default: "unverified"
+    t.float "email_verification_confidence", default: 0.0
+    t.datetime "email_verification_checked_at"
+    t.jsonb "email_verification_metadata", default: {}
+    t.index ["email_verification_checked_at"], name: "index_people_on_email_verification_checked_at"
+    t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
     t.index ["profile_url"], name: "index_people_on_profile_url", unique: true
   end
 
@@ -500,4 +522,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_02_170035) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "domains", "companies"
+  add_foreign_key "email_verification_attempts", "people"
 end

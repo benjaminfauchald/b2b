@@ -2,6 +2,7 @@ class Person < ApplicationRecord
   include ServiceAuditable
 
   belongs_to :company, optional: true
+  has_many :email_verification_attempts, dependent: :destroy
 
   validates :name, presence: true
   validates :profile_url, uniqueness: { allow_blank: true }
@@ -43,6 +44,16 @@ class Person < ApplicationRecord
 
   scope :recent_extractions, -> { where("profile_extracted_at > ?", 7.days.ago) }
 
+  # Service extraction scopes for consistency with button component
+  scope :needing_profile_extraction, -> { needs_profile_extraction }
+  scope :needing_email_extraction, -> { needs_email_extraction }
+  scope :needing_social_media_extraction, -> { needs_social_media_extraction }
+
+  # Potential scopes for completion percentage calculations
+  scope :profile_extraction_potential, -> { all }
+  scope :email_extraction_potential, -> { all }
+  scope :social_media_extraction_potential, -> { all }
+
   def full_profile_data
     {
       name: name,
@@ -69,5 +80,22 @@ class Person < ApplicationRecord
 
   def needs_social_media_extraction?
     social_media_extracted_at.nil? || social_media_extracted_at < 30.days.ago
+  end
+
+  # Email verification methods
+  def email_verified?
+    email_verification_status == "valid"
+  end
+
+  def email_unverified?
+    email_verification_status == "unverified"
+  end
+
+  def needs_email_verification?
+    email.present? && (email_unverified? || email_verification_checked_at.nil? || email_verification_checked_at < 30.days.ago)
+  end
+
+  def full_name
+    name
   end
 end
