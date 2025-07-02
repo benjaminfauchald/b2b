@@ -10,7 +10,7 @@ RSpec.describe "LinkedIn Discovery Queue Integration", type: :request do
   before do
     # Enable service
     ServiceConfiguration.find_or_create_by(service_name: "company_linkedin_discovery").update(active: true)
-    
+
     # Configure Sidekiq for testing
     Sidekiq::Testing.fake!
     CompanyLinkedinDiscoveryWorker.clear
@@ -35,9 +35,9 @@ RSpec.describe "LinkedIn Discovery Queue Integration", type: :request do
 
       # Verify job in queue
       expect(CompanyLinkedinDiscoveryWorker.jobs.size).to eq(1)
-      
+
       job = CompanyLinkedinDiscoveryWorker.jobs.first
-      expect(job["args"]).to eq([company.id])
+      expect(job["args"]).to eq([ company.id ])
       expect(job["queue"]).to eq("company_linkedin_discovery")
       expect(job["class"]).to eq("CompanyLinkedinDiscoveryWorker")
     end
@@ -111,7 +111,7 @@ RSpec.describe "LinkedIn Discovery Queue Integration", type: :request do
 
       # Verify all jobs are in the correct queue
       expect(CompanyLinkedinDiscoveryWorker.jobs.size).to eq(5)
-      
+
       CompanyLinkedinDiscoveryWorker.jobs.each do |job|
         expect(job["queue"]).to eq("company_linkedin_discovery")
         expect(job["class"]).to eq("CompanyLinkedinDiscoveryWorker")
@@ -145,7 +145,7 @@ RSpec.describe "LinkedIn Discovery Queue Integration", type: :request do
       sign_in admin_user
 
       post "/companies/999999/queue_single_linkedin_discovery"
-      
+
       # In request specs, Rails rescues RecordNotFound and returns 404
       expect(response).to have_http_status(:not_found)
       expect(CompanyLinkedinDiscoveryWorker.jobs.size).to eq(0)
@@ -164,7 +164,7 @@ RSpec.describe "LinkedIn Discovery Queue Integration", type: :request do
 
       # Get queue stats
       queue_stats = Sidekiq::Queue.new("company_linkedin_discovery")
-      
+
       # In test mode, we need to check the jobs array
       expect(CompanyLinkedinDiscoveryWorker.jobs.size).to eq(3)
     end

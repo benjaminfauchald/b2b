@@ -14,7 +14,7 @@ RSpec.configure do |config|
   # Also clean up for component tests that might have system-like behavior
   config.before(:each, type: :component) do |example|
     # Only clean if the test uses database data
-    if example.metadata[:full_description].include?("Service Stats") || 
+    if example.metadata[:full_description].include?("Service Stats") ||
        example.metadata[:full_description].include?("Business Logic")
       Company.destroy_all
       ServiceAuditLog.destroy_all
@@ -25,7 +25,7 @@ RSpec.configure do |config|
 
   # Clean up for any test that mentions service stats or business logic (regardless of type)
   config.before(:each) do |example|
-    if example.metadata[:full_description].include?("Service Stats") || 
+    if example.metadata[:full_description].include?("Service Stats") ||
        example.metadata[:full_description].include?("Business Logic") ||
        example.metadata[:file_path].include?("service_stats_consistency_spec.rb")
       Company.destroy_all

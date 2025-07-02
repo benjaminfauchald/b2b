@@ -4,7 +4,7 @@ RSpec.describe ServiceAuditLog, type: :model do
   describe 'user_update service compliance' do
     let(:company) { create(:company) }
     let(:user) { create(:user) }
-    
+
     context 'when creating a user_update audit log' do
       let(:audit_log_attributes) do
         {
@@ -16,10 +16,10 @@ RSpec.describe ServiceAuditLog, type: :model do
           table_name: 'companies',
           record_id: company.id.to_s,
           operation_type: 'update',
-          columns_affected: ['website', 'email'],
+          columns_affected: [ 'website', 'email' ],
           execution_time_ms: 0,
           metadata: {
-            fields_changed: ['website', 'email'],
+            fields_changed: [ 'website', 'email' ],
             changes: {
               'website' => { 'old_value' => nil, 'new_value' => 'https://example.com' },
               'email' => { 'old_value' => 'old@example.com', 'new_value' => 'new@example.com' }
@@ -37,7 +37,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'saves successfully with all required fields' do
         audit_log = ServiceAuditLog.create!(audit_log_attributes)
-        
+
         expect(audit_log.persisted?).to be true
         expect(audit_log.service_name).to eq('user_update')
         expect(audit_log.auditable).to eq(company)
@@ -66,7 +66,7 @@ RSpec.describe ServiceAuditLog, type: :model do
           audit_log = ServiceAuditLog.new(audit_log_attributes.merge(status: status))
           expect(audit_log).to be_valid
         end
-        
+
         # Test failed status requires error in metadata
         failed_attributes = audit_log_attributes.merge(
           status: 'failed',
@@ -78,7 +78,7 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'stores metadata as JSON' do
         audit_log = ServiceAuditLog.create!(audit_log_attributes)
-        
+
         expect(audit_log.metadata).to be_a(Hash)
         expect(audit_log.metadata['updated_by']).to eq(user.email)
         expect(audit_log.metadata['changes']['website']['new_value']).to eq('https://example.com')
@@ -86,9 +86,9 @@ RSpec.describe ServiceAuditLog, type: :model do
 
       it 'tracks columns_affected as an array' do
         audit_log = ServiceAuditLog.create!(audit_log_attributes)
-        
+
         expect(audit_log.columns_affected).to be_an(Array)
-        expect(audit_log.columns_affected).to eq(['website', 'email'])
+        expect(audit_log.columns_affected).to eq([ 'website', 'email' ])
       end
     end
 
@@ -104,7 +104,7 @@ RSpec.describe ServiceAuditLog, type: :model do
           table_name: 'companies',
           record_id: company.id.to_s,
           operation_type: 'update',
-          columns_affected: ['website'],
+          columns_affected: [ 'website' ],
           execution_time_ms: 0,
           metadata: { field: 'website', updated_by: user.email }
         )
@@ -118,7 +118,7 @@ RSpec.describe ServiceAuditLog, type: :model do
           table_name: 'companies',
           record_id: company.id.to_s,
           operation_type: 'sync',
-          columns_affected: ['revenue'],
+          columns_affected: [ 'revenue' ],
           execution_time_ms: 1500,
           metadata: { 'service' => 'company_financial_data' }
         )
@@ -155,7 +155,7 @@ RSpec.describe ServiceAuditLog, type: :model do
           table_name: 'companies',
           record_id: company.id.to_s,
           operation_type: 'update',
-          columns_affected: ['website'],
+          columns_affected: [ 'website' ],
           execution_time_ms: 0,
           metadata: {
             field: 'website',
@@ -180,7 +180,7 @@ RSpec.describe ServiceAuditLog, type: :model do
           table_name: 'companies',
           record_id: company.id.to_s,
           operation_type: 'update',
-          columns_affected: ['phone'],
+          columns_affected: [ 'phone' ],
           execution_time_ms: 0,
           metadata: {
             field: 'phone',

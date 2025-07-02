@@ -210,7 +210,7 @@ class CompanyServiceButtonComponent < ViewComponent::Base
     parts << "Manual" if company.linkedin_url.present?
     parts << "AI (#{company.linkedin_ai_confidence}%)" if company.linkedin_ai_url.present? && company.linkedin_ai_confidence.present?
     parts << "AI" if company.linkedin_ai_url.present? && company.linkedin_ai_confidence.blank?
-    
+
     if parts.any?
       parts.join(" + ")
     else

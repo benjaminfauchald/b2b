@@ -315,9 +315,9 @@ RSpec.describe PersonEmailExtractionService, type: :service do
       it 'parses various name formats correctly' do
         service_instance = service
 
-        expect(service_instance.send(:parse_person_name, "John Doe")).to eq(["John", "Doe"])
-        expect(service_instance.send(:parse_person_name, "John Michael Doe")).to eq(["John", "Doe"])
-        expect(service_instance.send(:parse_person_name, "Dr. John Doe Jr.")).to eq(["John", "Doe"])
+        expect(service_instance.send(:parse_person_name, "John Doe")).to eq([ "John", "Doe" ])
+        expect(service_instance.send(:parse_person_name, "John Michael Doe")).to eq([ "John", "Doe" ])
+        expect(service_instance.send(:parse_person_name, "Dr. John Doe Jr.")).to eq([ "John", "Doe" ])
       end
 
       it 'returns nil for invalid names' do

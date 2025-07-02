@@ -30,7 +30,7 @@ RSpec.describe 'Company Edit Integration', type: :request do
 
       it 'updates the company fields' do
         patch company_path(company), params: valid_params
-        
+
         company.reload
         expect(company.website).to eq('https://new.com')
         expect(company.email).to eq('new@example.com')
@@ -42,7 +42,7 @@ RSpec.describe 'Company Edit Integration', type: :request do
         expect {
           patch company_path(company), params: valid_params
         }.to change { ServiceAuditLog.where(service_name: 'user_update').count }.by(1)
-        
+
         audit_log = ServiceAuditLog.where(service_name: 'user_update').last
         expect(audit_log.auditable).to eq(company)
         expect(audit_log.status).to eq('success')
@@ -55,10 +55,10 @@ RSpec.describe 'Company Edit Integration', type: :request do
 
       it 'tracks old and new values in metadata' do
         patch company_path(company), params: valid_params
-        
+
         audit_log = ServiceAuditLog.where(service_name: 'user_update').last
         changes = audit_log.metadata['changes']
-        
+
         expect(changes['website']).to eq({
           'old_value' => 'https://old.com',
           'new_value' => 'https://new.com'
@@ -72,32 +72,32 @@ RSpec.describe 'Company Edit Integration', type: :request do
 
     context 'when only updating some fields' do
       it 'only logs the changed fields' do
-        patch company_path(company), params: { 
-          company: { 
+        patch company_path(company), params: {
+          company: {
             website: 'https://updated.com',
             email: company.email  # Same value, should not be logged
-          } 
+          }
         }
-        
+
         audit_log = ServiceAuditLog.where(service_name: 'user_update').last
-        expect(audit_log.columns_affected).to eq(['website'])
-        expect(audit_log.metadata['fields_changed']).to eq(['website'])
+        expect(audit_log.columns_affected).to eq([ 'website' ])
+        expect(audit_log.metadata['fields_changed']).to eq([ 'website' ])
       end
     end
 
     context 'with AJAX request' do
       it 'returns JSON response and creates audit log' do
-        patch company_path(company), 
+        patch company_path(company),
               params: { company: { website: 'https://ajax.com' } },
               headers: { 'X-Requested-With' => 'XMLHttpRequest' }
-        
+
         expect(response).to have_http_status(:ok)
         json = JSON.parse(response.body)
         expect(json['success']).to be true
         expect(json['message']).to eq('Field updated successfully')
-        
+
         audit_log = ServiceAuditLog.where(service_name: 'user_update').last
-        expect(audit_log.columns_affected).to eq(['website'])
+        expect(audit_log.columns_affected).to eq([ 'website' ])
         expect(audit_log.metadata['field']).to eq('website')
       end
     end
@@ -107,7 +107,7 @@ RSpec.describe 'Company Edit Integration', type: :request do
         expect {
           patch company_path(company), params: { company: { company_name: 'New Name' } }
         }.not_to change { ServiceAuditLog.where(service_name: 'user_update').count }
-        
+
         # Field is still updated (not restricted at model level)
         company.reload
         expect(company.company_name).to eq('New Name')
@@ -117,13 +117,13 @@ RSpec.describe 'Company Edit Integration', type: :request do
     context 'ServiceAuditLog compliance verification' do
       it 'creates fully compliant audit logs' do
         time_before = Time.current
-        
-        patch company_path(company), params: { 
-          company: { website: 'https://compliant.com' } 
+
+        patch company_path(company), params: {
+          company: { website: 'https://compliant.com' }
         }
-        
+
         audit_log = ServiceAuditLog.where(service_name: 'user_update').last
-        
+
         # Verify all required fields for SCT compliance
         expect(audit_log.auditable_type).to eq('Company')
         expect(audit_log.auditable_id).to eq(company.id)
@@ -138,7 +138,7 @@ RSpec.describe 'Company Edit Integration', type: :request do
         expect(audit_log.completed_at).to be >= audit_log.started_at
         expect(audit_log.metadata).to be_a(Hash)
         expect(audit_log.metadata).not_to be_empty
-        
+
         # Verify metadata structure
         expect(audit_log.metadata['updated_by']).to eq(user.email)
         expect(audit_log.metadata['updated_at']).to be_present

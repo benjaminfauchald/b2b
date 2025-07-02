@@ -138,12 +138,12 @@ RSpec.describe CompanyLinkedinDiscoveryWorker, type: :worker do
 
     it "can be enqueued via perform_async" do
       job_id = described_class.perform_async(123)
-      
+
       expect(job_id).to be_present
       expect(described_class.jobs.size).to eq(1)
-      
+
       job = described_class.jobs.first
-      expect(job["args"]).to eq([123])
+      expect(job["args"]).to eq([ 123 ])
       expect(job["queue"]).to eq("company_linkedin_discovery")
     end
 
@@ -154,7 +154,7 @@ RSpec.describe CompanyLinkedinDiscoveryWorker, type: :worker do
       allow(service_double).to receive(:perform).and_return(OpenStruct.new(success?: true))
 
       described_class.perform_async(company.id)
-      
+
       expect {
         described_class.drain
       }.not_to raise_error
@@ -164,9 +164,9 @@ RSpec.describe CompanyLinkedinDiscoveryWorker, type: :worker do
 
     it "respects Sidekiq retry configuration" do
       allow_any_instance_of(described_class).to receive(:perform).and_raise(StandardError)
-      
+
       described_class.perform_async(123)
-      
+
       expect {
         Sidekiq::Testing.inline! { described_class.drain }
       }.to raise_error(StandardError)
@@ -177,7 +177,7 @@ RSpec.describe CompanyLinkedinDiscoveryWorker, type: :worker do
     it "worker is properly configured in sidekiq.yml" do
       sidekiq_config = YAML.load_file(Rails.root.join("config", "sidekiq.yml"))
       queue_names = sidekiq_config[:queues].map { |q| q.is_a?(Array) ? q[0] : q }
-      
+
       expect(queue_names).to include("company_linkedin_discovery")
     end
   end

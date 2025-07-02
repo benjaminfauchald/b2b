@@ -10,7 +10,7 @@ class Person < ApplicationRecord
     # Get people with no profile extraction logs
     without_logs = left_joins(:service_audit_logs)
       .where(service_audit_logs: { id: nil })
-    
+
     # Get people with failed/error logs older than 24 hours
     with_old_failures = joins(:service_audit_logs)
       .where(
@@ -20,7 +20,7 @@ class Person < ApplicationRecord
         }
       )
       .where("service_audit_logs.created_at < ?", 24.hours.ago)
-    
+
     # Combine using where(id: ...) to avoid incompatible OR
     where(id: without_logs).or(where(id: with_old_failures)).distinct
   }

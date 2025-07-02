@@ -108,11 +108,11 @@ class CompaniesController < ApplicationController
       # Handle inline editing with audit logging
       allowed_fields = %w[website linkedin_url linkedin_ai_url email phone]
       field_to_update = company_params.keys.first.to_s
-      
+
       if allowed_fields.include?(field_to_update)
         old_value = @company.send(field_to_update)
         new_value = company_params[field_to_update]
-        
+
         if @company.update(company_params)
           # Log the user update to ServiceAuditLog
           ServiceAuditLog.create!(
@@ -124,7 +124,7 @@ class CompaniesController < ApplicationController
             table_name: "companies",
             record_id: @company.id.to_s,
             operation_type: "update",
-            columns_affected: [field_to_update],
+            columns_affected: [ field_to_update ],
             execution_time_ms: 0,
             metadata: {
               field: field_to_update,
@@ -134,7 +134,7 @@ class CompaniesController < ApplicationController
               updated_at: Time.current.iso8601
             }
           )
-          
+
           render json: { success: true, message: "Field updated successfully" }
         else
           render json: { success: false, error: @company.errors.full_messages.join(", ") }, status: :unprocessable_entity
@@ -147,7 +147,7 @@ class CompaniesController < ApplicationController
       changed_fields = []
       allowed_fields = %w[website linkedin_url email phone]
       changes_metadata = {}
-      
+
       allowed_fields.each do |field|
         if company_params.key?(field) && @company.send(field) != company_params[field]
           old_value = @company.send(field)
@@ -159,7 +159,7 @@ class CompaniesController < ApplicationController
           }
         end
       end
-      
+
       if @company.update(company_params)
         # Log user updates if any allowed fields were changed
         if changed_fields.any?
@@ -182,7 +182,7 @@ class CompaniesController < ApplicationController
             }
           )
         end
-        
+
         redirect_to @company, notice: "Company was successfully updated."
       else
         render :edit, status: :unprocessable_entity
@@ -199,7 +199,7 @@ class CompaniesController < ApplicationController
   def queue_financial_data
     Rails.logger.info "========== queue_financial_data called =========="
     Rails.logger.info "Params: #{params.inspect}"
-    
+
     unless ServiceConfiguration.active?("company_financial_data")
       render json: { success: false, message: "Financial data service is disabled" }
       return
@@ -265,7 +265,7 @@ class CompaniesController < ApplicationController
   def queue_web_discovery
     Rails.logger.info "========== queue_web_discovery called =========="
     Rails.logger.info "Params: #{params.inspect}"
-    
+
     unless ServiceConfiguration.active?("company_web_discovery")
       render json: { success: false, message: "Web discovery service is disabled" }
       return
@@ -331,7 +331,7 @@ class CompaniesController < ApplicationController
   def queue_linkedin_discovery
     Rails.logger.info "========== queue_linkedin_discovery called =========="
     Rails.logger.info "Params: #{params.inspect}"
-    
+
     unless ServiceConfiguration.active?("company_linkedin_discovery")
       render json: { success: false, message: "LinkedIn discovery service is disabled" }
       return

@@ -25,7 +25,7 @@ class PersonEmailExtractionService < ApplicationService
           error_code: email_result[:error_code],
           error_details: email_result[:error_details] || email_result[:reason]
         )
-        
+
         # Don't return here, instead raise an error to be caught by audit_service_operation
         raise StandardError.new(email_result[:reason] || "Hunter.io API error")
       end
@@ -48,6 +48,9 @@ class PersonEmailExtractionService < ApplicationService
                       email: email_result[:email],
                       confidence: email_result[:confidence])
       else
+        # Update person with "no email found" metadata
+        update_person_with_no_email_found(email_result)
+
         audit_log.add_metadata(
           email_found: false,
           reason: email_result[:reason] || "Hunter.io found no email for this person"
@@ -109,70 +112,70 @@ class PersonEmailExtractionService < ApplicationService
   end
 
   def hunter_api_key
-    ENV['HUNTER_API_KEY']
+    ENV["HUNTER_API_KEY"]
   end
 
   def parse_person_name(full_name)
     return nil unless full_name.present?
 
     # Clean and split name, removing titles and suffixes
-    cleaned_name = full_name.gsub(/\b(Dr|Mr|Mrs|Ms|Prof|Jr|Sr|III|II)\b\.?/i, '').strip
+    cleaned_name = full_name.gsub(/\b(Dr|Mr|Mrs|Ms|Prof|Jr|Sr|III|II)\b\.?/i, "").strip
     parts = cleaned_name.split(/\s+/)
-    
+
     return nil if parts.length < 2
 
     first_name = parts.first
     last_name = parts.last
-    
-    [first_name, last_name]
+
+    [ first_name, last_name ]
   end
 
   def process_hunter_response(hunter_data, person)
-    data = hunter_data['data']
+    data = hunter_data["data"]
     return { email: nil, reason: "Hunter.io returned no data" } unless data
 
-    email = data['email']
+    email = data["email"]
     return { email: nil, reason: "Hunter.io found no email for this person" } unless email.present?
 
     # Extract Hunter.io metadata
     hunter_metadata = {
-      score: data['score'],
-      domain: data['domain'],
-      accept_all: data['accept_all'],
-      position: data['position'],
-      company: data['company'],
-      sources: data['sources'] || [],
-      verification: data['verification'] || {}
+      score: data["score"],
+      domain: data["domain"],
+      accept_all: data["accept_all"],
+      position: data["position"],
+      company: data["company"],
+      sources: data["sources"] || [],
+      verification: data["verification"] || {}
     }
 
-    verification_status = data.dig('verification', 'status') || 'unknown'
-    
+    verification_status = data.dig("verification", "status") || "unknown"
+
     {
       email: email,
-      confidence: data['score'] || 0,
+      confidence: data["score"] || 0,
       verification_status: verification_status,
-      sources: ["hunter_io"],
+      sources: [ "hunter_io" ],
       hunter_data: hunter_metadata
     }
   end
 
   def handle_hunter_error(response)
     error_data = response.parsed_response
-    
-    if error_data.is_a?(Hash) && error_data['errors']
-      error = error_data['errors'].first
-      error_code = error['code'] || response.code
-      error_details = error['details'] || error['id'] || 'Unknown error'
-      
-      { 
-        email: nil, 
+
+    if error_data.is_a?(Hash) && error_data["errors"]
+      error = error_data["errors"].first
+      error_code = error["code"] || response.code
+      error_details = error["details"] || error["id"] || "Unknown error"
+
+      {
+        email: nil,
         reason: "Hunter.io API error (#{error_code}): #{error_details}",
         error_code: error_code,
         error_details: error_details
       }
     else
-      { 
-        email: nil, 
+      {
+        email: nil,
         reason: "Hunter.io API error (#{response.code}): #{response.message}",
         error_code: response.code
       }
@@ -290,6 +293,26 @@ class PersonEmailExtractionService < ApplicationService
     )
 
     Rails.logger.info "📧 Updated person with Hunter.io email: #{email_result[:email]} (#{email_result[:confidence]}% confidence)"
+  end
+
+  def update_person_with_no_email_found(email_result)
+    email_data = {
+      email: nil,
+      confidence: 0,
+      extracted_at: Time.current,
+      source: "hunter_io",
+      verification_status: "not_found",
+      sources: [ "hunter_io" ],
+      reason: email_result[:reason] || "Hunter.io found no email for this person",
+      hunter_data: email_result[:hunter_data] || {}
+    }
+
+    @person.update!(
+      email_extracted_at: Time.current,
+      email_data: email_data
+    )
+
+    Rails.logger.info "📧 Updated person with Hunter.io 'no email found' result: #{email_result[:reason]}"
   end
 
   def success_result(message, data = {})

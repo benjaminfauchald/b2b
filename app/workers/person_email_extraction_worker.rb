@@ -7,7 +7,7 @@ class PersonEmailExtractionWorker
     Rails.logger.info "🚀 PersonEmailExtractionWorker: Starting email extraction for person #{person_id}"
 
     service = PersonEmailExtractionService.new(person_id: person_id)
-    result = service.call
+    result = service.perform
 
     if result.success?
       Rails.logger.info "✅ PersonEmailExtractionWorker: Email extraction completed for person #{person_id}: #{result.message}"

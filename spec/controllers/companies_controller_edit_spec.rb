@@ -21,7 +21,7 @@ RSpec.describe CompaniesController, type: :controller do
 
       it 'updates the company fields in the database' do
         patch :update, params: { id: company.id, company: new_attributes }
-        
+
         company.reload
         expect(company.website).to eq('https://newwebsite.com')
         expect(company.email).to eq('newemail@example.com')
@@ -64,7 +64,7 @@ RSpec.describe CompaniesController, type: :controller do
 
         audit_log = ServiceAuditLog.last
         metadata = audit_log.metadata
-        
+
         expect(metadata['changes']['website']).to eq({
           'old_value' => 'https://oldwebsite.com',
           'new_value' => 'https://newwebsite.com'
@@ -80,7 +80,7 @@ RSpec.describe CompaniesController, type: :controller do
         patch :update, params: { id: company.id, company: { website: 'https://test.com' } }
 
         audit_log = ServiceAuditLog.last
-        
+
         # Check all required fields for ServiceAuditLog compliance
         expect(audit_log.auditable_type).to eq('Company')
         expect(audit_log.auditable_id).to eq(company.id)
@@ -104,18 +104,18 @@ RSpec.describe CompaniesController, type: :controller do
       end
 
       it 'only logs changes to allowed fields' do
-        patch :update, params: { 
-          id: company.id, 
-          company: { 
+        patch :update, params: {
+          id: company.id,
+          company: {
             website: 'https://test.com',
             company_name: 'New Name',  # This should not be logged
             registration_number: '999999999'  # This should not be logged
-          } 
+          }
         }
 
         audit_log = ServiceAuditLog.last
-        expect(audit_log.columns_affected).to eq(['website'])
-        expect(audit_log.metadata['fields_changed']).to eq(['website'])
+        expect(audit_log.columns_affected).to eq([ 'website' ])
+        expect(audit_log.metadata['fields_changed']).to eq([ 'website' ])
       end
 
       it 'redirects to company show page after successful update' do
@@ -132,7 +132,7 @@ RSpec.describe CompaniesController, type: :controller do
     context 'when updating via AJAX (inline edit)' do
       it 'updates single field and creates audit log' do
         expect {
-          patch :update, params: { id: company.id, company: { website: 'https://ajax-test.com' } }, 
+          patch :update, params: { id: company.id, company: { website: 'https://ajax-test.com' } },
                 xhr: true
         }.to change { ServiceAuditLog.count }.by(1)
 
@@ -141,12 +141,12 @@ RSpec.describe CompaniesController, type: :controller do
 
         audit_log = ServiceAuditLog.last
         expect(audit_log.service_name).to eq('user_update')
-        expect(audit_log.columns_affected).to eq(['website'])
+        expect(audit_log.columns_affected).to eq([ 'website' ])
         expect(audit_log.metadata['field']).to eq('website')
       end
 
       it 'returns JSON success response' do
-        patch :update, params: { id: company.id, company: { email: 'ajax@example.com' } }, 
+        patch :update, params: { id: company.id, company: { email: 'ajax@example.com' } },
               xhr: true
 
         expect(response).to have_http_status(:ok)
@@ -156,7 +156,7 @@ RSpec.describe CompaniesController, type: :controller do
       end
 
       it 'returns error for non-allowed fields' do
-        patch :update, params: { id: company.id, company: { company_name: 'Hacked Name' } }, 
+        patch :update, params: { id: company.id, company: { company_name: 'Hacked Name' } },
               xhr: true
 
         expect(response).to have_http_status(:forbidden)
@@ -170,25 +170,25 @@ RSpec.describe CompaniesController, type: :controller do
       it 'does not create audit log on validation failure' do
         # Force validation failure
         allow_any_instance_of(Company).to receive(:update).and_return(false)
-        
+
         # For regular form submission, it tries to render :edit template
         # We need to stub the render call in controller tests
         allow(controller).to receive(:render)
-        
+
         expect {
           patch :update, params: { id: company.id, company: { email: 'test@example.com' } }
         }.not_to change { ServiceAuditLog.count }
-        
+
         expect(response).to have_http_status(:unprocessable_entity)
       end
 
       it 'returns error for AJAX requests on validation failure' do
         allow_any_instance_of(Company).to receive(:update).and_return(false)
-        errors_double = double('errors', full_messages: ['Email is invalid'])
+        errors_double = double('errors', full_messages: [ 'Email is invalid' ])
         allow_any_instance_of(Company).to receive(:errors).and_return(errors_double)
-        
+
         patch :update, params: { id: company.id, company: { email: 'invalid' } }, xhr: true
-        
+
         expect(response).to have_http_status(:unprocessable_entity)
         json = JSON.parse(response.body)
         expect(json['success']).to be false

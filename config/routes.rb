@@ -68,6 +68,7 @@ Rails.application.routes.draw do
       # Individual person service triggers
       post :queue_single_email_extraction
       post :queue_single_social_media_extraction
+      get :service_status
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

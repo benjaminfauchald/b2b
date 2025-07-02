@@ -1,6 +1,6 @@
 # Custom RSpec formatter for Guard that logs failures
-require 'json'
-require_relative '../guard_test_logger'
+require "json"
+require_relative "../guard_test_logger"
 
 class Guard::RSpecFormatter
   RSpec::Core::Formatters.register self, :dump_summary, :example_failed
@@ -28,7 +28,7 @@ class Guard::RSpecFormatter
       pending_count: summary.pending_count,
       duration: summary.duration
     )
-    
+
     # Log test results
     GuardTestLogger.log_test_run(result, @failed_examples)
   end

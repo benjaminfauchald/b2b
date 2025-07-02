@@ -47,7 +47,7 @@ RSpec.describe CompaniesController, type: :controller do
         post :queue_single_linkedin_discovery, params: { id: company.id }, format: :json
 
         job = CompanyLinkedinDiscoveryWorker.jobs.last
-        expect(job["args"]).to eq([company.id])
+        expect(job["args"]).to eq([ company.id ])
       end
 
       it "queues the job to the correct queue" do
@@ -69,7 +69,7 @@ RSpec.describe CompaniesController, type: :controller do
         expect(audit_log.status).to eq("pending")
         expect(audit_log.table_name).to eq("companies")
         expect(audit_log.record_id).to eq(company.id.to_s)
-        expect(audit_log.columns_affected).to eq(["linkedin_url"])
+        expect(audit_log.columns_affected).to eq([ "linkedin_url" ])
         expect(audit_log.metadata["action"]).to eq("manual_queue")
         expect(audit_log.metadata["user_id"]).to eq(admin_user.id)
         expect(audit_log.metadata["timestamp"]).to be_present

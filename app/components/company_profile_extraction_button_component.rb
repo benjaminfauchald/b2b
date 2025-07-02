@@ -44,12 +44,12 @@ class CompanyProfileExtractionButtonComponent < ViewComponent::Base
 
   def profile_summary
     return nil unless has_extracted_profiles?
-    
+
     people = company.people
     {
       total: people.count,
-      emails: people.where.not(email: [nil, '']).count,
-      phones: people.where.not(phone: [nil, '']).count
+      emails: people.where.not(email: [ nil, "" ]).count,
+      phones: people.where.not(phone: [ nil, "" ]).count
     }
   end
 
@@ -74,7 +74,7 @@ class CompanyProfileExtractionButtonComponent < ViewComponent::Base
 
   def button_classes
     base_classes = "w-full px-4 py-2 text-sm font-medium rounded-lg focus:ring-4 focus:outline-none transition-colors duration-200 flex items-center justify-center"
-    
+
     if button_disabled?
       "#{base_classes} bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400"
     else

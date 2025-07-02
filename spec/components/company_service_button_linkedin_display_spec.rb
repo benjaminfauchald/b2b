@@ -19,7 +19,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
     context "when company has no LinkedIn data" do
       it "shows 'No Data' status" do
         render_inline(component)
-        
+
         expect(page).to have_text("No Data")
         expect(page).to have_button("Fetch LinkedIn")
       end
@@ -35,7 +35,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "displays the manual URL" do
         render_inline(component)
-        
+
         expect(page).to have_text("Manual")
         expect(page).to have_text("Manual URL:")
         expect(page).to have_link("company/test-company", href: "https://www.linkedin.com/company/test-company")
@@ -54,7 +54,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "displays the AI URL with confidence score" do
         render_inline(component)
-        
+
         expect(page).to have_text("AI (85%)")
         expect(page).to have_text("AI URL (Confidence: 85%):")
         expect(page).to have_link("company/ai-discovered-company", href: "https://www.linkedin.com/company/ai-discovered-company")
@@ -74,7 +74,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "displays both URLs" do
         render_inline(component)
-        
+
         expect(page).to have_text("Manual + AI (90%)")
         expect(page).to have_text("Manual URL:")
         expect(page).to have_link("company/manual-company")
@@ -106,7 +106,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "displays alternative suggestions" do
         render_inline(component)
-        
+
         expect(page).to have_text("AI (95%)")
         expect(page).to have_text("Alternative suggestions:")
         expect(page).to have_link("company/alt-company-1", href: "https://www.linkedin.com/company/alt-company-1")
@@ -131,7 +131,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "handles simple URL array format" do
         render_inline(component)
-        
+
         expect(page).to have_text("Alternative suggestions:")
         expect(page).to have_link("company/alt1", href: "https://www.linkedin.com/company/alt1")
         expect(page).to have_link("company/alt2", href: "https://www.linkedin.com/company/alt2")
@@ -149,7 +149,7 @@ RSpec.describe CompanyServiceButtonComponent, type: :component do
 
       it "shows when the data was last updated" do
         render_inline(component)
-        
+
         expect(page).to have_text("3 days ago")
       end
     end

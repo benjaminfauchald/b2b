@@ -21,16 +21,16 @@ class CompanyLinkedinProfilesComponent < ViewComponent::Base
   end
 
   def email_count
-    people.where.not(email: [nil, '']).count
+    people.where.not(email: [ nil, "" ]).count
   end
 
   def phone_count
-    people.where.not(phone: [nil, '']).count
+    people.where.not(phone: [ nil, "" ]).count
   end
 
   def summary_stats
     return nil unless has_profiles?
-    
+
     {
       people: profile_count,
       emails: email_count,

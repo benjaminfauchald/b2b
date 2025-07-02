@@ -2,7 +2,7 @@
 
 class PeopleController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction]
+  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction service_status]
   skip_before_action :verify_authenticity_token, only: [ :queue_profile_extraction, :queue_email_extraction, :queue_social_media_extraction, :queue_single_profile_extraction, :queue_single_email_extraction, :queue_single_social_media_extraction ]
 
   def index
@@ -455,6 +455,44 @@ class PeopleController < ApplicationController
         message: "Failed to queue person for social media extraction: #{e.message}"
       }
     end
+  end
+
+  # GET /people/:id/service_status - Check if a service has completed for this person
+  def service_status
+    service_type = params[:service]
+
+    # Map service type to service name
+    service_name = case service_type
+    when "email_extraction"
+      "person_email_extraction"
+    when "social_media_extraction"
+      "person_social_media_extraction"
+    when "profile_extraction"
+      "person_profile_extraction"
+    else
+      service_type
+    end
+
+    # Check for recent successful completion
+    recent_completion = @person.service_audit_logs
+                              .where(service_name: service_name)
+                              .where("completed_at > ?", 2.minutes.ago)
+                              .where(status: "success")
+                              .exists?
+
+    # Also check if there are any pending jobs (not started yet)
+    pending_jobs = @person.service_audit_logs
+                          .where(service_name: service_name)
+                          .where("started_at > ?", 2.minutes.ago)
+                          .where(status: "pending")
+                          .exists?
+
+    render json: {
+      completed: recent_completion,
+      pending: pending_jobs,
+      service: service_name,
+      timestamp: Time.current
+    }
   end
 
   # GET /people/service_stats
