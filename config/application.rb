@@ -19,6 +19,14 @@ module B2b
     # Add ViewComponents to autoload paths
     config.autoload_paths << Rails.root.join("app/components")
     config.eager_load_paths << Rails.root.join("app/components")
+    
+    # Rails 8 compatibility: Prevent ViewComponent from modifying frozen autoload_paths
+    config.before_initialize do
+      if defined?(ViewComponent::Engine)
+        # Remove ViewComponent's autoload path initializer to prevent FrozenError
+        ViewComponent::Engine.initializers.reject! { |init| init.name == :set_autoload_paths }
+      end
+    end
 
     # Configure Active Job to use Sidekiq
     config.active_job.queue_adapter = :sidekiq

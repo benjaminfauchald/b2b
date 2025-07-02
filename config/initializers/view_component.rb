@@ -1,12 +1,13 @@
-# ViewComponent configuration
-# Ensure ViewComponent is properly loaded before configuring
+# ViewComponent configuration for Rails 8 compatibility
 if defined?(ViewComponent)
   Rails.application.config.after_initialize do
+    # Configure ViewComponent settings after Rails is initialized
     ViewComponent::Base.config.view_component_path = Rails.root.join("app/components").to_s
     ViewComponent::Base.config.test_framework = :rspec
 
     # Only configure preview-related settings in development
     if Rails.env.development?
+      ViewComponent::Base.config.show_previews = true
       ViewComponent::Base.config.preview_route = "/rails/view_components"
       ViewComponent::Base.config.preview_paths << Rails.root.join("spec/components/previews").to_s
       ViewComponent::Base.config.generate.preview = true
