@@ -207,6 +207,47 @@ bundle exec rspec spec/models/person_spec.rb
 ./bin/claude-guard status
 ```
 
+## Rails 8 + CI/CD Testing Rules - CRITICAL ⚠️
+**MANDATORY checks before deployment to prevent CI/CD failures:**
+
+### Pre-Deployment Testing Checklist
+1. **CI Environment Test**: `CI=true bundle exec rspec spec/components/button_component_spec.rb --dry-run`
+2. **Critical Domain Tests**: `CI=true bundle exec rspec spec/models/domain_import_result_spec.rb`
+3. **ViewComponent Loading**: `CI=true bundle exec rspec spec/components/ --dry-run | head -10`
+4. **Controller Specs**: Test at least one controller spec with CI flag
+
+### Rails 8 Compatibility Rules
+**NEVER modify these files without testing CI compatibility:**
+- `config/boot.rb` - Contains Rails 8 autoload_paths freeze protection
+- `config/application.rb` - Early autoload path configuration
+- `config/initializers/viewcomponent_rails8_compatibility.rb` - Frozen array handling
+- `lib/guard/rspec_formatter.rb` - CI-specific Guard formatter
+
+### FrozenError Prevention
+**Root Cause**: Rails 8 freezes `autoload_paths` early in CI environments with eager loading
+**Symptoms**: `FrozenError: can't modify frozen Array` in CI/CD pipeline
+**Test Command**: `CI=true bundle exec rspec --dry-run` should load without errors
+
+### Component Development Rules
+1. **Always test components with CI flag**: `CI=true bundle exec rspec spec/components/your_component_spec.rb`
+2. **Check autoload path modifications**: New engines/gems that modify autoload_paths need CI testing
+3. **Eager loading validation**: If adding new autoload paths, test with `config.eager_load = true`
+
+### Deployment Gate Commands
+**BEFORE any deployment, run these commands and ensure they pass:**
+```bash
+# Core compatibility check
+CI=true bundle exec rspec spec/models/domain_import_result_spec.rb
+
+# ViewComponent compatibility
+CI=true bundle exec rspec spec/components/button_component_spec.rb --dry-run
+
+# System initialization test
+CI=true bundle exec rspec spec/controllers/companies_controller_edit_spec.rb --dry-run
+```
+
+**If ANY of these fail with FrozenError, deployment MUST be blocked until fixed.**
+
 ## Guard + Claude Integration (Enhanced Test Monitoring)
 Guard automatically monitors tests and logs failures for easy fixing:
 
