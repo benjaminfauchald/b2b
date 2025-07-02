@@ -54,10 +54,100 @@ class PeopleController < ApplicationController
   end
 
   def update
-    if @person.update(person_params)
-      redirect_to @person, notice: "Person was successfully updated."
+    # Check if this is an inline edit (AJAX request)
+    if request.xhr? || request.format.json?
+      # Handle inline editing with audit logging
+      allowed_fields = %w[email phone]
+      field_to_update = person_params.keys.first.to_s
+
+      if allowed_fields.include?(field_to_update)
+        old_value = @person.send(field_to_update)
+        new_value = person_params[field_to_update]
+
+        if @person.update(person_params)
+          # Log the user update to ServiceAuditLog
+          ServiceAuditLog.create!(
+            auditable: @person,
+            service_name: "user_update",
+            status: :success,
+            started_at: Time.current,
+            completed_at: Time.current,
+            table_name: "people",
+            record_id: @person.id.to_s,
+            operation_type: "update",
+            columns_affected: [ field_to_update ],
+            execution_time_ms: 0,
+            metadata: {
+              field: field_to_update,
+              old_value: old_value,
+              new_value: new_value,
+              updated_by: current_user.email,
+              updated_at: Time.current.iso8601
+            }
+          )
+
+          render json: { success: true, message: "Field updated successfully" }
+        else
+          render json: { success: false, error: @person.errors.full_messages.join(", ") },
+                 status: :unprocessable_entity
+        end
+      else
+        render json: { success: false, error: "Field not allowed for inline editing" },
+               status: :forbidden
+      end
     else
-      render :edit, status: :unprocessable_entity
+      # Regular form submission
+      # Get the list of changed fields for audit logging
+      changed_fields = []
+      old_values = {}
+
+      allowed_fields = %w[email phone]
+
+      # Track which allowed fields are being changed
+      allowed_fields.each do |field|
+        if person_params.key?(field) && @person.send(field) != person_params[field]
+          changed_fields << field
+          old_values[field] = @person.send(field)
+        end
+      end
+
+      if @person.update(person_params)
+        # Create audit log only if allowed fields were changed
+        if changed_fields.any?
+          metadata = {
+            fields_changed: changed_fields,
+            changes: {},
+            updated_by: current_user.email,
+            updated_at: Time.current.iso8601
+          }
+
+          # Add old and new values for each changed field
+          changed_fields.each do |field|
+            metadata[:changes][field] = {
+              old_value: old_values[field],
+              new_value: @person.send(field)
+            }
+          end
+
+          ServiceAuditLog.create!(
+            auditable: @person,
+            service_name: "user_update",
+            status: :success,
+            started_at: Time.current,
+            completed_at: Time.current,
+            table_name: "people",
+            record_id: @person.id.to_s,
+            operation_type: "update",
+            columns_affected: changed_fields,
+            execution_time_ms: 0,
+            metadata: metadata
+          )
+        end
+
+        redirect_to @person, notice: "Person was successfully updated."
+      else
+        render :edit, status: :unprocessable_entity
+      end
     end
   end
 
