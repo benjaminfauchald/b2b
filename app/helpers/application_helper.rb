@@ -28,9 +28,9 @@ module ApplicationHelper
     begin
       uri = URI.parse(url)
       # Only allow http, https, and mailto protocols
-      return uri.scheme.in?(%w[http https mailto])
+      uri.scheme.in?(%w[http https mailto])
     rescue URI::InvalidURIError
-      return false
+      false
     end
   end
 end
