@@ -11,9 +11,9 @@ if Rails::VERSION::MAJOR >= 8
     # Override the add_builtin_route initializer to prevent autoload_paths modification
     def self.inherited(subclass)
       super
-      
+
       # Skip autoload_paths modification for engines when paths are frozen
-      subclass.initializer "#{subclass.railtie_name}.add_builtin_route", :before => :build_middleware_stack do |app|
+      subclass.initializer "#{subclass.railtie_name}.add_builtin_route", before: :build_middleware_stack do |app|
         if app.config.autoload_paths.frozen?
           Rails.logger.debug "Rails 8: Skipping autoload_paths modification for #{subclass.name} (frozen)"
         else
@@ -44,7 +44,7 @@ if Rails::VERSION::MAJOR >= 8
       end
       super(path)
     end
-    
+
     def push(*args)
       if frozen?
         Rails.logger.debug "Rails 8: Prevented push to frozen autoload_paths: #{args.inspect}"
@@ -66,7 +66,7 @@ if Rails::VERSION::MAJOR >= 8
   unless Rails.application.config.autoload_paths.frozen?
     Rails.application.config.autoload_paths.extend(AutoloadPathsFrozenPatch)
   end
-  
+
   unless Rails.application.config.eager_load_paths.frozen?
     Rails.application.config.eager_load_paths.extend(AutoloadPathsFrozenPatch)
   end

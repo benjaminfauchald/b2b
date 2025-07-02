@@ -26,6 +26,22 @@ RSpec.configure do |config|
     Sidekiq::Worker.clear_all
   end
 
+  # Extra cleanup for worker specs
+  config.before(:each, type: :worker) do
+    # Ensure clean state for worker tests
+    Sidekiq::Worker.clear_all
+    clear_sidekiq_queues
+  end
+
+  # Extra cleanup for system specs that test queuing
+  config.before(:each, type: :system) do |example|
+    if example.metadata[:full_description].include?("queue") ||
+       example.metadata[:full_description].include?("Queue")
+      Sidekiq::Worker.clear_all
+      clear_sidekiq_queues
+    end
+  end
+
   config.around(:each, sidekiq: :inline) do |example|
     Sidekiq::Testing.inline! do
       example.run

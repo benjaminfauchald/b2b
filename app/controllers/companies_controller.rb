@@ -149,14 +149,21 @@ class CompaniesController < ApplicationController
       changes_metadata = {}
 
       allowed_fields.each do |field|
-        if company_params.key?(field) && @company.send(field) != company_params[field]
+        if company_params.key?(field)
           old_value = @company.send(field)
           new_value = company_params[field]
-          changed_fields << field
-          changes_metadata[field] = {
-            old_value: old_value,
-            new_value: new_value
-          }
+
+          # Normalize nil and empty string for comparison
+          normalized_old = old_value.presence
+          normalized_new = new_value.presence
+
+          if normalized_old != normalized_new
+            changed_fields << field
+            changes_metadata[field] = {
+              old_value: old_value,
+              new_value: new_value
+            }
+          end
         end
       end
 

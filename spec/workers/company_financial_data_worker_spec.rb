@@ -93,6 +93,10 @@ RSpec.describe CompanyFinancialDataWorker, type: :worker do
     end
 
     context 'with Sidekiq testing' do
+      before do
+        described_class.clear
+      end
+
       it 'can be enqueued' do
         expect {
           described_class.perform_async(company.id)

@@ -76,10 +76,10 @@ class PersonEmailExtractionService < ApplicationService
   def extract_email_from_hunter_io(person)
     # Validate prerequisites
     domain = extract_domain(person.company&.website)
-    return { email: nil, reason: "Company and website required for Hunter.io lookup" } unless domain
+    return { email: nil, reason: "Company and website required for Hunter.io lookup", error_code: "missing_prerequisites" } unless domain
 
     first_name, last_name = parse_person_name(person.name)
-    return { email: nil, reason: "Valid first and last name required for Hunter.io lookup" } unless first_name && last_name
+    return { email: nil, reason: "Valid first and last name required for Hunter.io lookup", error_code: "invalid_name_format" } unless first_name && last_name
 
     # Prepare Hunter.io API request
     params = {
@@ -131,6 +131,11 @@ class PersonEmailExtractionService < ApplicationService
   end
 
   def process_hunter_response(hunter_data, person)
+    # Ensure hunter_data is a hash
+    unless hunter_data.is_a?(Hash)
+      return { email: nil, reason: "Invalid response format from Hunter.io", error_code: "invalid_response_format" }
+    end
+
     data = hunter_data["data"]
     return { email: nil, reason: "Hunter.io returned no data" } unless data
 

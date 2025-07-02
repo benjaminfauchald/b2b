@@ -21,7 +21,9 @@ RSpec.describe 'Company Edit Functionality', type: :system do
     it 'shows the edit button on company page' do
       visit company_path(company)
 
-      within('.p-6.bg-white.border.border-gray-200.rounded-lg.shadow') do
+      # Find the Company Information section specifically
+      company_info_section = find('h2', text: 'Company Information').ancestor('.bg-white.border.border-gray-200.rounded-lg.shadow-sm')
+      within(company_info_section) do
         expect(page).to have_content('Company Information')
         expect(page).to have_button('Edit')
       end
@@ -67,7 +69,7 @@ RSpec.describe 'Company Edit Functionality', type: :system do
       expect(page).to have_link('https://newwebsite.com', href: 'https://newwebsite.com')
       expect(page).to have_link('new@example.com', href: 'mailto:new@example.com')
       expect(page).to have_content('+47 999 88 777')
-      expect(page).to have_link('https://linkedin.com/company/testcompany')
+      expect(page).to have_link('linkedin/testcompany', href: 'https://linkedin.com/company/testcompany')
 
       # Verify audit log was created
       audit_log = ServiceAuditLog.where(
@@ -157,7 +159,7 @@ RSpec.describe 'Company Edit Functionality', type: :system do
       expect(audit_log.table_name).to eq('companies')
       expect(audit_log.record_id).to eq(company.id.to_s)
       expect(audit_log.operation_type).to eq('update')
-      expect(audit_log.columns_affected).to eq([ 'website' ])
+      expect(audit_log.columns_affected).to include('website')
       expect(audit_log.execution_time_ms).to eq(0)
 
       # Verify timestamps

@@ -9,7 +9,7 @@ if ENV["CI"] || ENV["RAILS_ENV"] == "test"
   # Monkey patch Array#unshift globally to handle frozen autoload_paths
   class Array
     alias_method :original_unshift, :unshift
-    
+
     def unshift(*args)
       if frozen? && caller.any? { |line| line.include?("rails/engine.rb") }
         # Log the attempt but don't raise an error for Rails engines

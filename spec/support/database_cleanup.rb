@@ -8,6 +8,8 @@ RSpec.configure do |config|
     ServiceAuditLog.destroy_all
     Domain.destroy_all
     Person.destroy_all
+    # Clear Sidekiq jobs for system tests
+    Sidekiq::Worker.clear_all if defined?(Sidekiq::Worker)
     # ServiceConfiguration is handled by service_configuration_cleaner.rb
   end
 

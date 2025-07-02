@@ -184,9 +184,11 @@ RSpec.describe CompaniesController, type: :controller do
       end
 
       it 'returns error for AJAX requests on validation failure' do
-        allow_any_instance_of(Company).to receive(:update).and_return(false)
-        errors_double = double('errors', full_messages: [ 'Email is invalid' ])
-        allow_any_instance_of(Company).to receive(:errors).and_return(errors_double)
+        # Create a real errors object and add an error to it
+        allow_any_instance_of(Company).to receive(:update) do |company_instance|
+          company_instance.errors.add(:email, 'is invalid')
+          false
+        end
 
         patch :update, params: { id: company.id, company: { email: 'invalid' } }, xhr: true
 

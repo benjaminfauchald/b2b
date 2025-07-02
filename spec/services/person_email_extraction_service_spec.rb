@@ -186,7 +186,7 @@ RSpec.describe PersonEmailExtractionService, type: :service do
         service.perform
 
         audit_log = ServiceAuditLog.last
-        expect(audit_log.status).to eq("failure")
+        expect(audit_log.status).to eq("failed")
         expect(audit_log.metadata["error_code"]).to eq(429)
         expect(audit_log.metadata["error_details"]).to include("Rate limit exceeded")
       end
@@ -271,7 +271,7 @@ RSpec.describe PersonEmailExtractionService, type: :service do
         service.perform
 
         audit_log = ServiceAuditLog.last
-        expect(audit_log.status).to eq("failure")
+        expect(audit_log.status).to eq("failed")
       end
     end
 

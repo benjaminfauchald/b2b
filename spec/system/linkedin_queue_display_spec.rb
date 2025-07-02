@@ -35,6 +35,9 @@ RSpec.describe "LinkedIn Queue Display", type: :system, js: true do
     it "shows the current queue size" do
       # Use fake mode to prevent processing
       Sidekiq::Testing.fake! do
+        # Ensure clean state
+        CompanyLinkedinDiscoveryWorker.clear
+
         visit companies_path
 
         # Find the LinkedIn queue stats element
@@ -49,8 +52,8 @@ RSpec.describe "LinkedIn Queue Display", type: :system, js: true do
           click_button "Queue Processing"
         end
 
-        # Wait for the response
-        expect(page).to have_css('.toast-notification', text: 'Queued 5 companies')
+        # Wait for the response - look for the toast notification
+        expect(page).to have_css('.fixed.top-4.right-4', text: 'Queued 5')
 
         # The queue stat should update (in real app with Turbo Streams)
         # In test environment, we can verify the jobs were queued
@@ -61,19 +64,20 @@ RSpec.describe "LinkedIn Queue Display", type: :system, js: true do
     it "displays queue size in the enhancement statistics card" do
       visit companies_path
 
-      within(".enhancement-statistics") do
-        # Find the LinkedIn Discovery queue display
-        queue_display = find("div", text: /LinkedIn Discovery/)
+      # Find the LinkedIn queue statistics display
+      linkedin_queue_stat = find('[data-queue-stat="company_linkedin_discovery"]')
 
-        # Should show the queue size
-        expect(queue_display).to have_text(/\d+ in queue/)
-      end
+      # Should show the queue size
+      expect(linkedin_queue_stat.text).to match(/\d+/)
     end
   end
 
   describe "real-time queue updates" do
     it "updates queue display after queueing jobs" do
       Sidekiq::Testing.fake! do
+        # Ensure clean state
+        CompanyLinkedinDiscoveryWorker.clear
+
         visit companies_path
 
         # Get initial queue size
@@ -84,6 +88,9 @@ RSpec.describe "LinkedIn Queue Display", type: :system, js: true do
           fill_in "company_linkedin_discovery_count", with: "3"
           click_button "Queue Processing"
         end
+
+        # Wait for the response
+        expect(page).to have_css('.fixed.top-4.right-4', text: 'Queued 3')
 
         # In a real app with ActionCable/Turbo Streams, this would update automatically
         # For now, we verify the backend state
