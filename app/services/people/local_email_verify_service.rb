@@ -258,12 +258,16 @@ module People
     end
 
     def save_verification_result(result, audit_log)
+      Rails.logger.info "Saving verification result for person #{person.id}: status=#{result[:status]}, confidence=#{result[:confidence]}"
+
       person.update!(
         email_verification_status: result[:status].to_s,
         email_verification_confidence: result[:confidence],
         email_verification_checked_at: Time.current,
         email_verification_metadata: result
       )
+
+      Rails.logger.info "Person #{person.id} updated successfully. New status: #{person.reload.email_verification_status}"
 
       audit_log.add_metadata(
         status: result[:status],

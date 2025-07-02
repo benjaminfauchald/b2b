@@ -460,7 +460,7 @@ class PeopleController < ApplicationController
   # POST /people/:id/verify_email
   def verify_email
     Rails.logger.info "Email verification requested for person #{@person.id}"
-    
+
     unless ServiceConfiguration.active?("local_email_verify")
       render json: { success: false, error: "Email verification service is disabled" }
       return
@@ -475,15 +475,15 @@ class PeopleController < ApplicationController
       # Run email verification synchronously for immediate feedback
       service = People::LocalEmailVerifyService.new(person: @person)
       result = service.perform
-      
+
       Rails.logger.info "Email verification result: #{result.success?} - #{result.message}"
 
       if result.success?
         # Reload person to get updated data
         @person.reload
-        
+
         Rails.logger.info "Person verification status updated: #{@person.email_verification_status} (#{@person.email_verification_confidence})"
-        
+
         render json: {
           success: true,
           message: result.message,
