@@ -81,6 +81,18 @@ jobs:
       - name: Run Brakeman Security Scan
         run: bundle exec brakeman --no-pager
 
+      - name: Verify ViewComponent Rails 8 Compatibility
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          echo "🔍 Verifying ViewComponent Rails 8 compatibility in CI environment..."
+          bundle exec rake viewcomponent:verify
+
       - name: Run RSpec Tests
         env:
           PGHOST: localhost
@@ -101,11 +113,35 @@ jobs:
           GOOGLE_SEARCH_API_KEY: test_google_search_key
           GOOGLE_SEARCH_ENGINE_LINKED_IN_COMPANIES_NO_ID: test_engine_id
           GOOGLE_SEARCH_ENGINE_WEB_ID: test_web_engine_id
-          # Additional settings for ViewComponent
+          # ViewComponent Rails 8 compatibility settings
           RAILS_SERVE_STATIC_FILES: true
           DISABLE_SPRING: true
         run: |
+          echo "🧪 Running complete RSpec test suite with ViewComponent Rails 8 compatibility..."
           bundle exec rspec --format documentation
+          
+      - name: Test ViewComponent Production Compatibility
+        env:
+          RAILS_ENV: production
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/b2b_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY_BASE: test_secret_key_for_ci_only
+          # Production-like settings for ViewComponent testing
+          RAILS_LOG_LEVEL: info
+        run: |
+          echo "🏭 Testing ViewComponent compatibility in production-like environment..."
+          
+          # Precompile assets with ViewComponent integration
+          bundle exec rails assets:precompile
+          
+          # Run ViewComponent-specific tests in production mode
+          bundle exec rspec spec/components/ --format progress
+          
+          echo "✅ ViewComponent production compatibility verified"
 
       - name: Upload screenshots from failed tests
         uses: actions/upload-artifact@v4

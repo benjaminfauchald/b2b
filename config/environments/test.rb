@@ -57,4 +57,20 @@ Rails.application.configure do
   # Reduce log verbosity during tests
   config.log_level = :warn
   config.logger = Logger.new(nil) # Suppress most output during tests
+
+  # ViewComponent Rails 8 compatibility for CI environment
+  if defined?(ViewComponent) && ENV["CI"]
+    config.after_initialize do
+      Rails.logger.info "Configuring ViewComponent for CI environment with Rails 8 compatibility"
+
+      # Ensure eager loading is enabled for ViewComponent in CI
+      config.eager_load_namespaces << ViewComponent if defined?(ViewComponent)
+
+      # Force ViewComponent template compilation in CI
+      if defined?(ViewComponent::Base)
+        ViewComponent::Base.config.view_component_path = Rails.root.join("app/components").to_s
+        ViewComponent::Base.config.test_framework = :rspec
+      end
+    end
+  end
 end

@@ -24,9 +24,14 @@ Rails.application.config.after_initialize do
     # Log ViewComponent initialization
     Rails.logger.info "ViewComponent initialized with Rails 8 compatibility patch"
 
-    # Force early compilation of ViewComponent templates in production
-    if Rails.env.production?
-      Rails.logger.info "Precompiling ViewComponent templates for production..."
+    # Force early compilation of ViewComponent templates in production and CI
+    if Rails.env.production? || ENV["CI"]
+      Rails.logger.info "Precompiling ViewComponent templates for #{Rails.env.production? ? 'production' : 'CI'}..."
+
+      # Special handling for CI environment
+      if ENV["CI"] && Rails.env.test?
+        Rails.logger.info "Applying ViewComponent Rails 8 compatibility for CI testing environment"
+      end
 
       # Precompile all ViewComponent templates to prevent runtime compilation issues
       Dir.glob(Rails.root.join("app/components/**/*_component.rb")).each do |component_file|

@@ -168,18 +168,19 @@ RSpec.describe CompaniesController, type: :controller do
 
     context 'with validation errors' do
       it 'does not create audit log on validation failure' do
-        # Force validation failure
+        # Stub the company to fail validation
         allow_any_instance_of(Company).to receive(:update).and_return(false)
+        allow_any_instance_of(Company).to receive(:errors).and_return(
+          ActiveModel::Errors.new(Company.new).tap { |e| e.add(:base, "Validation failed") }
+        )
 
-        # For regular form submission, it tries to render :edit template
-        # We need to stub the render call in controller tests
-        allow(controller).to receive(:render)
+        # In controller specs, template rendering doesn't happen by default
+        # We need to check if the render method is called with correct params
+        expect(controller).to receive(:render).with(:edit, status: :unprocessable_entity)
 
         expect {
           patch :update, params: { id: company.id, company: { email: 'test@example.com' } }
         }.not_to change { ServiceAuditLog.count }
-
-        expect(response).to have_http_status(:unprocessable_entity)
       end
 
       it 'returns error for AJAX requests on validation failure' do
