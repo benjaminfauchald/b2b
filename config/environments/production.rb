@@ -95,4 +95,15 @@ Rails.application.configure do
 
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  # ViewComponent production configuration for Rails 8 compatibility
+  if defined?(ViewComponent)
+    config.view_component.show_previews = false
+    # Ensure ViewComponent templates are eagerly compiled in production
+    config.after_initialize do
+      # Force compilation of all ViewComponent templates during startup
+      Rails.logger.info "Precompiling ViewComponent templates for Rails 8 production..."
+      ViewComponent::Base.compile_templates if ViewComponent::Base.respond_to?(:compile_templates)
+    end
+  end
 end
