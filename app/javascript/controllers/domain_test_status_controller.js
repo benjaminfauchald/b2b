@@ -34,22 +34,41 @@ export default class extends Controller {
   
   checkTestStatus() {
     fetch(`/domains/${this.domainIdValue}/test_status`, {
+      method: 'GET',
+      credentials: 'same-origin',
       headers: {
         'Accept': 'text/vnd.turbo-stream.html',
         'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
       }
     })
     .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok')
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
       return response.text()
     })
     .then(html => {
+      // Render the Turbo Stream response
       Turbo.renderStreamMessage(html)
+      
+      // Check if we should stop polling by looking at the updated DOM
+      // This ensures polling stops even if the data attribute doesn't update properly
+      const updatedElement = document.getElementById(`domain-test-status-${this.domainIdValue}`)
+      if (updatedElement) {
+        const stillTesting = updatedElement.dataset.domainTestStatusTestingValue === 'true'
+        if (!stillTesting && this.refreshTimer) {
+          console.log("All tests complete, stopping polling for domain", this.domainIdValue)
+          this.stopPolling()
+        }
+      }
     })
     .catch(error => {
       console.error("Error checking domain test status:", error)
-      // Stop polling on error
-      this.stopPolling()
+      // Only stop polling on persistent errors
+      if (error.message.includes('401') || error.message.includes('403')) {
+        console.error("Authentication error - stopping polling")
+        this.stopPolling()
+      }
     })
   }
 }
