@@ -46,34 +46,8 @@
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
               <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <div class="flex items-center space-x-2">
-                  <%= mail_to @person.email, @person.email, 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
-                  
-                  <% if @person.email_data&.dig('source') == 'hunter_io' %>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      Hunter.io <%= @person.email_data['confidence'] %>%
-                    </span>
-                    
-                    <% verification_status = @person.email_data&.dig('verification_status') %>
-                    <% if verification_status.present? && verification_status != 'unknown' %>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium <%= 
-                        case verification_status
-                        when 'valid' then 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        when 'invalid' then 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        else 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        end %>">
-                        <%= verification_status.humanize %>
-                      </span>
-                    <% end %>
-                  <% end %>
-                </div>
-                
-                <% if @person.email_data&.dig('hunter_data', 'position').present? %>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Position: <%= @person.email_data['hunter_data']['position'] %>
-                  </div>
-                <% end %>
+                <div data-controller="email-verification">
+                  <%= render EmailVerificationStatusComponent.new(person: @person) %>
               </dd>
             </div>
           <% end %>

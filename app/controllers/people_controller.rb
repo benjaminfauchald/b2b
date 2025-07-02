@@ -2,7 +2,7 @@
 
 class PeopleController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction service_status]
+  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction service_status verify_email]
   skip_before_action :verify_authenticity_token, only: [ :queue_profile_extraction, :queue_email_extraction, :queue_social_media_extraction, :queue_single_profile_extraction, :queue_single_email_extraction, :queue_single_social_media_extraction ]
 
   def index
@@ -453,6 +453,49 @@ class PeopleController < ApplicationController
       render json: {
         success: false,
         message: "Failed to queue person for social media extraction: #{e.message}"
+      }
+    end
+  end
+
+  # POST /people/:id/verify_email
+  def verify_email
+    unless ServiceConfiguration.active?("local_email_verify")
+      render json: { success: false, error: "Email verification service is disabled" }
+      return
+    end
+
+    unless @person.email.present?
+      render json: { success: false, error: "Person has no email address" }
+      return
+    end
+
+    begin
+      # Run email verification synchronously for immediate feedback
+      service = People::LocalEmailVerifyService.new(person: @person)
+      result = service.perform
+
+      if result.success?
+        # Render updated component HTML
+        component = EmailVerificationStatusComponent.new(person: @person.reload)
+        html = render_to_string(component, layout: false)
+
+        render json: {
+          success: true,
+          message: result.message,
+          html: html,
+          data: result.data
+        }
+      else
+        render json: {
+          success: false,
+          error: result.error || "Email verification failed"
+        }
+      end
+    rescue => e
+      Rails.logger.error "Email verification error: #{e.message}"
+      render json: {
+        success: false,
+        error: "An error occurred during verification"
       }
     end
   end
