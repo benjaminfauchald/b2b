@@ -1,0 +1,21 @@
+#!/bin/bash
+# Script to set up passwordless sudo for puma service management
+
+echo "Setting up passwordless sudo for puma service management..."
+echo
+echo "Run this command on the production server as benjamin:"
+echo
+echo "sudo visudo -f /etc/sudoers.d/puma-service"
+echo
+echo "Then add these lines:"
+echo "benjamin ALL=(ALL) NOPASSWD: /bin/systemctl start puma.service"
+echo "benjamin ALL=(ALL) NOPASSWD: /bin/systemctl stop puma.service"
+echo "benjamin ALL=(ALL) NOPASSWD: /bin/systemctl restart puma.service"
+echo "benjamin ALL=(ALL) NOPASSWD: /bin/systemctl status puma.service"
+echo "benjamin ALL=(ALL) NOPASSWD: /bin/journalctl -u puma.service *"
+echo
+echo "Save and exit the file."
+echo
+echo "Alternatively, you can run this one-liner on the production server:"
+echo
+echo 'echo -e "benjamin ALL=(ALL) NOPASSWD: /bin/systemctl start puma.service\nbenjamin ALL=(ALL) NOPASSWD: /bin/systemctl stop puma.service\nbenjamin ALL=(ALL) NOPASSWD: /bin/systemctl restart puma.service\nbenjamin ALL=(ALL) NOPASSWD: /bin/systemctl status puma.service\nbenjamin ALL=(ALL) NOPASSWD: /bin/journalctl -u puma.service *" | sudo tee /etc/sudoers.d/puma-service'

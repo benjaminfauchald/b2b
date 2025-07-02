@@ -359,6 +359,10 @@ jobs:
           # Deploy using git pull on production
           echo "SSH connection successful, proceeding with deployment..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PRODUCTION_USER}@${PRODUCTION_HOST}" << 'ENDSSH'
+            # Load rbenv and Ruby environment first
+            export PATH="$HOME/.rbenv/bin:$PATH"
+            eval "$(rbenv init -)"
+            
             # Navigate to the application directory in home folder
             cd ~/b2b || {
               echo "Error: ~/b2b directory not found"
@@ -376,9 +380,22 @@ jobs:
             git checkout -f $LATEST_TAG
             git clean -fd
             
+            # Handle Ruby version mismatch
+            REQUIRED_RUBY=$(cat .ruby-version)
+            INSTALLED_RUBY=$(rbenv versions --bare | grep "^${REQUIRED_RUBY}$" || true)
+            
+            if [ -z "$INSTALLED_RUBY" ]; then
+              echo "⚠️ Ruby $REQUIRED_RUBY not installed, using fallback"
+              # Use the first available Ruby version as fallback
+              FALLBACK_RUBY=$(rbenv versions --bare | head -1)
+              echo "Using Ruby $FALLBACK_RUBY instead"
+              rbenv local $FALLBACK_RUBY
+            fi
+            
             # Enhanced bundle install with proper configuration
             echo "🔍 Verifying Ruby environment..."
-            source ~/.bashrc || true
+            ruby -v
+            bundle -v
             export RAILS_ENV=production
             
             # Load environment variables
@@ -423,24 +440,20 @@ jobs:
             # Enhanced service restart with health checks
             echo "🔄 Restarting application services..."
             
-            # Stop service gracefully first
-            if sudo -n systemctl stop puma.service 2>/dev/null; then
-              echo "✅ Puma service stopped gracefully"
-              sleep 5
-            else
-              echo "⚠️ Could not stop puma.service gracefully"
-            fi
-            
-            # Verify process is fully stopped
-            if pgrep -f puma >/dev/null 2>&1; then
-              echo "⚠️ Puma process still running, force killing..."
-              sudo pkill -f puma || true
-              sleep 3
-            fi
-            
-            # Start service
-            if sudo systemctl start puma.service; then
-              echo "✅ Puma service started"
+            # Restart the puma service
+            echo "🔄 Restarting puma service..."
+            # Use systemctl restart which handles stop/start automatically
+            systemctl restart puma.service || {
+              echo "⚠️ Normal restart failed, trying with sudo..."
+              # If passwordless sudo is configured, this will work
+              sudo -n systemctl restart puma.service || {
+                echo "❌ Cannot restart puma service - sudo requires password"
+                echo "Please configure passwordless sudo for systemctl commands or restart manually"
+                echo "To fix: Add to sudoers: benjamin ALL=(ALL) NOPASSWD: /bin/systemctl restart puma.service"
+                exit 1
+              }
+            }
+            echo "✅ Puma service restarted"
               
               # Health check with timeout
               echo "🏥 Running health checks..."

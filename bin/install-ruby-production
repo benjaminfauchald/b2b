@@ -1,0 +1,17 @@
+#!/bin/bash
+# Script to install Ruby 3.3.8 on production server
+
+echo "Run these commands on production server (app.connectica.no):"
+echo
+echo "# Update rbenv"
+echo "cd ~/.rbenv && git pull"
+echo "cd ~/.rbenv/plugins/ruby-build && git pull"
+echo
+echo "# Install Ruby 3.3.8"
+echo "rbenv install 3.3.8"
+echo
+echo "# Set as global default (optional)"
+echo "rbenv global 3.3.8"
+echo
+echo "# Or just for the b2b project"
+echo "cd ~/b2b && rbenv local 3.3.8"
