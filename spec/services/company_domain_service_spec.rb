@@ -54,7 +54,7 @@ RSpec.describe CompanyDomainService do
         it 'queues domain tests' do
           allow(ServiceConfiguration).to receive(:active?).with("domain_testing").and_return(true)
           expect(DomainDnsTestingWorker).to receive(:perform_async)
-          
+
           service.execute
         end
       end
@@ -64,7 +64,7 @@ RSpec.describe CompanyDomainService do
 
         it 'associates existing domain with company' do
           expect { service.execute }.not_to change(Domain, :count)
-          
+
           result = service.execute
           expect(result).to be_success
           expect(existing_domain.reload.company).to eq(company)
@@ -76,10 +76,10 @@ RSpec.describe CompanyDomainService do
 
         it 'updates the existing domain' do
           expect { service.execute }.not_to change(Domain, :count)
-          
+
           result = service.execute
           expect(result).to be_success
-          
+
           domain = result.data[:domain]
           expect(domain.id).to eq(existing_domain.id)
           expect(domain.domain).to eq('example.com')
@@ -87,7 +87,7 @@ RSpec.describe CompanyDomainService do
 
         it 'resets test results when domain changes' do
           service.execute
-          
+
           existing_domain.reload
           expect(existing_domain.dns).to be_nil
           expect(existing_domain.mx).to be_nil
@@ -113,7 +113,7 @@ RSpec.describe CompanyDomainService do
         it "normalizes #{test_case[:input]} to #{test_case[:expected]}" do
           service = described_class.new(company, test_case[:input])
           result = service.execute
-          
+
           expect(result).to be_success
           expect(result.data[:domain].domain).to eq(test_case[:expected])
         end
@@ -134,7 +134,7 @@ RSpec.describe CompanyDomainService do
         it "rejects invalid domain: #{invalid_domain}" do
           service = described_class.new(company, invalid_domain)
           result = service.execute
-          
+
           expect(result).to be_error
           expect(result.error_message).to include('Invalid domain format')
         end
@@ -147,7 +147,7 @@ RSpec.describe CompanyDomainService do
       it 'does not queue domain tests' do
         allow(ServiceConfiguration).to receive(:active?).with("domain_testing").and_return(false)
         expect(DomainDnsTestingWorker).not_to receive(:perform_async)
-        
+
         service.execute
       end
     end
@@ -157,7 +157,7 @@ RSpec.describe CompanyDomainService do
 
       it 'handles database errors gracefully' do
         allow(Domain).to receive(:transaction).and_raise(ActiveRecord::RecordInvalid.new)
-        
+
         result = service.execute
         expect(result).to be_error
         expect(result.error_message).to include('Failed to process domain')

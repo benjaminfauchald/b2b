@@ -934,7 +934,7 @@ class DomainsController < ApplicationController
           dns: @domain.dns,
           mx: @domain.mx,
           www: @domain.www,
-          testing_complete: !@domain.dns.nil? && 
+          testing_complete: !@domain.dns.nil? &&
                            (@domain.dns == false || (!@domain.mx.nil? && !@domain.www.nil?))
         }
       end

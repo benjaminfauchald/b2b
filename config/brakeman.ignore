@@ -5,15 +5,15 @@
       "note": "Development-only tool for Guard notifications - count variable is controlled internally"
     },
     {
-      "fingerprint": "d52bb4d8c367069e437160eed7156ecd66d238bf0f58dc6c397ccd71fa9bed39",
+      "fingerprint": "59340e831a9a741cc2ac85f24a7e571e9e29590f95108b41582621bf40db7ad9",
       "note": "Website URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
-      "fingerprint": "664f72d696060d42390f87560094e07b8ff63a476ec9f33feb5bb6afbcf50067",
+      "fingerprint": "9335df4817152fc552b6616c05d0860bac069079d4363da9d56ed9c66bf724fa",
       "note": "LinkedIn URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
-      "fingerprint": "89c485375ef7bf75b68a43694c44c0670c5fa2be499bd1a2f7a33a5052a71710",
+      "fingerprint": "a9067188eb4db55df3e0c1b6b8020265ce2d04b260af6318251ef2c421d31b33",
       "note": "LinkedIn AI URLs are validated with url_safe? helper method to prevent XSS attacks"
     },
     {
@@ -25,6 +25,6 @@
       "note": "Filename is sanitized with File.basename and gsub to prevent path traversal"
     }
   ],
-  "updated": "2025-07-02 04:59:00 +0000",
+  "updated": "2025-07-02 17:30:00 +0000",
   "brakeman_version": "7.0.2"
 }

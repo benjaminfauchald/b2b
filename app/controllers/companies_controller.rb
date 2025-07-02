@@ -139,7 +139,7 @@ class CompaniesController < ApplicationController
           if field_to_update == "website" && new_value.present?
             domain_service = CompanyDomainService.new(@company, new_value)
             domain_result = domain_service.execute
-            
+
             unless domain_result.success?
               Rails.logger.error "Failed to process domain: #{domain_result.error_message}"
             end
@@ -204,7 +204,7 @@ class CompaniesController < ApplicationController
         if changed_fields.include?("website") && company_params["website"].present?
           domain_service = CompanyDomainService.new(@company, company_params["website"])
           domain_result = domain_service.execute
-          
+
           unless domain_result.success?
             Rails.logger.error "Failed to process domain: #{domain_result.error_message}"
           end

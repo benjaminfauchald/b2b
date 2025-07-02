@@ -78,8 +78,8 @@ class DomainTestStatusComponent < ViewComponent::Base
   end
 
   def any_testing?
-    domain.dns.nil? || 
-    (domain.dns == true && domain.mx.nil?) || 
+    domain.dns.nil? ||
+    (domain.dns == true && domain.mx.nil?) ||
     (domain.dns == true && domain.www.nil?)
   end
 end

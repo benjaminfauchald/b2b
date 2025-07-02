@@ -31,115 +31,21 @@
         queue_name: "person_profile_extraction"
       ) %>
       
-      <!-- Email Extraction Service -->
-      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
-           data-controller="service-queue"
-           data-service-queue-service-name-value="person_email_extraction">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Email Extraction</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Find email addresses (Mock Service)</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <span data-available-count="person_email_extraction">0 persons need processing</span>
-          </p>
-          <p class="text-xs text-gray-500 dark:text-gray-500">
-            <span data-queue-stat="person_email_extraction" class="queue-button-stat">0 in queue</span>
-          </p>
-        </div>
-        
-        <%= form_with url: queue_email_extraction_people_path, method: :post, 
-            data: { 
-              service_queue_target: "form",
-              turbo: false 
-            }, 
-            class: "space-y-3" do |f| %>
-          <div>
-            <%= f.number_field :count, 
-                value: 10, 
-                min: 1, 
-                max: 1000,
-                data: { 
-                  service_queue_target: "countInput",
-                  max_available: 0
-                },
-                class: "shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" %>
-          </div>
-          <div>
-            <%= f.submit "Queue Processing", 
-                data: { 
-                  service_queue_target: "submitButton",
-                  action: "click->service-queue#submit"
-                },
-                class: "w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" %>
-          </div>
-        <% end %>
-      </div>
+      <%= render PersonServiceQueueButtonComponent.new(
+        service_name: "person_email_extraction",
+        title: "Email Extraction",
+        icon: "email",
+        action_path: queue_email_extraction_people_path,
+        queue_name: "person_email_extraction"
+      ) %>
       
-      <!-- Social Media Extraction Service -->
-      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
-           data-controller="service-queue"
-           data-service-queue-service-name-value="person_social_media_extraction">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <svg class="h-8 w-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Social Media Extraction</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Find social media profiles (Mock Service)</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <span data-available-count="person_social_media_extraction">0 persons need processing</span>
-          </p>
-          <p class="text-xs text-gray-500 dark:text-gray-500">
-            <span data-queue-stat="person_social_media_extraction" class="queue-button-stat">0 in queue</span>
-          </p>
-        </div>
-        
-        <%= form_with url: queue_social_media_extraction_people_path, method: :post, 
-            data: { 
-              service_queue_target: "form",
-              turbo: false 
-            }, 
-            class: "space-y-3" do |f| %>
-          <div>
-            <%= f.number_field :count, 
-                value: 10, 
-                min: 1, 
-                max: 1000,
-                data: { 
-                  service_queue_target: "countInput",
-                  max_available: 0
-                },
-                class: "shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md" %>
-          </div>
-          <div>
-            <%= f.submit "Queue Processing", 
-                data: { 
-                  service_queue_target: "submitButton",
-                  action: "click->service-queue#submit"
-                },
-                class: "w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" %>
-          </div>
-        <% end %>
-      </div>
+      <%= render PersonServiceQueueButtonComponent.new(
+        service_name: "person_social_media_extraction",
+        title: "Social Media Extraction",
+        icon: "social",
+        action_path: queue_social_media_extraction_people_path,
+        queue_name: "person_social_media_extraction"
+      ) %>
     </div>
   </div>
 
