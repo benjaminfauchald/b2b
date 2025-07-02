@@ -234,10 +234,16 @@ module People
         result[:valid] = true
         result[:status] = :valid
 
-        # Check if it's a catch-all domain
+        # Check if it's a known catch-all domain or if we should test it
         if catch_all_domains.include?(domain)
           result[:confidence] = settings[:catch_all_confidence] || 0.5
           result[:metadata][:catch_all_suspected] = true
+        elsif detect_catch_all_domain?(domain, smtp_check[:mx_host])
+          # Detected as catch-all, add to configuration
+          add_to_catch_all_domains(domain)
+          result[:confidence] = settings[:catch_all_confidence] || 0.5
+          result[:metadata][:catch_all_suspected] = true
+          result[:metadata][:catch_all_detected] = true
         else
           result[:confidence] = 0.95
         end
@@ -369,6 +375,51 @@ module People
       config = ServiceConfiguration.find_by(service_name: service_name)
       return false unless config
       config.active?
+    end
+
+    def detect_catch_all_domain?(domain, mx_host)
+      settings = service_configuration.settings.symbolize_keys
+      
+      # Skip detection for already known catch-all domains
+      return false if (settings[:catch_all_domains] || []).include?(domain)
+      
+      # Generate a random test email
+      test_email = "test_#{SecureRandom.hex(8)}_#{Time.now.to_i}@#{domain}"
+      
+      begin
+        Timeout.timeout(5) do
+          Net::SMTP.start(mx_host, 25, settings[:helo_domain] || "connectica.no") do |smtp|
+            smtp.mailfrom(settings[:mail_from] || "noreply@connectica.no")
+            
+            begin
+              smtp.rcptto(test_email)
+              # If random email is accepted, it's a catch-all
+              Rails.logger.info "Detected catch-all domain: #{domain} (accepted #{test_email})"
+              return true
+            rescue Net::SMTPFatalError => e
+              # If random email is rejected, it's not a catch-all
+              return false
+            end
+          end
+        end
+      rescue => e
+        Rails.logger.warn "Catch-all detection failed for #{domain}: #{e.message}"
+        # If detection fails, assume not catch-all
+        return false
+      end
+    end
+
+    def add_to_catch_all_domains(domain)
+      config = service_configuration
+      settings = config.settings
+      catch_all_domains = settings['catch_all_domains'] || []
+      
+      unless catch_all_domains.include?(domain)
+        catch_all_domains << domain
+        settings['catch_all_domains'] = catch_all_domains
+        config.update!(settings: settings)
+        Rails.logger.info "Added #{domain} to catch-all domains list"
+      end
     end
 
     def success_result(message, data = {})
