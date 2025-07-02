@@ -24,6 +24,8 @@ RSpec.configure do |config|
   config.before(:each) do
     # Clear all jobs before each test
     Sidekiq::Worker.clear_all
+    # Reset Sidekiq testing mode to default fake mode for consistency
+    Sidekiq::Testing.fake!
   end
 
   # Extra cleanup for worker specs

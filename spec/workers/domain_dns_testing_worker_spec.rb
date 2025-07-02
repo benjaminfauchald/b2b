@@ -46,6 +46,10 @@ RSpec.describe DomainDnsTestingWorker, type: :worker do
           # Ensure clean state
           ServiceAuditLog.destroy_all
 
+          # Mock follow-up worker calls to prevent additional audit logs in tests
+          allow(DomainMxTestingWorker).to receive(:perform_async)
+          allow(DomainARecordTestingWorker).to receive(:perform_async)
+
           expect {
             worker.perform(domain.id)
           }.to change(ServiceAuditLog, :count).by(1)
