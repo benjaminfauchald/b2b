@@ -58,12 +58,12 @@ RSpec.describe "LinkedIn Queue Behavior", type: :feature do
       ServiceAuditLog.destroy_all
       ServiceConfiguration.destroy_all
       User.destroy_all
-      
+
       # Recreate required data
       ServiceConfiguration.create!(service_name: "company_linkedin_discovery", active: true)
       admin_user.save! # Ensure user exists
       sign_in admin_user
-      
+
       # Reset Sidekiq state
       Sidekiq::Worker.clear_all
     end
