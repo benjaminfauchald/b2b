@@ -19,7 +19,7 @@ module B2b
     # Add ViewComponents to autoload paths
     config.autoload_paths << Rails.root.join("app/components")
     config.eager_load_paths << Rails.root.join("app/components")
-    
+
     # Rails 8 compatibility: Prevent ViewComponent from modifying frozen autoload_paths
     config.before_initialize do
       if defined?(ViewComponent::Engine)
