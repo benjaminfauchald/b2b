@@ -23,8 +23,16 @@
     {
       "fingerprint": "0ef8149021b597bdf7d9dff1253a4e53d9b7845432b64a947aad6d45c4801d0e",
       "note": "Filename is sanitized with File.basename and gsub to prevent path traversal"
+    },
+    {
+      "fingerprint": "dbb14be890ba7cf32792771710b66a180871a9b5467d2bc1bee14ba0db04f5e7",
+      "note": "LinkedIn URLs are validated with url_safe? helper method to prevent XSS attacks"
+    },
+    {
+      "fingerprint": "faf751b0c05317bacfddfac27c25c45ad42161191ea3bde1c748a3ad31bd7387",
+      "note": "LinkedIn AI URLs are validated with url_safe? helper method to prevent XSS attacks"
     }
   ],
-  "updated": "2025-07-02 17:30:00 +0000",
+  "updated": "2025-07-02 18:55:00 +0000",
   "brakeman_version": "7.0.2"
 }
