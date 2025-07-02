@@ -37,13 +37,20 @@
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Website</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
               <% if @company.website.present? %>
-                <% website_url = @company.website.match?(/\Ahttps?:\/\//i) ? @company.website : "https://#{@company.website}" %>
-                <% if url_safe?(website_url) %>
-                  <%= link_to @company.website, website_url, target: "_blank", 
-                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
-                <% else %>
-                  <span class="text-gray-900 dark:text-gray-100"><%= @company.website %></span>
-                <% end %>
+                <div class="space-y-2">
+                  <% website_url = @company.website.match?(/\Ahttps?:\/\//i) ? @company.website : "https://#{@company.website}" %>
+                  <% if url_safe?(website_url) %>
+                    <%= link_to @company.website, website_url, target: "_blank", 
+                        class: "font-medium text-blue-600 dark:text-blue-500 hover:underline break-words" %>
+                  <% else %>
+                    <span class="text-gray-900 dark:text-gray-100"><%= @company.website %></span>
+                  <% end %>
+                  <% if @company.domain.present? %>
+                    <div class="mt-2">
+                      <%= render DomainTestStatusComponent.new(domain: @company.domain) %>
+                    </div>
+                  <% end %>
+                </div>
               <% else %>
                 <span class="text-gray-400 dark:text-gray-500">Not provided</span>
               <% end %>

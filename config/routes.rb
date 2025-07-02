@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       post :queue_single_mx
       post :queue_single_www
       post :queue_single_web_content
+      get :test_status
     end
   end
 

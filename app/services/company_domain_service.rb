@@ -2,7 +2,7 @@
 
 require 'public_suffix'
 
-class CompanyDomainService < ApplicationService
+class CompanyDomainService
   attr_reader :company, :website_url
 
   def initialize(company, website_url)
@@ -11,13 +11,19 @@ class CompanyDomainService < ApplicationService
   end
 
   def execute
-    return success(domain: nil) if website_url.blank?
+    # Only return success with nil for truly nil/unset values
+    return ServiceResult.success(domain: nil) if website_url.nil?
 
     # Normalize and validate the domain
     domain_name = normalize_domain(website_url)
     
+    # Check if normalization resulted in empty string
+    if domain_name.blank?
+      return ServiceResult.error("Invalid domain format: empty domain")
+    end
+    
     unless valid_domain?(domain_name)
-      return error("Invalid domain format: #{domain_name}")
+      return ServiceResult.error("Invalid domain format: #{domain_name}")
     end
 
     # Find or create the domain record
@@ -26,9 +32,9 @@ class CompanyDomainService < ApplicationService
     # Queue domain tests if needed
     queue_domain_tests(domain) if domain.needs_testing?
 
-    success(domain: domain)
+    ServiceResult.success(domain: domain)
   rescue StandardError => e
-    error("Failed to process domain: #{e.message}")
+    ServiceResult.error("Failed to process domain: #{e.message}")
   end
 
   private
@@ -47,6 +53,9 @@ class CompanyDomainService < ApplicationService
 
   def valid_domain?(domain_name)
     return false if domain_name.blank?
+    
+    # Check for consecutive dots
+    return false if domain_name.include?('..')
 
     begin
       # Use public_suffix gem for validation
@@ -96,7 +105,7 @@ class CompanyDomainService < ApplicationService
   def queue_domain_tests(domain)
     # Queue DNS test which will cascade to other tests
     if ServiceConfiguration.active?("domain_testing")
-      DomainTestingWorker.perform_async(domain.id)
+      DomainDnsTestingWorker.perform_async(domain.id)
       
       # Log the queueing action
       ServiceAuditLog.create!(

@@ -919,6 +919,28 @@ class DomainsController < ApplicationController
     end
   end
 
+  # GET /domains/:id/test_status
+  def test_status
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "domain-test-status-#{@domain.id}",
+          DomainTestStatusComponent.new(domain: @domain)
+        )
+      end
+      format.json do
+        render json: {
+          domain_id: @domain.id,
+          dns: @domain.dns,
+          mx: @domain.mx,
+          www: @domain.www,
+          testing_complete: !@domain.dns.nil? && 
+                           (@domain.dns == false || (!@domain.mx.nil? && !@domain.www.nil?))
+        }
+      end
+    end
+  end
+
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_domain
