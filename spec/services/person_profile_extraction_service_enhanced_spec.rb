@@ -51,11 +51,15 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
     context "when company has only high-confidence AI LinkedIn URL" do
       let(:company) do
-        create(:company,
+        # Create company with low confidence first to avoid auto-populate
+        company = create(:company,
           linkedin_url: nil,
           linkedin_ai_url: "https://linkedin.com/company/ai-test",
-          linkedin_ai_confidence: 90
+          linkedin_ai_confidence: 50
         )
+        # Then update just the confidence without triggering callbacks
+        company.update_column(:linkedin_ai_confidence, 90)
+        company.reload
       end
 
       it "uses AI LinkedIn URL" do
@@ -63,6 +67,11 @@ RSpec.describe PersonProfileExtractionService, type: :service do
       end
 
       it "logs the URL source as AI-discovered with confidence" do
+        # Verify company setup
+        expect(company.linkedin_url).to be_nil
+        expect(company.linkedin_ai_url).to eq("https://linkedin.com/company/ai-test")
+        expect(company.linkedin_ai_confidence).to eq(90)
+
         service = PersonProfileExtractionService.new(company_id: company.id)
 
         # Mock PhantomBuster API calls
@@ -126,11 +135,15 @@ RSpec.describe PersonProfileExtractionService, type: :service do
 
   describe "Audit Log Metadata Enhancement" do
     let(:company) do
-      create(:company,
+      # Create company with low confidence first to avoid auto-populate
+      company = create(:company,
         linkedin_url: nil,
         linkedin_ai_url: "https://linkedin.com/company/ai-test",
-        linkedin_ai_confidence: 85
+        linkedin_ai_confidence: 50
       )
+      # Then update just the confidence without triggering callbacks
+      company.update_column(:linkedin_ai_confidence, 85)
+      company.reload
     end
 
     it "includes URL source and confidence in audit metadata" do

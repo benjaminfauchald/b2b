@@ -24,8 +24,14 @@ class PersonProfileExtractionService < ApplicationService
     return error_result("Company has no valid LinkedIn URL") unless linkedin_url.present?
 
     audit_service_operation(@company) do |audit_log|
-      url_source = @company.linkedin_url.present? ? "manual" : "AI-discovered"
-      confidence_info = @company.linkedin_ai_confidence.present? ? " (#{@company.linkedin_ai_confidence}% confidence)" : ""
+      # Determine which URL we're actually using
+      if @company.linkedin_url.present?
+        url_source = "manual"
+        confidence_info = ""
+      else
+        url_source = "AI-discovered"
+        confidence_info = @company.linkedin_ai_confidence.present? ? " (#{@company.linkedin_ai_confidence}% confidence)" : ""
+      end
 
       Rails.logger.info "🚀 Starting LinkedIn Profile Extraction for #{@company.company_name}"
       Rails.logger.info "📎 Using #{url_source} LinkedIn URL: #{linkedin_url}#{confidence_info}"

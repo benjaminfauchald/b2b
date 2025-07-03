@@ -49,6 +49,21 @@ class PersonProfileExtractionAsyncService < ApplicationService
       # Launch phantom
       container_id = launch_phantom
 
+      # Check if launch was successful
+      if container_id.nil? || container_id.blank?
+        audit_log.add_metadata(
+          error: "Failed to launch PhantomBuster - no container ID returned",
+          phantom_id: @phantom_id,
+          launch_attempted_at: Time.current.iso8601
+        )
+        audit_log.update!(
+          status: "failed",
+          completed_at: Time.current,
+          error_message: "Failed to launch PhantomBuster - no container ID returned"
+        )
+        return error_result("Failed to launch PhantomBuster - no container ID returned")
+      end
+
       # Store container ID in audit log for async processing
       audit_log.add_metadata(
         container_id: container_id,
@@ -63,12 +78,24 @@ class PersonProfileExtractionAsyncService < ApplicationService
       # Schedule async check job instead of synchronous monitoring
       schedule_status_check(container_id, audit_log.id)
 
+      # CRITICAL: Also schedule a safety check to prevent stuck jobs
+      # This ensures we have a backup check in case the initial schedule fails
+      # TODO: Implement PersonProfileExtractionCheckWorker as a backup safety mechanism
+      # PersonProfileExtractionCheckWorker.perform_in(30.seconds, container_id, audit_log.id)
+
+      # Schedule monitor as additional safety net
+      PhantomJobMonitorWorker.perform_in(11.minutes)
+
       # Return immediately with pending status - DO NOT mark as success
       success_result("Profile extraction launched. Monitoring in background.",
                     container_id: container_id,
                     audit_log_id: audit_log.id,
                     status: "processing")
     rescue StandardError => e
+      audit_log.add_metadata(
+        error: e.message,
+        error_class: e.class.name
+      )
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
@@ -110,14 +137,15 @@ class PersonProfileExtractionAsyncService < ApplicationService
 
     when "error", "failed", "timeout", "cancelled"
       # Failed
+      audit_log.add_metadata(
+        error: "Phantom execution failed with status: #{status}",
+        phantom_status: status,
+        ended_at: container["endedAt"]
+      )
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
         error_message: "Phantom execution failed with status: #{status}"
-      )
-      audit_log.add_metadata(
-        phantom_status: status,
-        ended_at: container["endedAt"]
       )
       error_result("Phantom execution failed", status: status)
 
@@ -146,6 +174,9 @@ class PersonProfileExtractionAsyncService < ApplicationService
     )
 
     unless output_response.success?
+      audit_log.add_metadata(
+        error: "Failed to fetch phantom output"
+      )
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
@@ -158,6 +189,9 @@ class PersonProfileExtractionAsyncService < ApplicationService
     json_url = extract_json_url_from_output(output)
 
     unless json_url
+      audit_log.add_metadata(
+        error: "Could not find JSON result URL in phantom output"
+      )
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
@@ -263,12 +297,27 @@ class PersonProfileExtractionAsyncService < ApplicationService
       timeout: 10
     )
 
-    raise "Failed to launch phantom: #{launch_response.code}" unless launch_response.success?
+    unless launch_response.success?
+      Rails.logger.error "❌ Failed to launch phantom: HTTP #{launch_response.code} - #{launch_response.body}"
+      raise "Failed to launch phantom: #{launch_response.code} - #{launch_response.message}"
+    end
 
     container_id = launch_response.parsed_response["containerId"]
-    Rails.logger.info "📦 Phantom launched with container ID: #{container_id}"
 
+    if container_id.nil? || container_id.blank?
+      Rails.logger.error "❌ PhantomBuster API returned success but no container ID"
+      Rails.logger.error "Response body: #{launch_response.body}"
+      return nil
+    end
+
+    Rails.logger.info "📦 Phantom launched with container ID: #{container_id}"
     container_id
+  rescue Net::ReadTimeout, Net::OpenTimeout => e
+    Rails.logger.error "❌ PhantomBuster API timeout: #{e.message}"
+    raise "PhantomBuster API timeout: #{e.message}"
+  rescue StandardError => e
+    Rails.logger.error "❌ Unexpected error launching phantom: #{e.class} - #{e.message}"
+    raise
   end
 
   def extract_json_url_from_output(output)
