@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_04_024618) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_04_194645) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -442,7 +442,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_024618) do
     t.datetime "email_verification_checked_at"
     t.jsonb "email_verification_metadata", default: {}
     t.string "import_tag"
+    t.string "email_validation_engine"
+    t.jsonb "email_validation_details", default: {}
     t.index ["email"], name: "index_people_on_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
+    t.index ["email_validation_details"], name: "index_people_on_email_validation_details", using: :gin
+    t.index ["email_validation_engine"], name: "index_people_on_email_validation_engine"
     t.index ["email_verification_checked_at"], name: "index_people_on_email_verification_checked_at"
     t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
     t.index ["import_tag"], name: "index_people_on_import_tag"

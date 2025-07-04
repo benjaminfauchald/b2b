@@ -257,12 +257,22 @@ class PersonImportService < ApplicationService
       import_tag: @import_tag
     }
 
-    # Set email verification status if provided
+    # Store external email validation data in metadata but DON'T set verification status
+    # The system should perform its own verification instead of trusting external sources
     if row_data[:email_status].present? || row_data[:zb_status].present?
-      email_status = (row_data[:email_status] || row_data[:zb_status]).to_s.downcase
-      person_attributes[:email_verification_status] = map_email_status(email_status)
-      person_attributes[:email_verification_checked_at] = Time.current
+      external_status = (row_data[:email_status] || row_data[:zb_status]).to_s.downcase
+      person_attributes[:email_verification_metadata] = {
+        external_validation: {
+          source: row_data[:email_status].present? ? "email_status" : "zb_status",
+          original_status: external_status,
+          mapped_status: map_email_status(external_status),
+          imported_at: Time.current
+        }
+      }
     end
+
+    # Always start with unverified status for imported emails
+    person_attributes[:email_verification_status] = "unverified"
 
     # Associate with company if exists
     if person_attributes[:company_name].present?

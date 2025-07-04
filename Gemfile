@@ -132,6 +132,10 @@ gem "ruby-openai"           # OpenAI API for content validation
 gem "firecrawl"             # Firecrawl API for web content extraction
 gem "public_suffix", "~> 6.0"  # Domain name validation and parsing
 
+# Email verification and validation
+gem "truemail"        # Multi-layer email validation (syntax, DNS, SMTP)
+gem "valid_email2"    # Disposable email detection + MX validation
+
 # Console enhancements for all environments
 gem "pry-rails"
 gem "awesome_print"

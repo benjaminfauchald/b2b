@@ -17,7 +17,7 @@ RSpec.describe People::LocalEmailVerifyService do
         helo_domain: 'test.com',
         mail_from: 'noreply@test.com',
         catch_all_domains: [ 'gmail.com' ],
-        catch_all_confidence: 0.5,
+        catch_all_confidence: 0.2,  # Updated for false positive fix
         rate_limit_per_domain_hour: 50,
         rate_limit_per_domain_day: 500,
         random_delay_min: 0,
@@ -138,13 +138,13 @@ RSpec.describe People::LocalEmailVerifyService do
           allow(service).to receive(:detect_catch_all_domain?).and_return(false)
         end
 
-        it 'marks email as valid' do
+        it 'marks email as valid with lower confidence' do
           result = service.perform
           expect(result.success?).to be true
 
           person.reload
           expect(person.email_verification_status).to eq('valid')
-          expect(person.email_verification_confidence).to eq(0.95)
+          expect(person.email_verification_confidence).to eq(0.7)  # Updated from 0.95 due to false positive fixes
 
           data = result.data
           expect(data[:valid]).to be true
@@ -255,16 +255,19 @@ RSpec.describe People::LocalEmailVerifyService do
       let(:dns_mock) { instance_double(Resolv::DNS) }
       let(:mx_record) { instance_double(Resolv::DNS::Resource::IN::MX, preference: 10, exchange: 'gmail-smtp-in.l.google.com') }
 
-      it 'reduces confidence for catch-all domains' do
+      it 'marks catch-all domains as catch_all status (CRITICAL FIX)' do
         result = service.perform
         expect(result.success?).to be true
 
         person.reload
-        expect(person.email_verification_status).to eq('valid')
-        expect(person.email_verification_confidence).to eq(0.5)
+        expect(person.email_verification_status).to eq('catch_all')  # Fixed: no longer marks as 'valid'
+        expect(person.email_verification_confidence).to eq(0.2)      # Fixed: much lower confidence
 
         data = result.data
+        expect(data[:valid]).to be false  # Fixed: catch-all domains are not valid
+        expect(data[:status]).to eq(:catch_all)
         expect(data[:metadata][:catch_all_suspected]).to be true
+        expect(data[:metadata][:catch_all_reason]).to include('Known catch-all')
       end
     end
 
@@ -310,6 +313,9 @@ RSpec.describe People::LocalEmailVerifyService do
       it 'tries secondary MX if primary fails' do
         smtp_mock1 = instance_double(Net::SMTP)
         smtp_mock2 = instance_double(Net::SMTP)
+
+        # Mock catch-all detection to return false for this test
+        allow(service).to receive(:detect_catch_all_domain?).and_return(false)
 
         # First MX fails
         allow(Net::SMTP).to receive(:start).with('mail1.example.com', anything, anything).and_raise(StandardError)

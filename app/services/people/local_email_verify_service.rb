@@ -231,21 +231,27 @@ module People
       smtp_check = result[:checks][:smtp]
 
       if smtp_check[:passed]
-        result[:valid] = true
-        result[:status] = :valid
-
         # Check if it's a known catch-all domain or if we should test it
         if catch_all_domains.include?(domain)
-          result[:confidence] = settings[:catch_all_confidence] || 0.5
+          result[:valid] = false
+          result[:status] = :catch_all
+          result[:confidence] = settings[:catch_all_confidence] || 0.2
           result[:metadata][:catch_all_suspected] = true
+          result[:metadata][:catch_all_reason] = "Known catch-all domain"
         elsif detect_catch_all_domain?(domain, smtp_check[:mx_host])
           # Detected as catch-all, add to configuration
           add_to_catch_all_domains(domain)
-          result[:confidence] = settings[:catch_all_confidence] || 0.5
+          result[:valid] = false
+          result[:status] = :catch_all
+          result[:confidence] = settings[:catch_all_confidence] || 0.2
           result[:metadata][:catch_all_suspected] = true
           result[:metadata][:catch_all_detected] = true
+          result[:metadata][:catch_all_reason] = "Dynamically detected catch-all domain"
         else
-          result[:confidence] = 0.95
+          # Legitimate SMTP success
+          result[:valid] = true
+          result[:status] = :valid
+          result[:confidence] = settings[:smtp_success_confidence] || 0.7  # Lowered from 0.95
         end
       elsif smtp_check[:greylist]
         result[:status] = :greylist_retry
