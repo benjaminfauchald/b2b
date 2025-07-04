@@ -102,7 +102,7 @@ group :test do
   gem "database_cleaner-active_record"
 
   # Shoulda matchers for RSpec
-  gem "shoulda-matchers", "~> 5.0"
+  gem "shoulda-matchers", "~> 6.5"
 
   # HTTP request stubbing
   gem "webmock"
