@@ -10,9 +10,10 @@ class PersonImportService < ApplicationService
   MAX_FILE_SIZE = 200.megabytes # Support larger files for person imports
   VALID_MIME_TYPES = %w[text/csv application/csv].freeze
 
-  def initialize(file: nil, user: nil, **options)
+  def initialize(file: nil, user: nil, validate_emails: false, **options)
     @file = file
     @user = user
+    @validate_emails = validate_emails
     @import_tag = generate_import_tag
     @result = PersonImportResult.new(import_tag: @import_tag)
     super(service_name: "person_import", action: "import", **options)
@@ -260,6 +261,8 @@ class PersonImportService < ApplicationService
         begin
           existing_person.update!(merged_attributes)
           result.add_updated_person(existing_person, row_number, merged_attributes)
+          # Trigger email validation if enabled
+          trigger_email_validation(existing_person) if @validate_emails
         rescue ActiveRecord::RecordInvalid => e
           result.add_failed_person(row_data, row_number, e.record.errors.full_messages)
         end
@@ -271,6 +274,8 @@ class PersonImportService < ApplicationService
       begin
         person = Person.create!(person_attributes)
         result.add_imported_person(person, row_number)
+        # Trigger email validation if enabled
+        trigger_email_validation(person) if @validate_emails
       rescue ActiveRecord::RecordInvalid => e
         result.add_failed_person(row_data, row_number, e.record.errors.full_messages)
       rescue ActiveRecord::RecordNotUnique

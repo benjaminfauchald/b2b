@@ -3,7 +3,7 @@
 class PersonImportJob < ApplicationJob
   queue_as :default
 
-  def perform(temp_file_path, user_id, original_filename, import_id)
+  def perform(temp_file_path, user_id, original_filename, import_id, validate_emails = false)
     Rails.logger.info "🚀 PersonImportJob started: #{import_id}"
     Rails.logger.info "  - File: #{temp_file_path}"
     Rails.logger.info "  - User ID: #{user_id}"
@@ -22,7 +22,8 @@ class PersonImportJob < ApplicationJob
       # Run the import service
       service = PersonImportService.new(
         file: file,
-        user: user
+        user: user,
+        validate_emails: validate_emails
       )
 
       result = service.perform

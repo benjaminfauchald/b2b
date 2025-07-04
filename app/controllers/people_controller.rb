@@ -729,7 +729,8 @@ class PeopleController < ApplicationController
           temp_file_path.to_s,
           current_user.id,
           original_filename,
-          import_id
+          import_id,
+          params[:validate_emails] == "1"
         )
 
         Rails.logger.info "  - Background job queued successfully"
@@ -756,7 +757,8 @@ class PeopleController < ApplicationController
 
         service = PersonImportService.new(
           file: params[:csv_file],
-          user: current_user
+          user: current_user,
+          validate_emails: params[:validate_emails] == "1"
         )
 
         service_creation_duration = Time.current - service_creation_start

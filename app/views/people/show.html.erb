@@ -41,7 +41,7 @@
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">LinkedIn Profile</dt>
               <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <%= link_to @person.profile_url, @person.profile_url, target: "_blank", 
+                <%= link_to truncate_url(@person.profile_url), @person.profile_url, target: "_blank", 
                     class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
               </dd>
             </div>

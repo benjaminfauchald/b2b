@@ -68,4 +68,49 @@ RSpec.describe ApplicationHelper, type: :helper do
       expect(result).to include('href="https://example.com"')
     end
   end
+
+  describe '#truncate_url' do
+    it 'returns empty string for blank URLs' do
+      expect(helper.truncate_url(nil)).to eq('')
+      expect(helper.truncate_url('')).to eq('')
+    end
+
+    it 'returns full URL when under max length' do
+      short_url = 'https://example.com'
+      expect(helper.truncate_url(short_url)).to eq(short_url)
+    end
+
+    it 'truncates long URLs keeping domain and partial path' do
+      long_url = 'https://linkedin.com/sales/people/ACwAAEZya98BKfAe4xzkdmaSBA8VVvAgssLyK_4E'
+      result = helper.truncate_url(long_url)
+      expect(result).to eq('https://linkedin.com/sales/people/ACwAAEZya98BK...')
+      expect(result.length).to be <= 50
+    end
+
+    it 'truncates very long domains' do
+      very_long_domain = 'https://this-is-a-very-long-domain-name-that-exceeds-normal-limits.example.com'
+      result = helper.truncate_url(very_long_domain)
+      expect(result).to end_with('...')
+      expect(result.length).to be <= 50
+    end
+
+    it 'handles custom max length' do
+      url = 'https://linkedin.com/company/example-company'
+      result = helper.truncate_url(url, 30)
+      expect(result.length).to be <= 30
+    end
+
+    it 'handles URLs without paths' do
+      url = 'https://example.com'
+      result = helper.truncate_url(url, 25)
+      expect(result).to eq('https://example.com')
+    end
+
+    it 'handles malformed URLs gracefully' do
+      malformed_url = 'not-a-valid-url-but-very-long-string-that-should-be-truncated'
+      result = helper.truncate_url(malformed_url)
+      expect(result).to end_with('...')
+      expect(result.length).to be <= 50
+    end
+  end
 end

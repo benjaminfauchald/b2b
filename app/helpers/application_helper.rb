@@ -33,4 +33,35 @@ module ApplicationHelper
       false
     end
   end
+
+  def truncate_url(url, max_length = 50)
+    return "" if url.blank?
+    
+    if url.length <= max_length
+      url
+    else
+      # Keep the domain and truncate the path
+      begin
+        uri = URI.parse(url)
+        domain_part = "#{uri.scheme}://#{uri.host}"
+        path_part = uri.path
+        
+        # If domain itself is too long, truncate it
+        if domain_part.length >= max_length - 4
+          "#{domain_part[0..max_length-5]}..."
+        else
+          # Calculate remaining space for path
+          remaining_space = max_length - domain_part.length - 3 # 3 for "..."
+          if remaining_space > 0 && path_part.present?
+            "#{domain_part}#{path_part[0..remaining_space-1]}..."
+          else
+            "#{domain_part}..."
+          end
+        end
+      rescue URI::InvalidURIError
+        # If URL parsing fails, just truncate the string
+        "#{url[0..max_length-4]}..."
+      end
+    end
+  end
 end
