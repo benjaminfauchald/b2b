@@ -31,22 +31,25 @@
       
       <%= render CsvUploadComponent.new %>
 
-      <!-- Email Validation Checkbox -->
-      <div class="flex items-center space-x-2 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <%= form.check_box :validate_emails, 
-            { checked: true, class: "w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" },
-            true, false %>
-        <%= form.label :validate_emails, "Automatically validate all emails on import", 
-            class: "text-sm font-medium text-red-600 dark:text-red-400" %>
-      </div>
+      <div class="flex justify-between items-center">
+        <!-- Email Validation Checkbox -->
+        <div class="flex items-center space-x-2">
+          <%= form.check_box :validate_emails, 
+              { checked: true, class: "w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" },
+              true, false %>
+          <%= form.label :validate_emails, "Automatically validate all emails on import", 
+              class: "text-sm font-medium text-gray-700 dark:text-gray-300" %>
+        </div>
 
-      <div class="flex justify-end space-x-3">
+        <!-- Buttons -->
+        <div class="flex space-x-3">
         <%= link_to "Cancel", people_path, 
             class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600" %>
         
         <%= form.submit "Import People", 
             class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed",
             data: { "csv-upload-target": "submitButton" } %>
+        </div>
       </div>
     <% end %>
   <% end %>

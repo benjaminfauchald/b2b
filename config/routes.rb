@@ -68,6 +68,7 @@ Rails.application.routes.draw do
       post :import, to: "people#process_import"
       get :import_results, to: "people#import_results"
       get :import_status, to: "people#import_status"
+      get :import_progress, to: "people#import_progress"
       get :check_import_status, to: "people#check_import_status"
       get :template, to: "people#download_template"
       get :export_errors, to: "people#export_errors"

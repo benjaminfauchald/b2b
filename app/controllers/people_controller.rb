@@ -677,6 +677,7 @@ class PeopleController < ApplicationController
     Rails.logger.info "  - Request IP: #{request.remote_ip}"
     Rails.logger.info "  - Params present: #{params.keys}"
     Rails.logger.info "  - CSV file present: #{params[:csv_file].present?}"
+    Rails.logger.info "  - Email validation enabled: #{params[:validate_emails] == '1' || params[:validate_emails] == 'true'}"
 
     if params[:csv_file]
       Rails.logger.info "📁 FILE DETAILS:"
@@ -730,7 +731,7 @@ class PeopleController < ApplicationController
           current_user.id,
           original_filename,
           import_id,
-          params[:validate_emails] == "1"
+          params[:validate_emails] == "1" || params[:validate_emails] == "true"
         )
 
         Rails.logger.info "  - Background job queued successfully"
@@ -758,7 +759,7 @@ class PeopleController < ApplicationController
         service = PersonImportService.new(
           file: params[:csv_file],
           user: current_user,
-          validate_emails: params[:validate_emails] == "1"
+          validate_emails: params[:validate_emails] == "1" || params[:validate_emails] == "true"
         )
 
         service_creation_duration = Time.current - service_creation_start
@@ -790,14 +791,23 @@ class PeopleController < ApplicationController
           Rails.logger.info "  - Failed: #{result.data[:failed]}"
           Rails.logger.info "  - Duplicates: #{result.data[:duplicates]}"
 
+          # Store result in temporary file to avoid session overflow
+          result_id = SecureRandom.uuid
+          result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
+          File.write(result_file_path, result.data[:result].to_h.to_json)
+          
+          # Store only the result ID in session
+          session[:last_import_result_id] = result_id
+          session[:last_import_time] = Time.current
+          
+          # Clean up progress data
+          Rails.cache.delete("person_import_progress_#{current_user.id}")
+
           redirect_to import_results_people_path, notice: "Person import completed successfully!"
         else
           Rails.logger.info "  - Import failed: #{result.error}"
           redirect_to import_people_path, alert: result.error
         end
-
-        # Store result in session for results page
-        session[:last_import_result] = result.data[:result].to_h
       end
 
     rescue => e
@@ -810,14 +820,55 @@ class PeopleController < ApplicationController
 
   # GET /people/import_results
   def import_results
-    @import_result = session[:last_import_result]
-    if @import_result.nil?
+    result_id = session[:last_import_result_id]
+    import_time = session[:last_import_time]
+    
+    if result_id.nil?
       redirect_to import_people_path, alert: "No import results found."
       return
     end
 
-    # Convert hash back to PersonImportResult-like object
-    @import_result = OpenStruct.new(@import_result)
+    # Check if result file exists and is not too old (cleanup after 1 hour)
+    result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
+    
+    if !File.exist?(result_file_path) || (import_time && import_time < 1.hour.ago)
+      redirect_to import_people_path, alert: "Import results have expired."
+      return
+    end
+
+    begin
+      # Read result from temporary file
+      result_data = JSON.parse(File.read(result_file_path))
+      @import_result = OpenStruct.new(result_data)
+      
+      # Clean up old result files (older than 1 hour)
+      cleanup_old_import_results
+    rescue JSON::ParserError, StandardError => e
+      Rails.logger.error "Failed to read import results: #{e.message}"
+      redirect_to import_people_path, alert: "Failed to load import results."
+    end
+  end
+
+  # GET /people/import_progress (AJAX endpoint)
+  def import_progress
+    progress_key = "person_import_progress_#{current_user.id}"
+    progress_data = Rails.cache.read(progress_key)
+    
+    if progress_data
+      render json: {
+        status: 'in_progress',
+        current: progress_data[:current],
+        total: progress_data[:total],
+        percent: progress_data[:percent],
+        message: progress_data[:message],
+        updated_at: progress_data[:updated_at]
+      }
+    else
+      render json: {
+        status: 'not_found',
+        message: 'No import progress found'
+      }
+    end
   end
 
   # GET /people/import_status
@@ -885,14 +936,34 @@ class PeopleController < ApplicationController
 
   # GET /people/export_errors
   def export_errors
-    @import_result = session[:last_import_result]
-
-    if @import_result.nil? || @import_result["failed_people"].blank?
-      redirect_to people_path, alert: "No error data found to export."
+    result_id = session[:last_import_result_id]
+    
+    if result_id.nil?
+      redirect_to people_path, alert: "No import results found."
       return
     end
 
-    csv_content = generate_error_export_csv(@import_result["failed_people"])
+    result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
+    
+    if !File.exist?(result_file_path)
+      redirect_to people_path, alert: "Import results have expired."
+      return
+    end
+
+    begin
+      result_data = JSON.parse(File.read(result_file_path))
+      
+      if result_data["failed_people"].blank?
+        redirect_to people_path, alert: "No error data found to export."
+        return
+      end
+
+      csv_content = generate_error_export_csv(result_data["failed_people"])
+    rescue JSON::ParserError, StandardError => e
+      Rails.logger.error "Failed to read import results for export: #{e.message}"
+      redirect_to people_path, alert: "Failed to load import results."
+      return
+    end
 
     respond_to do |format|
       format.csv do
@@ -939,6 +1010,19 @@ class PeopleController < ApplicationController
 
   def set_person
     @person = Person.find(params[:id])
+  end
+
+  def cleanup_old_import_results
+    # Clean up result files older than 1 hour
+    pattern = Rails.root.join("tmp", "person_import_result_*.json")
+    Dir.glob(pattern).each do |file_path|
+      if File.mtime(file_path) < 1.hour.ago
+        File.delete(file_path)
+        Rails.logger.debug "Cleaned up old import result file: #{File.basename(file_path)}"
+      end
+    end
+  rescue StandardError => e
+    Rails.logger.warn "Failed to cleanup old import result files: #{e.message}"
   end
 
   def calculate_service_stats

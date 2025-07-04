@@ -112,26 +112,52 @@ export default class extends Controller {
         return
       }
 
-      // Check for required header or if first line looks like a domain
+      // Check for required headers based on the page context
       const firstLine = content.split('\n')[0].trim()
       console.log('First line of CSV:', firstLine)
       console.log('First line lowercase:', firstLine.toLowerCase())
-      console.log('Contains "domain"?', firstLine.toLowerCase().includes('domain'))
       
-      // Check if it has a header or if the first line looks like a domain
-      // Handle domains that may end with a dot (like "se.")
-      const domainWithoutTrailingDot = firstLine.endsWith('.') ? firstLine.slice(0, -1) : firstLine
-      const domainRegex = /\.[a-zA-Z]{2,}$/
-      const looksLikeDomain = domainRegex.test(domainWithoutTrailingDot) || domainWithoutTrailingDot === 'se' // Special case for TLD only
-      console.log('Testing regex:', domainRegex)
-      console.log('Testing against (without trailing dot):', JSON.stringify(domainWithoutTrailingDot))
-      console.log('First line looks like domain?', looksLikeDomain)
+      // Determine if we're on a domain import page or person import page
+      const isDomainImport = window.location.pathname.includes('/domains/import')
+      const isPersonImport = window.location.pathname.includes('/people/import')
       
-      if (!firstLine.toLowerCase().includes('domain') && !looksLikeDomain) {
-        console.log('Domain header not found and first line does not look like a domain, clearing input')
-        this.showError('CSV file must contain a "domain" column header or start with valid domain names.')
-        this.clearFileInput()
-        return
+      if (isDomainImport) {
+        // Domain import validation
+        console.log('Contains "domain"?', firstLine.toLowerCase().includes('domain'))
+        
+        // Handle domains that may end with a dot (like "se.")
+        const domainWithoutTrailingDot = firstLine.endsWith('.') ? firstLine.slice(0, -1) : firstLine
+        const domainRegex = /\.[a-zA-Z]{2,}$/
+        const looksLikeDomain = domainRegex.test(domainWithoutTrailingDot) || domainWithoutTrailingDot === 'se' // Special case for TLD only
+        console.log('Testing regex:', domainRegex)
+        console.log('Testing against (without trailing dot):', JSON.stringify(domainWithoutTrailingDot))
+        console.log('First line looks like domain?', looksLikeDomain)
+        
+        if (!firstLine.toLowerCase().includes('domain') && !looksLikeDomain) {
+          console.log('Domain header not found and first line does not look like a domain, clearing input')
+          this.showError('CSV file must contain a "domain" column header or start with valid domain names.')
+          this.clearFileInput()
+          return
+        }
+      } else if (isPersonImport) {
+        // Person import validation - check for email header (required for person imports)
+        const hasEmailHeader = firstLine.toLowerCase().includes('email')
+        console.log('Contains "email"?', hasEmailHeader)
+        
+        if (!hasEmailHeader) {
+          console.log('Email header not found, clearing input')
+          this.showError('CSV file must contain an "email" column header for person imports.')
+          this.clearFileInput()
+          return
+        }
+      } else {
+        // Generic validation - accept any CSV with headers
+        console.log('Generic CSV import - accepting file with headers')
+        if (!firstLine.includes(',')) {
+          this.showError('CSV file must contain comma-separated headers.')
+          this.clearFileInput()
+          return
+        }
       }
 
       // File is valid
@@ -198,7 +224,7 @@ export default class extends Controller {
     this.progressTextTarget.textContent = 'Uploading...'
   }
 
-  updateProgress(percent) {
+  updateUploadProgress(percent) {
     this.progressBarTarget.style.width = `${percent}%`
     this.progressTextTarget.textContent = `Uploading... ${percent}%`
   }
@@ -255,6 +281,74 @@ export default class extends Controller {
     this.hideErrors()
     this.hideFileInfo()
     
+    // Start progress polling after a short delay to allow form submission
+    setTimeout(() => {
+      this.startProgressPolling()
+    }, 500)
+    
     return true
+  }
+
+  startProgressPolling() {
+    console.log('Starting progress polling...')
+    this.progressPoller = setInterval(() => {
+      this.fetchProgress()
+    }, 1000) // Poll every second
+    
+    // Set a maximum polling time (2 minutes) to prevent infinite polling
+    this.maxPollingTime = setTimeout(() => {
+      this.stopProgressPolling()
+      console.log('Progress polling stopped due to timeout')
+    }, 120000)
+  }
+
+  stopProgressPolling() {
+    if (this.progressPoller) {
+      clearInterval(this.progressPoller)
+      this.progressPoller = null
+    }
+    if (this.maxPollingTime) {
+      clearTimeout(this.maxPollingTime)
+      this.maxPollingTime = null
+    }
+  }
+
+  async fetchProgress() {
+    try {
+      const response = await fetch('/people/import_progress', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Progress data:', data)
+        
+        if (data.status === 'in_progress') {
+          this.updateProgress(data.percent, data.message)
+        } else if (data.status === 'not_found') {
+          // Import might be complete or not started yet
+          console.log('No progress data found')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch progress:', error)
+    }
+  }
+
+  updateProgress(percent, message = null) {
+    if (this.hasProgressBarTarget) {
+      this.progressBarTarget.style.width = `${percent}%`
+    }
+    if (this.hasProgressTextTarget) {
+      this.progressTextTarget.textContent = message || `Processing... ${percent}%`
+    }
+  }
+
+  disconnect() {
+    // Clean up polling when controller is disconnected
+    this.stopProgressPolling()
   }
 }
