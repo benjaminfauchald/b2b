@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_02_172625) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_04_024618) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -441,9 +441,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_02_172625) do
     t.float "email_verification_confidence", default: 0.0
     t.datetime "email_verification_checked_at"
     t.jsonb "email_verification_metadata", default: {}
+    t.string "import_tag"
+    t.index ["email"], name: "index_people_on_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
     t.index ["email_verification_checked_at"], name: "index_people_on_email_verification_checked_at"
     t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
-    t.index ["profile_url"], name: "index_people_on_profile_url", unique: true
+    t.index ["import_tag"], name: "index_people_on_import_tag"
+    t.index ["profile_url"], name: "index_people_on_profile_url", unique: true, where: "((profile_url IS NOT NULL) AND ((profile_url)::text <> ''::text))"
   end
 
   create_table "service_audit_logs", force: :cascade do |t|

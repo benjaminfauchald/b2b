@@ -189,7 +189,7 @@
   <!-- Service Testing Buttons -->
   <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
     <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Person Services</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div>
         <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Profile Extraction</h4>
         <button onclick="queuePersonService('<%= @person.id %>', 'profile_extraction')"
@@ -205,6 +205,16 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
           Hunter.io Extract
+        </button>
+      </div>
+      <div>
+        <h4 class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Email Verification</h4>
+        <button onclick="verifyPersonEmail('<%= @person.id %>')"
+                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Verify Email
         </button>
       </div>
       <div>
@@ -393,6 +403,59 @@
     } else if (serviceType === 'social_media_extraction') {
       button.classList.add('bg-purple-600', 'hover:bg-purple-700');
     }
+  }
+  
+  function verifyPersonEmail(personId) {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    button.disabled = true;
+    button.textContent = 'Verifying...';
+    
+    fetch(`/people/${personId}/verify_email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        button.textContent = 'Verified!';
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-green-600', 'hover:bg-green-700');
+        
+        // Refresh the page to show updated verification status
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        button.textContent = 'Error';
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-red-600', 'hover:bg-red-700');
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.disabled = false;
+          button.classList.remove('bg-red-600', 'hover:bg-red-700');
+          button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }, 3000);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      button.textContent = 'Error';
+      button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+      button.classList.add('bg-red-600', 'hover:bg-red-700');
+      
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+        button.classList.remove('bg-red-600', 'hover:bg-red-700');
+        button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+      }, 3000);
+    });
   }
   
   function togglePersonEdit() {

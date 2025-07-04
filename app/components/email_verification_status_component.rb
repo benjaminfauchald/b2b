@@ -78,6 +78,11 @@ class EmailVerificationStatusComponent < ViewComponent::Base
   def last_checked_text
     return "Never checked" unless checked_at
 
+    # If confidence is 0.0 and metadata is empty, this was likely imported, not verified
+    if confidence == 0.0 && verification_metadata.blank?
+      return "Imported (not verified)"
+    end
+
     days_ago = ((Time.current - checked_at) / 1.day).round
 
     if days_ago == 0

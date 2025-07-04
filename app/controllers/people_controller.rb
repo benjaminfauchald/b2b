@@ -26,6 +26,10 @@ class PeopleController < ApplicationController
       people_scope = people_scope.needs_profile_extraction
     end
 
+    if params[:import_tag].present?
+      people_scope = people_scope.imported_with_tag(params[:import_tag])
+    end
+
     @pagy, @people = pagy(people_scope)
     @queue_stats = get_queue_stats
   end
@@ -655,6 +659,249 @@ class PeopleController < ApplicationController
     }
   end
 
+  # GET /people/import
+  def import_csv
+    # Show the CSV import form
+  end
+
+  # POST /people/import
+  def process_import
+    request_start_time = Time.current
+    Rails.logger.info "\n" + "="*60
+    Rails.logger.info "🚀 PERSON CSV IMPORT REQUEST START: #{request_start_time}"
+    Rails.logger.info "="*60
+
+    Rails.logger.info "📋 REQUEST DETAILS:"
+    Rails.logger.info "  - User ID: #{current_user&.id}"
+    Rails.logger.info "  - User email: #{current_user&.email}"
+    Rails.logger.info "  - Request IP: #{request.remote_ip}"
+    Rails.logger.info "  - Params present: #{params.keys}"
+    Rails.logger.info "  - CSV file present: #{params[:csv_file].present?}"
+
+    if params[:csv_file]
+      Rails.logger.info "📁 FILE DETAILS:"
+      Rails.logger.info "  - File class: #{params[:csv_file].class}"
+      Rails.logger.info "  - File size: #{params[:csv_file].respond_to?(:size) ? "#{params[:csv_file].size} bytes (#{(params[:csv_file].size / 1024.0 / 1024.0).round(2)} MB)" : 'N/A'}"
+      Rails.logger.info "  - File name: #{params[:csv_file].respond_to?(:original_filename) ? params[:csv_file].original_filename : 'N/A'}"
+      Rails.logger.info "  - Content type: #{params[:csv_file].respond_to?(:content_type) ? params[:csv_file].content_type : 'N/A'}"
+    end
+
+    unless params[:csv_file].present?
+      redirect_to import_people_path, alert: "Please select a CSV file to upload."
+      return
+    end
+
+    # Check rate limiting (simple session-based approach)
+    if session[:last_import_at] && session[:last_import_at] > 5.seconds.ago
+      redirect_to import_people_path, alert: "Please wait a moment before importing again."
+      return
+    end
+
+    begin
+      # Check file size and decide processing method
+      file_size_mb = (params[:csv_file].size / 1024.0 / 1024.0).round(2)
+      large_file_threshold = 5.0 # MB
+
+      Rails.logger.info "\n🔍 PROCESSING DECISION:"
+      Rails.logger.info "  - File size: #{file_size_mb} MB"
+      Rails.logger.info "  - Large file threshold: #{large_file_threshold} MB"
+      Rails.logger.info "  - Will use: #{file_size_mb > large_file_threshold ? 'BACKGROUND PROCESSING' : 'SYNCHRONOUS PROCESSING'}"
+
+      if file_size_mb > large_file_threshold
+        # Large file - use background job
+        Rails.logger.info "\n🚀 QUEUEING BACKGROUND JOB:"
+
+        # Create unique import ID
+        import_id = SecureRandom.uuid
+        Rails.logger.info "  - Import ID: #{import_id}"
+
+        # Save file to temporary location with secure filename
+        original_filename = params[:csv_file].respond_to?(:original_filename) ? params[:csv_file].original_filename : "import.csv"
+        # Use only the import_id for the filename to prevent any path traversal attacks
+        temp_file_path = Rails.root.join("tmp", "person_import_#{import_id}.csv")
+        File.open(temp_file_path, "wb") do |file|
+          file.write(params[:csv_file].read)
+        end
+        Rails.logger.info "  - Temporary file saved: #{temp_file_path}"
+
+        # Queue the background job
+        PersonImportJob.perform_later(
+          temp_file_path.to_s,
+          current_user.id,
+          original_filename,
+          import_id
+        )
+
+        Rails.logger.info "  - Background job queued successfully"
+
+        # Store import ID in session for status checking
+        session[:import_id] = import_id
+        session[:import_status] = "queued"
+        session[:import_started_at] = Time.current
+
+        total_request_duration = Time.current - request_start_time
+        Rails.logger.info "\n📈 BACKGROUND JOB REQUEST SUMMARY:"
+        Rails.logger.info "  - Total request time: #{total_request_duration.round(4)} seconds"
+        Rails.logger.info "  - Processing queued in background"
+
+        redirect_to import_status_people_path
+        nil
+      else
+        # Small file - process synchronously
+        Rails.logger.info "\n🔧 SYNCHRONOUS PROCESSING:"
+
+        # Service instantiation
+        service_creation_start = Time.current
+        Rails.logger.info "  - Creating service..."
+
+        service = PersonImportService.new(
+          file: params[:csv_file],
+          user: current_user
+        )
+
+        service_creation_duration = Time.current - service_creation_start
+        Rails.logger.info "  - Service created in #{service_creation_duration.round(4)} seconds"
+
+        # Service execution
+        service_execution_start = Time.current
+        Rails.logger.info "  - Executing service..."
+
+        result = service.perform
+
+        service_execution_duration = Time.current - service_execution_start
+        Rails.logger.info "  - Service executed in #{service_execution_duration.round(4)} seconds"
+
+        # Update session tracking
+        session[:last_import_at] = Time.current
+
+        total_request_duration = Time.current - request_start_time
+
+        Rails.logger.info "\n📈 SYNCHRONOUS REQUEST SUMMARY:"
+        Rails.logger.info "  - Total request time: #{total_request_duration.round(4)} seconds"
+        Rails.logger.info "  - Service creation time: #{service_creation_duration.round(4)} seconds"
+        Rails.logger.info "  - Service execution time: #{service_execution_duration.round(4)} seconds"
+
+        if result.success?
+          Rails.logger.info "  - Import successful!"
+          Rails.logger.info "  - Imported: #{result.data[:imported]}"
+          Rails.logger.info "  - Updated: #{result.data[:updated]}"
+          Rails.logger.info "  - Failed: #{result.data[:failed]}"
+          Rails.logger.info "  - Duplicates: #{result.data[:duplicates]}"
+
+          redirect_to import_results_people_path, notice: "Person import completed successfully!"
+        else
+          Rails.logger.info "  - Import failed: #{result.error}"
+          redirect_to import_people_path, alert: result.error
+        end
+
+        # Store result in session for results page
+        session[:last_import_result] = result.data[:result].to_h
+      end
+
+    rescue => e
+      Rails.logger.error "❌ PERSON IMPORT ERROR: #{e.message}"
+      Rails.logger.error "❌ BACKTRACE: #{e.backtrace.join("\n")}"
+
+      redirect_to import_people_path, alert: "Import failed: #{e.message}"
+    end
+  end
+
+  # GET /people/import_results
+  def import_results
+    @import_result = session[:last_import_result]
+    if @import_result.nil?
+      redirect_to import_people_path, alert: "No import results found."
+      return
+    end
+
+    # Convert hash back to PersonImportResult-like object
+    @import_result = OpenStruct.new(@import_result)
+  end
+
+  # GET /people/import_status
+  def import_status
+    @import_id = session[:import_id]
+    @import_status = session[:import_status]
+    @import_started_at = session[:import_started_at]
+
+    if @import_id.nil?
+      redirect_to import_people_path, alert: "No import in progress."
+      nil
+    end
+  end
+
+  # GET /people/check_import_status
+  def check_import_status
+    import_id = session[:import_id]
+
+    if import_id.nil?
+      render json: { error: "No import ID found" }, status: :not_found
+      return
+    end
+
+    # Check if the background job has completed by looking for a result file
+    result_file_path = Rails.root.join("tmp", "person_import_result_#{import_id}.json")
+
+    if File.exist?(result_file_path)
+      # Job completed - read the result
+      result_data = JSON.parse(File.read(result_file_path))
+
+      # Clean up the result file
+      File.delete(result_file_path)
+
+      # Store result in session
+      session[:last_import_result] = result_data
+      session[:import_status] = "completed"
+
+      render json: {
+        status: "completed",
+        result: result_data,
+        redirect_url: import_results_people_path
+      }
+    else
+      # Job still running
+      render json: {
+        status: "processing",
+        started_at: session[:import_started_at]
+      }
+    end
+  end
+
+  # GET /people/template
+  def download_template
+    csv_content = generate_person_csv_template
+
+    respond_to do |format|
+      format.csv do
+        send_data csv_content,
+                  filename: "person_import_template.csv",
+                  type: "text/csv",
+                  disposition: "attachment"
+      end
+    end
+  end
+
+  # GET /people/export_errors
+  def export_errors
+    @import_result = session[:last_import_result]
+
+    if @import_result.nil? || @import_result["failed_people"].blank?
+      redirect_to people_path, alert: "No error data found to export."
+      return
+    end
+
+    csv_content = generate_error_export_csv(@import_result["failed_people"])
+
+    respond_to do |format|
+      format.csv do
+        send_data csv_content,
+                  filename: "person_import_errors_#{Time.current.strftime('%Y%m%d_%H%M%S')}.csv",
+                  type: "text/csv",
+                  disposition: "attachment"
+      end
+    end
+  end
+
   # GET /people/service_stats
   def service_stats
     respond_to do |format|
@@ -707,6 +954,70 @@ class PeopleController < ApplicationController
       :email, :phone, :connection_degree, :phantom_run_id,
       :company_id
     )
+  end
+
+  def generate_person_csv_template
+    headers = [
+      "Name",
+      "First name",
+      "Last name",
+      "Email",
+      "Email Status",
+      "Title",
+      "Linkedin",
+      "Location",
+      "Company Name",
+      "Phone"
+    ]
+
+    sample_data = [
+      [
+        "John Doe",
+        "John",
+        "Doe",
+        "john.doe@example.com",
+        "Valid",
+        "Software Engineer",
+        "https://linkedin.com/in/johndoe",
+        "San Francisco, CA",
+        "Example Corp",
+        "+1-555-123-4567"
+      ],
+      [
+        "Jane Smith",
+        "Jane",
+        "Smith",
+        "jane.smith@testcorp.com",
+        "Valid",
+        "Product Manager",
+        "https://linkedin.com/in/janesmith",
+        "New York, NY",
+        "Test Corporation",
+        "+1-555-987-6543"
+      ]
+    ]
+
+    CSV.generate do |csv|
+      csv << headers
+      sample_data.each { |row| csv << row }
+    end
+  end
+
+  def generate_error_export_csv(failed_people)
+    headers = [ "Row", "Name", "Email", "Company", "Errors" ]
+
+    CSV.generate do |csv|
+      csv << headers
+      failed_people.each do |failed_person|
+        csv << [
+          failed_person["row"],
+          failed_person["name"],
+          failed_person["email"],
+          failed_person["company_name"],
+          failed_person["errors"].join("; ")
+        ]
+      end
+    end
   end
 
   def get_queue_stats

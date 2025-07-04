@@ -1,0 +1,85 @@
+<% content_for :title, "Person Import Status" %>
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Person Import Status</h1>
+      <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+        Your CSV file is being processed in the background
+      </p>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <%= render CardComponent.new(title: "Import Progress") do %>
+    <div class="text-center py-8" id="import-status-content">
+      <!-- Loading State -->
+      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Processing Your File</h3>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        Import ID: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"><%= @import_id %></code>
+      </p>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        Started: <%= @import_started_at.strftime("%B %d, %Y at %I:%M %p") if @import_started_at %>
+      </p>
+      <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">
+        This page will automatically update when the import is complete.
+      </p>
+    </div>
+  <% end %>
+
+  <!-- Actions -->
+  <div class="mt-8 flex justify-center space-x-4">
+    <%= link_to people_path,
+        class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600" do %>
+      <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back to People
+    <% end %>
+  </div>
+</div>
+
+<script>
+// Auto-refresh to check import status
+function checkImportStatus() {
+  fetch('<%= check_import_status_people_path %>', {
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'completed') {
+      // Import completed - redirect to results
+      window.location.href = data.redirect_url;
+    } else if (data.status === 'processing') {
+      // Still processing - check again in 3 seconds
+      setTimeout(checkImportStatus, 3000);
+    } else if (data.error) {
+      // Error occurred
+      document.getElementById('import-status-content').innerHTML = `
+        <div class="text-center py-8">
+          <svg class="h-16 w-16 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 class="text-lg font-medium text-red-900 dark:text-red-100 mb-2">Import Error</h3>
+          <p class="text-sm text-red-600 dark:text-red-400">${data.error}</p>
+        </div>
+      `;
+    }
+  })
+  .catch(error => {
+    console.error('Error checking import status:', error);
+    // Retry after 5 seconds on error
+    setTimeout(checkImportStatus, 5000);
+  });
+}
+
+// Start checking status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Check status immediately
+  checkImportStatus();
+});
+</script>

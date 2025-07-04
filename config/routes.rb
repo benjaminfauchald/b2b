@@ -63,6 +63,14 @@ Rails.application.routes.draw do
       post :queue_social_media_extraction
       post :queue_single_profile_extraction
       get :service_stats
+      # Person import routes
+      get :import, to: "people#import_csv"
+      post :import, to: "people#process_import"
+      get :import_results, to: "people#import_results"
+      get :import_status, to: "people#import_status"
+      get :check_import_status, to: "people#check_import_status"
+      get :template, to: "people#download_template"
+      get :export_errors, to: "people#export_errors"
     end
 
     member do

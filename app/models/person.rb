@@ -5,6 +5,7 @@ class Person < ApplicationRecord
   has_many :email_verification_attempts, dependent: :destroy
 
   validates :name, presence: true
+  validates :email, uniqueness: { allow_blank: true }
   validates :profile_url, uniqueness: { allow_blank: true }
 
   scope :needs_profile_extraction, -> {
@@ -43,6 +44,7 @@ class Person < ApplicationRecord
   scope :with_social_media_data, -> { where.not(social_media_data: nil) }
 
   scope :recent_extractions, -> { where("profile_extracted_at > ?", 7.days.ago) }
+  scope :imported_with_tag, ->(tag) { where(import_tag: tag) }
 
   # Service extraction scopes for consistency with button component
   scope :needing_profile_extraction, -> { where(profile_data: nil) }
