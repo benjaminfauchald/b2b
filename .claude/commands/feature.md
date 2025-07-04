@@ -12,8 +12,12 @@ Follow these steps:
     5.2 For UI and UX - make sure to follow structure and best practices for ViewComponent, Tailwind, and flowbite 
 7. Write and run tests for full implementation
 8. Describe what you are going to do brefore we start writing code for implementation.
+8.1 Store your plan under the folder plans/features/ as an md file
 9. Await accetance from user for plan
+9.11 ALWAYS UPDATE THE PLAN FOR EACH STEP SO WE CAN COME BACK AND CONTINUE IF WE GET INTERUPTED!
 10. Start writing minimal code to pass all tests
+10.1 DONT STOP UNTIL YOU ARE COMPLETLY FINISHED WITH THE FEATURE
+10.2 REVIEW YOUR WORK. IF YOU FIDN IT LESS THAN 7 out of 10 THEN ITTERATE ON THE WORK (Go back to step 2) TO PASS YOUR NEXT REVIEW
 7. Create a descriptive commit message
 8. Push and create a PR
 

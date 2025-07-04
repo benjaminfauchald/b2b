@@ -100,6 +100,80 @@
       </div>
     <% end %>
 
+    <!-- Email Verification Statistics -->
+    <% if @import_result.email_verification_stats && (@import_result.email_verification_stats['total_verified'] > 0 || @import_result.email_verification_stats['skipped'] > 0) %>
+      <%= render CardComponent.new(title: "Email Verification Results") do %>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <!-- Passed -->
+          <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400">Passed</p>
+                <p class="text-xl font-semibold text-emerald-900 dark:text-emerald-100"><%= @import_result.email_verification_stats['passed'] %></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Failed -->
+          <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-orange-600 dark:text-orange-400">Failed</p>
+                <p class="text-xl font-semibold text-orange-900 dark:text-orange-100"><%= @import_result.email_verification_stats['failed'] %></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending -->
+          <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-amber-600 dark:text-amber-400">Pending</p>
+                <p class="text-xl font-semibold text-amber-900 dark:text-amber-100"><%= @import_result.email_verification_stats['pending'] %></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skipped -->
+          <div class="bg-slate-50 dark:bg-slate-900/20 p-4 rounded-lg">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-slate-600 dark:text-slate-400">Skipped</p>
+                <p class="text-xl font-semibold text-slate-900 dark:text-slate-100"><%= @import_result.email_verification_stats['skipped'] %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="text-sm text-gray-600 dark:text-gray-400">
+            <span class="font-medium">Email Verification Summary:</span> 
+            <%= @import_result.email_verification_summary %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
     <!-- Failed Records -->
     <% if @import_result.failed_count > 0 %>
       <%= render CardComponent.new(title: "Failed Records") do %>
@@ -166,6 +240,16 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
         </svg>
         Import Another File
+      <% end %>
+
+      <% if @import_result.import_tag.present? %>
+        <%= link_to export_with_validation_people_path(import_tag: @import_result.import_tag, format: :csv),
+            class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600" do %>
+          <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          Download with Validation Results
+        <% end %>
       <% end %>
 
       <%= link_to people_path,

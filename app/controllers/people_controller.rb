@@ -854,6 +854,8 @@ class PeopleController < ApplicationController
     progress_key = "person_import_progress_#{current_user.id}"
     progress_data = Rails.cache.read(progress_key)
     
+    # Rails.logger.debug "Progress request for user #{current_user.id}: #{progress_data.inspect}"
+    
     if progress_data
       render json: {
         status: 'in_progress',
@@ -1101,6 +1103,71 @@ class PeopleController < ApplicationController
           failed_person["email"],
           failed_person["company_name"],
           failed_person["errors"].join("; ")
+        ]
+      end
+    end
+  end
+
+  # GET /people/export_with_validation.csv
+  def export_with_validation
+    import_tag = params[:import_tag]
+    
+    if import_tag.blank?
+      redirect_to people_path, alert: "No import tag provided."
+      return
+    end
+
+    # Find all people from this import
+    people = Person.where(import_tag: import_tag).includes(:company)
+    
+    if people.empty?
+      redirect_to people_path, alert: "No people found for this import."
+      return
+    end
+
+    # Generate CSV with validation results
+    respond_to do |format|
+      format.csv do
+        csv_data = generate_csv_with_validation(people)
+        send_data csv_data, 
+                  filename: "people_import_with_validation_#{import_tag}_#{Date.current.strftime('%Y%m%d')}.csv",
+                  type: 'text/csv; charset=utf-8'
+      end
+    end
+  end
+
+  private
+
+  def generate_csv_with_validation(people)
+    CSV.generate(headers: true) do |csv|
+      # CSV headers including validation fields
+      csv << [
+        "name",
+        "email", 
+        "title",
+        "company_name",
+        "location",
+        "linkedin",
+        "phone",
+        "email_verification_status",
+        "email_verification_confidence",
+        "email_verification_checked_at",
+        "import_tag"
+      ]
+
+      people.each do |person|
+        csv << [
+          person.name,
+          person.email,
+          person.title,
+          person.company_name,
+          person.location,
+          person.profile_url,
+          person.phone,
+          person.email_verification_status || "unverified",
+          person.email_verification_confidence || 0.0,
+          person.email_verification_checked_at&.strftime("%Y-%m-%d %H:%M:%S"),
+          person.import_tag
         ]
       end
     end

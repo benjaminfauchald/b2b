@@ -149,8 +149,7 @@ class PersonImportService < ApplicationService
 
           process_single_row(row_data, row_count)
           
-          # Add small delay for progress visibility (development only)
-          sleep(0.2) if Rails.env.development?
+          # Progress tracking without artificial delay in production
           
           # Update progress every row for small imports, every 10 rows for larger ones
           update_frequency = total_rows <= 20 ? 1 : 10
@@ -282,8 +281,13 @@ class PersonImportService < ApplicationService
         begin
           existing_person.update!(merged_attributes)
           result.add_updated_person(existing_person, row_number, merged_attributes)
-          # Trigger email validation if enabled
-          trigger_email_validation(existing_person) if @validate_emails
+          # Trigger email validation if enabled and track stats
+          if @validate_emails
+            trigger_email_validation(existing_person)
+            result.track_email_verification(existing_person, true)
+          else
+            result.track_email_verification(existing_person, false)
+          end
         rescue ActiveRecord::RecordInvalid => e
           result.add_failed_person(row_data, row_number, e.record.errors.full_messages)
         end
@@ -295,8 +299,13 @@ class PersonImportService < ApplicationService
       begin
         person = Person.create!(person_attributes)
         result.add_imported_person(person, row_number)
-        # Trigger email validation if enabled
-        trigger_email_validation(person) if @validate_emails
+        # Trigger email validation if enabled and track stats
+        if @validate_emails
+          trigger_email_validation(person)
+          result.track_email_verification(person, true)
+        else
+          result.track_email_verification(person, false)
+        end
       rescue ActiveRecord::RecordInvalid => e
         result.add_failed_person(row_data, row_number, e.record.errors.full_messages)
       rescue ActiveRecord::RecordNotUnique
@@ -307,8 +316,13 @@ class PersonImportService < ApplicationService
           if merged_attributes.any?
             existing_person.update!(merged_attributes)
             result.add_updated_person(existing_person, row_number, merged_attributes)
-            # Trigger email validation if enabled
-            trigger_email_validation(existing_person) if @validate_emails
+            # Trigger email validation if enabled and track stats
+            if @validate_emails
+              trigger_email_validation(existing_person)
+              result.track_email_verification(existing_person, true)
+            else
+              result.track_email_verification(existing_person, false)
+            end
           else
             result.add_duplicate_person(row_data, row_number)
           end

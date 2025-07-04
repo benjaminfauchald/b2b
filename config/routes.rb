@@ -72,6 +72,7 @@ Rails.application.routes.draw do
       get :check_import_status, to: "people#check_import_status"
       get :template, to: "people#download_template"
       get :export_errors, to: "people#export_errors"
+      get :export_with_validation, to: "people#export_with_validation"
     end
 
     member do
