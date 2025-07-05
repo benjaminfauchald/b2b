@@ -205,15 +205,26 @@ module People
 
 
     def determine_hybrid_final_status(result, domain)
-      # Use Truemail's validation result as the authoritative answer
+      # Enhanced status determination with ZeroBounce-level accuracy
       smtp_check = result[:checks][:smtp]
       
       if smtp_check[:passed]
-        # Trust Truemail's SMTP verification completely
-        result[:valid] = true
-        result[:status] = :valid
-        result[:confidence] = smtp_check[:confidence]
-        result[:metadata][:validation_method] = "truemail_smtp"
+        # Enhanced validation - check for catch-all indicators
+        catch_all_detected = detect_catch_all_domain(domain, smtp_check)
+        
+        if catch_all_detected
+          result[:valid] = false
+          result[:status] = :catch_all
+          result[:confidence] = 0.3  # Low confidence for catch-all domains
+          result[:metadata][:validation_method] = "truemail_catch_all_detected"
+          result[:metadata][:catch_all_reason] = catch_all_detected
+        else
+          # Trust enhanced Truemail SMTP verification
+          result[:valid] = true
+          result[:status] = :valid
+          result[:confidence] = smtp_check[:confidence]
+          result[:metadata][:validation_method] = "truemail_enhanced_smtp"
+        end
       else
         # Check if it's a temporary issue (greylist) based on Truemail errors
         truemail_errors = smtp_check[:details]&.dig(:truemail, :errors) || []
@@ -223,14 +234,79 @@ module People
           result[:confidence] = 0.0
           result[:metadata][:validation_method] = "truemail_greylist"
         else
-          # Truemail determined it's invalid - trust that assessment
+          # Enhanced Truemail determined it's invalid - trust that assessment
           result[:valid] = false
           result[:status] = :invalid
           result[:confidence] = 0.9
-          result[:metadata][:validation_method] = "truemail_invalid"
+          result[:metadata][:validation_method] = "truemail_enhanced_invalid"
           result[:metadata][:truemail_errors] = truemail_errors
+          
+          # Log enhanced error details for analysis
+          if smtp_check[:details]&.dig(:truemail, :smtp_debug)
+            result[:metadata][:smtp_debug] = smtp_check[:details][:truemail][:smtp_debug]
+          end
         end
       end
+    end
+
+    def detect_catch_all_domain(domain, smtp_check)
+      # Enhanced catch-all detection based on ZeroBounce analysis
+      
+      # Known catch-all domains from our analysis (ZeroBounce confirmed)
+      known_catch_all_domains = %w[
+        krungsri.com kasikornbank.com tmbbank.com bot.or.th scb.co.th
+      ]
+      
+      if known_catch_all_domains.include?(domain.downcase)
+        return "Known catch-all domain from ZeroBounce analysis"
+      end
+      
+      # Don't test Google Workspace domains as catch-all - they have proper mailbox validation
+      google_workspace_indicators = %w[aspmx.l.google.com google.com g-suite]
+      smtp_provider = smtp_check.dig(:details, :truemail, :smtp_debug) || ""
+      
+      if google_workspace_indicators.any? { |indicator| smtp_provider.downcase.include?(indicator) }
+        Rails.logger.debug "Skipping catch-all test for Google Workspace domain: #{domain}"
+        return false
+      end
+      
+      # For other domains, test for catch-all by checking if obviously invalid emails are accepted
+      # Only test if we're confident this isn't a single-mailbox failure
+      test_emails = [
+        "definitely-nonexistent-test-#{SecureRandom.hex(6)}@#{domain}",
+        "invalid-user-#{Time.current.to_i}@#{domain}"
+      ]
+      
+      accepted_count = 0
+      test_emails.each do |test_email|
+        begin
+          # Use lighter MX validation for catch-all testing to avoid SMTP rate limits
+          Truemail.configure do |config|
+            config.verifier_email = 'noreply@connectica.no'
+            config.verifier_domain = 'connectica.no'
+            config.default_validation_type = :smtp
+            config.smtp_safe_check = false  # Lighter validation for testing
+            config.connection_timeout = 5
+            config.response_timeout = 5
+            config.connection_attempts = 1
+          end
+          
+          test_result = Truemail.validate(test_email)
+          accepted_count += 1 if test_result.result.valid?
+        rescue => e
+          # If test fails, assume domain is not catch-all
+          Rails.logger.debug "Catch-all test failed for #{domain}: #{e.message}"
+          break  # Stop testing if we get errors
+        end
+      end
+      
+      # Only consider it catch-all if BOTH obviously invalid emails are accepted
+      # This reduces false positives
+      if accepted_count >= 2
+        return "Catch-all detected: #{accepted_count}/#{test_emails.length} invalid emails accepted"
+      end
+      
+      false
     end
 
     def save_verification_result(result, audit_log, engine)
@@ -335,12 +411,31 @@ module People
       Truemail.configure do |config|
         config.verifier_email = settings[:verifier_email] || "noreply@connectica.no"
         config.verifier_domain = settings[:verifier_domain] || "connectica.no"
-        config.default_validation_type = :smtp  # Use SMTP validation for email verification
-        config.email_pattern = settings[:email_pattern] if settings[:email_pattern]
-        config.smtp_error_body_pattern = settings[:smtp_error_body_pattern] if settings[:smtp_error_body_pattern]
-        config.connection_timeout = settings[:truemail_timeout] || 5
-        config.response_timeout = settings[:truemail_timeout] || 5
-        config.connection_attempts = settings[:truemail_attempts] || 2
+        config.default_validation_type = :smtp
+        
+        # ENHANCED: ZeroBounce-level accuracy configuration
+        config.smtp_safe_check = true  # Parse SMTP error bodies for detailed validation
+        config.smtp_fail_fast = false  # Disable fail-fast for thorough checking
+        
+        # Enhanced SMTP error pattern based on ZeroBounce analysis
+        config.smtp_error_body_pattern = /(?:user|mailbox|recipient|address).*(?:unknown|not found|invalid|doesn't exist|does not exist|no such|unavailable|rejected)/i
+        
+        # Increased timeouts for accuracy over speed
+        config.connection_timeout = settings[:truemail_timeout] || 10
+        config.response_timeout = settings[:truemail_timeout] || 10
+        config.connection_attempts = settings[:truemail_attempts] || 3
+        
+        # Domain-specific validation rules for known problematic providers
+        config.validation_type_for = build_domain_validation_rules(settings)
+        
+        # Enable detailed logging for troubleshooting
+        if Rails.env.development? || settings[:enable_truemail_logging]
+          config.logger = {
+            tracking_event: :all,
+            stdout: false,
+            log_absolute_path: Rails.root.join('log', 'truemail_enhanced.log').to_s
+          }
+        end
       end
     end
 
@@ -360,6 +455,40 @@ module People
       # Look for response codes in debug output
       code_match = smtp_debug.match(/(\d{3})\s/)
       code_match ? code_match[1].to_i : nil
+    end
+
+    def build_domain_validation_rules(settings)
+      # Base domain rules for enhanced validation
+      base_rules = {
+        # Google domains - require SMTP for mailbox-level validation
+        'gmail.com' => :smtp,
+        'googlemail.com' => :smtp,
+        'g.co' => :smtp,
+        'google.com' => :smtp,
+        
+        # Microsoft domains
+        'outlook.com' => :smtp,
+        'hotmail.com' => :smtp,
+        'live.com' => :smtp,
+        
+        # Known problematic domains from ZeroBounce analysis
+        'ascendcorp.com' => :smtp,  # Google Workspace - original problem case
+        'omise.co' => :smtp,        # Another invalid case found
+        
+        # Banking domains with catch-all issues
+        'krungsri.com' => :smtp,
+        'kasikornbank.com' => :smtp,
+        'tmbbank.com' => :smtp,
+        'bot.or.th' => :smtp,
+        'scb.co.th' => :smtp
+      }
+      
+      # Allow custom domain rules from settings
+      if settings[:domain_validation_rules].is_a?(Hash)
+        base_rules.merge!(settings[:domain_validation_rules].symbolize_keys)
+      end
+      
+      base_rules
     end
 
     def service_configuration

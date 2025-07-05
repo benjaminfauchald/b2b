@@ -130,6 +130,7 @@ class Person < ApplicationRecord
     when "valid" then "valid"
     when "invalid" then "invalid"
     when "suspect" then "catch-all"
+    when "catch_all" then "catch-all"  # New enhanced status
     else "unknown"
     end
 
