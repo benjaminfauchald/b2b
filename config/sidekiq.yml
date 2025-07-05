@@ -16,6 +16,7 @@
   - [person_profile_extraction, 5]
   - [person_email_extraction, 5]
   - [person_social_media_extraction, 5]
+  - [email_verification, 5]
   - [DomainTestingService, 5]
   - [DomainARecordTestingService, 5]
   - [domain_dns_testing, 5]
@@ -35,6 +36,7 @@
   person_profile_extraction: 1
   person_email_extraction: 1
   person_social_media_extraction: 1
+  email_verification: 2
   DomainTestingService: 1
   DomainARecordTestingService: 1
   domain_dns_testing: 1

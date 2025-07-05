@@ -33,10 +33,10 @@ class PersonImportService < ApplicationService
         validate_file!
         process_csv_file
         @result.finalize!
-        
+
         # Update final progress
         update_progress(@result.total_count, @result.total_count, "Import completed successfully!")
-        
+
         audit_log.add_metadata(
           user_id: @user.id,
           filename: @file.original_filename,
@@ -139,7 +139,7 @@ class PersonImportService < ApplicationService
       # Count total rows for progress calculation
       total_rows = count_csv_rows(has_headers)
       row_count = 0
-      
+
       # Initialize progress tracking
       update_progress(0, total_rows, "Starting import...")
 
@@ -148,9 +148,9 @@ class PersonImportService < ApplicationService
           row_count += 1
 
           process_single_row(row_data, row_count)
-          
+
           # Progress tracking without artificial delay in production
-          
+
           # Update progress every row for small imports, every 10 rows for larger ones
           update_frequency = total_rows <= 20 ? 1 : 10
           if row_count % update_frequency == 0 || row_count == total_rows
@@ -467,17 +467,22 @@ class PersonImportService < ApplicationService
   def trigger_email_validation(person)
     return unless person.email.present?
     return if person.email_verification_status == "valid"
-    
+
     # Queue email validation asynchronously to avoid blocking import
     begin
-      # Check if LocalEmailVerifyWorker exists, otherwise use direct service call
+      # Use hybrid verification service if available, fallback to local
       if defined?(LocalEmailVerifyWorker)
         LocalEmailVerifyWorker.perform_async(person.id)
         Rails.logger.info "✅ Email validation queued for person #{person.id} during import"
       else
         # Fallback to synchronous validation with timeout
-        Timeout.timeout(5) do
-          verification_service = People::LocalEmailVerifyService.new(person: person)
+        Timeout.timeout(10) do  # Increased timeout for hybrid service
+          # Try hybrid service first, fallback to local
+          verification_service = if ServiceConfiguration.find_by(service_name: "hybrid_email_verify")&.active?
+                                  People::HybridEmailVerifyService.new(person: person)
+          else
+                                  People::LocalEmailVerifyService.new(person: person)
+          end
           verification_service.perform
         end
         Rails.logger.info "✅ Email validation completed for person #{person.id} during import"
@@ -501,7 +506,7 @@ class PersonImportService < ApplicationService
 
   def update_progress(current, total, message)
     return unless @user # Only track progress if we have a user
-    
+
     progress_key = "person_import_progress_#{@user.id}"
     progress_data = {
       current: current,
@@ -510,7 +515,7 @@ class PersonImportService < ApplicationService
       message: message,
       updated_at: Time.current.iso8601
     }
-    
+
     # Store progress in Rails cache (Redis if available, memory otherwise)
     Rails.cache.write(progress_key, progress_data, expires_in: 10.minutes)
   rescue StandardError => e

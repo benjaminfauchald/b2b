@@ -185,11 +185,11 @@ module People
                 response_code = 250
                 response_message = "OK"
               rescue Net::SMTPFatalError => e
-                response_code = e.response&.code&.to_i || 550
-                response_message = e.response&.message || e.message
+                response_code = e.response&.status&.to_i || 550
+                response_message = e.response&.string || e.message
               rescue Net::SMTPServerBusy => e
-                response_code = e.response&.code&.to_i || 450
-                response_message = e.response&.message || e.message
+                response_code = e.response&.status&.to_i || 450
+                response_message = e.response&.string || e.message
               end
             end
           end

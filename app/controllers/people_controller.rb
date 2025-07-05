@@ -795,11 +795,11 @@ class PeopleController < ApplicationController
           result_id = SecureRandom.uuid
           result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
           File.write(result_file_path, result.data[:result].to_h.to_json)
-          
+
           # Store only the result ID in session
           session[:last_import_result_id] = result_id
           session[:last_import_time] = Time.current
-          
+
           # Clean up progress data
           Rails.cache.delete("person_import_progress_#{current_user.id}")
 
@@ -822,7 +822,7 @@ class PeopleController < ApplicationController
   def import_results
     result_id = session[:last_import_result_id]
     import_time = session[:last_import_time]
-    
+
     if result_id.nil?
       redirect_to import_people_path, alert: "No import results found."
       return
@@ -830,7 +830,7 @@ class PeopleController < ApplicationController
 
     # Check if result file exists and is not too old (cleanup after 1 hour)
     result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
-    
+
     if !File.exist?(result_file_path) || (import_time && import_time < 1.hour.ago)
       redirect_to import_people_path, alert: "Import results have expired."
       return
@@ -840,7 +840,7 @@ class PeopleController < ApplicationController
       # Read result from temporary file
       result_data = JSON.parse(File.read(result_file_path))
       @import_result = OpenStruct.new(result_data)
-      
+
       # Clean up old result files (older than 1 hour)
       cleanup_old_import_results
     rescue JSON::ParserError, StandardError => e
@@ -853,12 +853,12 @@ class PeopleController < ApplicationController
   def import_progress
     progress_key = "person_import_progress_#{current_user.id}"
     progress_data = Rails.cache.read(progress_key)
-    
+
     # Rails.logger.debug "Progress request for user #{current_user.id}: #{progress_data.inspect}"
-    
+
     if progress_data
       render json: {
-        status: 'in_progress',
+        status: "in_progress",
         current: progress_data[:current],
         total: progress_data[:total],
         percent: progress_data[:percent],
@@ -867,8 +867,8 @@ class PeopleController < ApplicationController
       }
     else
       render json: {
-        status: 'not_found',
-        message: 'No import progress found'
+        status: "not_found",
+        message: "No import progress found"
       }
     end
   end
@@ -939,14 +939,14 @@ class PeopleController < ApplicationController
   # GET /people/export_errors
   def export_errors
     result_id = session[:last_import_result_id]
-    
+
     if result_id.nil?
       redirect_to people_path, alert: "No import results found."
       return
     end
 
     result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
-    
+
     if !File.exist?(result_file_path)
       redirect_to people_path, alert: "Import results have expired."
       return
@@ -954,7 +954,7 @@ class PeopleController < ApplicationController
 
     begin
       result_data = JSON.parse(File.read(result_file_path))
-      
+
       if result_data["failed_people"].blank?
         redirect_to people_path, alert: "No error data found to export."
         return
@@ -1111,7 +1111,7 @@ class PeopleController < ApplicationController
   # GET /people/export_with_validation.csv
   def export_with_validation
     import_tag = params[:import_tag]
-    
+
     if import_tag.blank?
       redirect_to people_path, alert: "No import tag provided."
       return
@@ -1119,7 +1119,7 @@ class PeopleController < ApplicationController
 
     # Find all people from this import
     people = Person.where(import_tag: import_tag).includes(:company)
-    
+
     if people.empty?
       redirect_to people_path, alert: "No people found for this import."
       return
@@ -1129,9 +1129,9 @@ class PeopleController < ApplicationController
     respond_to do |format|
       format.csv do
         csv_data = generate_csv_with_validation(people)
-        send_data csv_data, 
+        send_data csv_data,
                   filename: "people_import_with_validation_#{import_tag}_#{Date.current.strftime('%Y%m%d')}.csv",
-                  type: 'text/csv; charset=utf-8'
+                  type: "text/csv; charset=utf-8"
       end
     end
   end
@@ -1143,7 +1143,7 @@ class PeopleController < ApplicationController
       # CSV headers including validation fields
       csv << [
         "name",
-        "email", 
+        "email",
         "title",
         "company_name",
         "location",

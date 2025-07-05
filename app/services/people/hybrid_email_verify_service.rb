@@ -98,11 +98,11 @@ module People
 
     def enhanced_syntax_check(email)
       results = {}
-      
+
       # Check 1: Truemail syntax validation
       begin
         configure_truemail
-        truemail_result = Truemail.validate(email, validation_type: :regex)
+        truemail_result = Truemail.validate(email)
         results[:truemail] = {
           valid: truemail_result.result.valid?,
           message: truemail_result.result.errors.any? ? truemail_result.result.errors.first : "Valid syntax"
@@ -129,13 +129,15 @@ module People
         message: email.match?(email_regex) ? "Valid RFC syntax" : "Invalid RFC syntax"
       }
 
-      # Consensus logic: all must pass for syntax to be valid
-      all_valid = results.values.all? { |r| r[:valid] }
-      
+      # Consensus logic: majority (2 out of 3) must pass for syntax to be valid
+      valid_count = results.values.count { |r| r[:valid] }
+      majority_valid = valid_count >= 2
+
       {
-        passed: all_valid,
-        message: all_valid ? "Valid syntax (all engines)" : "Invalid syntax detected",
-        details: results
+        passed: majority_valid,
+        message: majority_valid ? "Valid syntax (#{valid_count}/3 engines)" : "Invalid syntax detected (#{valid_count}/3 engines)",
+        details: results,
+        consensus_score: valid_count
       }
     end
 
@@ -143,7 +145,7 @@ module People
       begin
         address = ValidEmail2::Address.new(email)
         is_disposable = address.disposable?
-        
+
         {
           is_disposable: is_disposable,
           message: is_disposable ? "Disposable email detected" : "Not a disposable email",
@@ -161,12 +163,12 @@ module People
     def enhanced_mx_check(domain)
       # Use existing MX check but also cross-validate with valid_email2
       existing_result = check_domain_mx(domain)
-      
+
       # Add valid_email2 MX validation
       begin
         address = ValidEmail2::Address.new("test@#{domain}")
         valid_email2_mx = address.valid_mx?
-        
+
         existing_result[:valid_email2_mx] = valid_email2_mx
         existing_result[:consensus] = existing_result[:passed] && valid_email2_mx
       rescue => e
@@ -180,13 +182,13 @@ module People
 
     def hybrid_smtp_verification(email, domain)
       settings = service_configuration.settings.symbolize_keys
-      
+
       results = {}
-      
+
       # Try Truemail SMTP verification first
       begin
-        configure_truemail
-        truemail_result = Truemail.validate(email, validation_type: :smtp)
+        configure_truemail_for_smtp
+        truemail_result = Truemail.validate(email)
         results[:truemail] = {
           valid: truemail_result.result.valid?,
           confidence: truemail_result.result.valid? ? 0.8 : 0.1,
@@ -218,29 +220,49 @@ module People
       if truemail[:valid] == existing[:passed]
         return {
           passed: truemail[:valid],
-          confidence: [truemail[:confidence], 0.7].max,
+          confidence: [ truemail[:confidence], 0.7 ].max,
           message: truemail[:valid] ? "SMTP verification passed (consensus)" : "SMTP verification failed (consensus)",
           consensus: true,
           details: results
         }
       end
 
-      # If they disagree, be conservative and mark as suspect
-      {
-        passed: false,
-        confidence: 0.3,
-        message: "SMTP verification disagreement - marked as suspect",
-        consensus: false,
-        details: results,
-        requires_manual_review: true
-      }
+      # If they disagree, trust Truemail (more sophisticated engine) but lower confidence
+      if truemail[:valid] && !existing[:passed]
+        {
+          passed: true,
+          confidence: [ truemail[:confidence] * 0.8, 0.6 ].min, # Reduce confidence but still pass
+          message: "SMTP verification passed (Truemail trusted over local)",
+          consensus: false,
+          details: results,
+          trusted_engine: "truemail"
+        }
+      elsif !truemail[:valid] && existing[:passed]
+        {
+          passed: false,
+          confidence: 0.2,
+          message: "SMTP verification failed (Truemail overrides local)",
+          consensus: false,
+          details: results,
+          trusted_engine: "truemail"
+        }
+      else
+        # Both failed - definite invalid
+        {
+          passed: false,
+          confidence: 0.9,
+          message: "SMTP verification failed (both engines)",
+          consensus: true,
+          details: results
+        }
+      end
     end
 
     def determine_hybrid_final_status(result, domain)
       settings = service_configuration.settings.symbolize_keys
       catch_all_domains = settings[:catch_all_domains] || []
       confidence_thresholds = settings[:confidence_thresholds] || {
-        "valid" => 0.8,
+        "valid" => 0.7,      # Lowered from 0.8 to be less strict
         "suspect" => 0.4,
         "invalid" => 0.2
       }
@@ -248,25 +270,33 @@ module People
       smtp_check = result[:checks][:smtp]
 
       if smtp_check[:passed]
-        # Check for catch-all domains first
-        if catch_all_domains.include?(domain) || detect_catch_all_domain?(domain, domain)
+        # Check for catch-all domains - but be less aggressive
+        if catch_all_domains.include?(domain)
+          # Known problematic catch-all domains
           result[:valid] = false
           result[:status] = :catch_all
-          result[:confidence] = settings[:catch_all_confidence] || 0.2
+          result[:confidence] = settings[:catch_all_confidence] || 0.3
           result[:metadata][:catch_all_suspected] = true
-          result[:metadata][:catch_all_reason] = "Hybrid detection confirmed catch-all"
-        elsif smtp_check[:requires_manual_review]
+          result[:metadata][:catch_all_reason] = "Known catch-all domain"
+        elsif detect_catch_all_domain?(domain, domain) && is_suspicious_domain?(domain)
+          # Only mark as catch-all if both catch-all AND suspicious
           result[:valid] = false
-          result[:status] = :suspect
+          result[:status] = :catch_all
           result[:confidence] = 0.3
-          result[:metadata][:requires_manual_review] = true
-          result[:metadata][:reason] = "Engine disagreement requires review"
+          result[:metadata][:catch_all_suspected] = true
+          result[:metadata][:catch_all_reason] = "Suspicious catch-all detected"
         else
-          # Legitimate SMTP success
+          # Legitimate SMTP success - trust it even if catch-all
           result[:valid] = true
           result[:status] = :valid
-          # Use consensus confidence but cap at threshold
-          result[:confidence] = [smtp_check[:confidence], confidence_thresholds["valid"]].min
+          # Use consensus confidence but be more lenient
+          result[:confidence] = [ smtp_check[:confidence], 0.8 ].min
+          
+          # Add note if catch-all but still valid
+          if detect_catch_all_domain?(domain, domain)
+            result[:metadata][:catch_all_noted] = true
+            result[:metadata][:note] = "Catch-all domain but SMTP verified"
+          end
         end
       elsif smtp_check[:details]&.[](:existing)&.[](:greylist)
         result[:status] = :greylist_retry
@@ -276,8 +306,16 @@ module People
         result[:status] = :invalid
         result[:confidence] = 0.95
       else
-        result[:status] = :unknown
-        result[:confidence] = 0.0
+        # Be less conservative - mark as valid with lower confidence if syntax passed
+        if result[:checks][:syntax][:passed] && result[:checks][:mx_record][:passed]
+          result[:valid] = true
+          result[:status] = :valid
+          result[:confidence] = 0.4  # Low but still valid
+          result[:metadata][:reason] = "Syntax and MX valid, SMTP inconclusive"
+        else
+          result[:status] = :unknown
+          result[:confidence] = 0.0
+        end
       end
     end
 
@@ -288,15 +326,11 @@ module People
         email_verification_status: result[:status].to_s,
         email_verification_confidence: result[:confidence],
         email_verification_checked_at: Time.current,
-        email_verification_metadata: result,
-        email_validation_engine: engine,
-        email_validation_details: {
-          last_validation: {
-            engine: engine,
-            timestamp: Time.current,
-            version: "1.0.0"
-          }
-        }
+        email_verification_metadata: result.merge({
+          engine: engine,
+          timestamp: Time.current,
+          version: "1.0.0"
+        })
       )
 
       audit_log.add_metadata(
@@ -318,7 +352,7 @@ module People
       # Get MX hosts first
       mx_result = check_domain_mx(domain)
       return { passed: false, message: "No MX records" } unless mx_result[:passed]
-      
+
       existing_service.send(:verify_smtp, email, domain, mx_result[:mx_hosts] || [])
     end
 
@@ -342,12 +376,40 @@ module People
       email.split("@").last.downcase
     end
 
+    def is_suspicious_domain?(domain)
+      # Consider domains suspicious if they appear to be temporary or spam-friendly
+      suspicious_patterns = [
+        /^\d+\.\d+\.\d+\.\d+$/, # IP addresses
+        /^.{1,3}\.(com|net|org)$/, # Very short domains  
+        /temp|disposable|fake|test|spam/i, # Obviously temporary
+        /^[a-z]{1,3}[0-9]+\./i # Short random domains like abc123.com
+      ]
+      
+      suspicious_patterns.any? { |pattern| domain.match?(pattern) }
+    end
+
     def configure_truemail
       settings = service_configuration.settings.symbolize_keys
-      
+
       Truemail.configure do |config|
         config.verifier_email = settings[:verifier_email] || "noreply@connectica.no"
         config.verifier_domain = settings[:verifier_domain] || "connectica.no"
+        config.default_validation_type = :regex  # Use regex validation by default for syntax checks
+        config.email_pattern = settings[:email_pattern] if settings[:email_pattern]
+        config.smtp_error_body_pattern = settings[:smtp_error_body_pattern] if settings[:smtp_error_body_pattern]
+        config.connection_timeout = settings[:truemail_timeout] || 5
+        config.response_timeout = settings[:truemail_timeout] || 5
+        config.connection_attempts = settings[:truemail_attempts] || 2
+      end
+    end
+
+    def configure_truemail_for_smtp
+      settings = service_configuration.settings.symbolize_keys
+
+      Truemail.configure do |config|
+        config.verifier_email = settings[:verifier_email] || "noreply@connectica.no"
+        config.verifier_domain = settings[:verifier_domain] || "connectica.no"
+        config.default_validation_type = :smtp  # Use SMTP validation for email verification
         config.email_pattern = settings[:email_pattern] if settings[:email_pattern]
         config.smtp_error_body_pattern = settings[:smtp_error_body_pattern] if settings[:smtp_error_body_pattern]
         config.connection_timeout = settings[:truemail_timeout] || 5

@@ -10,6 +10,129 @@
 
 set -e
 
+# Changelog Management Functions
+check_unreleased_changes() {
+    if [ ! -f "CHANGELOG.md" ]; then
+        return 0  # Will be created automatically
+    fi
+    
+    if grep -q "## \[Unreleased\]" CHANGELOG.md; then
+        # Check if there's any content under Unreleased (not just empty headings)
+        if sed -n '/## \[Unreleased\]/,/## \[/p' CHANGELOG.md | grep -q "^- "; then
+            return 0  # Has unreleased changes
+        else
+            echo "⚠️  No unreleased changes found in CHANGELOG.md"
+            echo "   Consider adding changes to the [Unreleased] section"
+            return 0  # Warn but don't abort
+        fi
+    else
+        echo "⚠️  No [Unreleased] section found in CHANGELOG.md"
+        return 0  # Warn but don't abort
+    fi
+}
+
+create_initial_changelog() {
+    echo "📝 Creating initial CHANGELOG.md..."
+    cat > CHANGELOG.md << EOF
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Initial changelog setup
+
+EOF
+    echo "✅ Created initial CHANGELOG.md"
+}
+
+backup_changelog() {
+    if [ -f "CHANGELOG.md" ]; then
+        cp CHANGELOG.md "CHANGELOG.md.backup"
+        echo "📋 Backed up existing changelog"
+    fi
+}
+
+update_changelog() {
+    local new_version="$1"
+    local release_date="$2"
+    
+    if [ ! -f "CHANGELOG.md" ]; then
+        create_initial_changelog
+    fi
+    
+    # Create temporary file for new changelog
+    local temp_file=$(mktemp)
+    local unreleased_content=$(mktemp)
+    
+    # Extract content from [Unreleased] section
+    sed -n '/## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | sed '$d' | tail -n +2 > "$unreleased_content"
+    
+    # Check if there's actual content in unreleased section
+    local has_content=false
+    if grep -q "^### \|^- " "$unreleased_content"; then
+        has_content=true
+    fi
+    
+    # Build new changelog
+    echo "# Changelog" > "$temp_file"
+    echo "" >> "$temp_file"
+    echo "All notable changes to this project will be documented in this file." >> "$temp_file"
+    echo "" >> "$temp_file"
+    echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)," >> "$temp_file"
+    echo "and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)." >> "$temp_file"
+    echo "" >> "$temp_file"
+    echo "## [Unreleased]" >> "$temp_file"
+    echo "" >> "$temp_file"
+    
+    # Add new version section with content from unreleased
+    echo "## [$new_version] - $release_date" >> "$temp_file"
+    echo "" >> "$temp_file"
+    
+    if [ "$has_content" = true ]; then
+        # Use content from unreleased section
+        cat "$unreleased_content" >> "$temp_file"
+    else
+        # Add default content
+        echo "### Added" >> "$temp_file"
+        echo "- Release $new_version" >> "$temp_file"
+    fi
+    echo "" >> "$temp_file"
+    
+    # Add existing version sections (skip the old [Unreleased] section)
+    sed -n '/^## \[.*\] - [0-9]/,$p' CHANGELOG.md >> "$temp_file"
+    
+    # Clean up
+    rm "$unreleased_content"
+    mv "$temp_file" CHANGELOG.md
+    echo "✅ Updated changelog for version $new_version"
+}
+
+update_version_links() {
+    local new_version="$1"
+    local prev_version="$2"
+    local repo_url="https://github.com/benjaminfauchald/b2b"
+    
+    # Remove existing links section if present
+    sed -i.bak '/^\[Unreleased\]: /,$d' CHANGELOG.md
+    rm -f CHANGELOG.md.bak
+    
+    # Add updated links
+    echo "" >> CHANGELOG.md
+    echo "[Unreleased]: $repo_url/compare/$new_version...HEAD" >> CHANGELOG.md
+    if [ "$prev_version" != "v0.0.0" ]; then
+        echo "[$new_version]: $repo_url/compare/$prev_version...$new_version" >> CHANGELOG.md
+    else
+        echo "[$new_version]: $repo_url/releases/tag/$new_version" >> CHANGELOG.md
+    fi
+    
+    echo "✅ Updated version diff links"
+}
+
 # Detect if first argument is a version bump type
 if [[ "$1" =~ ^(major|minor|patch)$ ]]; then
     BUMP_TYPE=$1
@@ -121,6 +244,20 @@ if ! git diff-index --quiet HEAD --; then
     git commit -m "$MESSAGE"
 fi
 
+# 5.5. Changelog Management
+echo "📝 Managing changelog..."
+check_unreleased_changes
+backup_changelog
+update_changelog "$NEW_VERSION" "$(date +%Y-%m-%d)"
+update_version_links "$NEW_VERSION" "$LATEST_TAG"
+
+# Commit changelog updates if they were made
+if ! git diff-index --quiet HEAD -- CHANGELOG.md; then
+    echo "📝 Committing changelog updates..."
+    git add CHANGELOG.md
+    git commit -m "Update changelog for $NEW_VERSION"
+fi
+
 # 6. Deploy based on mode
 if [ "$DEPLOY_MODE" = "simple" ]; then
     # Simple mode: push to master and create tag
@@ -167,6 +304,7 @@ echo "   ✅ Message: $MESSAGE"
 echo "   ✅ RuboCop: Passed"
 echo "   ✅ Brakeman: Passed"
 echo "   ✅ Critical Tests: Passed"
+echo "   ✅ Changelog: Updated"
 echo "   ✅ Deployment: Triggered"
 echo ""
 echo "📊 Monitor at: https://github.com/benjaminfauchald/b2b/actions"

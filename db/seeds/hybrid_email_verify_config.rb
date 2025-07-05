@@ -30,7 +30,7 @@ hybrid_config.settings = {
   catch_all_confidence: 0.2,  # Much lower than previous 0.5
   catch_all_domains: [
     # Start with known problematic domains - will be expanded dynamically
-    "gmail.com",  # Often appears as catch-all in testing
+    "gmail.com"  # Often appears as catch-all in testing
   ],
 
   # SMTP verification settings
@@ -49,11 +49,11 @@ hybrid_config.settings = {
   # Rate limiting (stricter to be more polite)
   rate_limit_per_domain_hour: 30,  # Reduced from 50
   rate_limit_per_domain_day: 300,  # Reduced from 500
-  
+
   # Delays and retry settings
   random_delay_min: 1,
   random_delay_max: 3,
-  greylist_retry_delays: [60, 300, 900],  # 1min, 5min, 15min
+  greylist_retry_delays: [ 60, 300, 900 ],  # 1min, 5min, 15min
   max_retries_greylist: 3
 }
 
@@ -74,12 +74,12 @@ if local_config
     smtp_success_confidence: 0.7,  # Lower SMTP confidence
     backup_service: true  # Mark as backup
   })
-  
+
   local_config.update!(
     settings: local_settings,
     active: false  # Disable in favor of hybrid service
   )
-  
+
   puts "✅ Updated local_email_verify service configuration as backup"
   puts "   - Status: disabled (backup only)"
   puts "   - Catch-all confidence updated: #{local_config.settings['catch_all_confidence']}"

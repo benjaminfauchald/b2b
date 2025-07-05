@@ -36,7 +36,7 @@ module ApplicationHelper
 
   def truncate_url(url, max_length = 50)
     return "" if url.blank?
-    
+
     if url.length <= max_length
       url
     else
@@ -45,7 +45,7 @@ module ApplicationHelper
         uri = URI.parse(url)
         domain_part = "#{uri.scheme}://#{uri.host}"
         path_part = uri.path
-        
+
         # If domain itself is too long, truncate it
         if domain_part.length >= max_length - 4
           "#{domain_part[0..max_length-5]}..."

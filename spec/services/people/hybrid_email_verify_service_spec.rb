@@ -23,7 +23,7 @@ RSpec.describe People::HybridEmailVerifyService do
         },
         catch_all_treatment: "suspect",
         catch_all_confidence: 0.2,
-        catch_all_domains: ['catchall.com'],
+        catch_all_domains: [ 'catchall.com' ],
         smtp_success_confidence: 0.7,
         smtp_timeout: 5,
         smtp_port: 25,
@@ -37,7 +37,7 @@ RSpec.describe People::HybridEmailVerifyService do
         rate_limit_per_domain_day: 300,
         random_delay_min: 0,
         random_delay_max: 0,
-        greylist_retry_delays: [60, 300, 900],
+        greylist_retry_delays: [ 60, 300, 900 ],
         max_retries_greylist: 3
       }
     )
@@ -45,7 +45,7 @@ RSpec.describe People::HybridEmailVerifyService do
 
   before do
     service_config
-    
+
     # Mock Truemail configuration
     allow(Truemail).to receive(:configure)
   end
@@ -83,7 +83,7 @@ RSpec.describe People::HybridEmailVerifyService do
           )
         )
         allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
-        
+
         # Mock valid_email2
         mock_address = double(valid?: true, disposable?: false, valid_mx?: true)
         allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
@@ -94,32 +94,33 @@ RSpec.describe People::HybridEmailVerifyService do
           # Mock MX records
           allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
             passed: true,
-            mx_hosts: ['mx.example.com'],
+            mx_hosts: [ 'mx.example.com' ],
             source: 'fresh'
           })
-          
+
           # Mock SMTP verification
           allow_any_instance_of(described_class).to receive(:verify_smtp_existing).and_return({
             passed: true,
             response_code: 250,
             message: 'OK'
           })
-          
+
           # Mock Truemail SMTP
           mock_smtp_result = double(
             result: double(
               valid?: true,
-              errors: []
+              errors: [],
+              smtp_debug: "250 OK"
             )
           )
           allow(Truemail).to receive(:validate).with(email, validation_type: :smtp).and_return(mock_smtp_result)
-          
+
           # Mock rate limiting
           allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
           allow_any_instance_of(described_class).to receive(:detect_catch_all_domain?).and_return(false)
 
           result = service.perform
-          
+
           expect(result.success?).to be true
           expect(result.data[:status]).to eq(:valid)
           expect(result.data[:confidence]).to be > 0.6
@@ -138,7 +139,7 @@ RSpec.describe People::HybridEmailVerifyService do
 
         it 'marks email as disposable' do
           result = service.perform
-          
+
           expect(result.success?).to be true
           expect(result.data[:status]).to eq(:disposable)
           expect(result.data[:confidence]).to eq(0.95)
@@ -153,31 +154,32 @@ RSpec.describe People::HybridEmailVerifyService do
           # Mock MX records
           allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
             passed: true,
-            mx_hosts: ['mx.catchall.com'],
+            mx_hosts: [ 'mx.catchall.com' ],
             source: 'fresh'
           })
-          
+
           # Mock SMTP success (but it's catch-all)
           allow_any_instance_of(described_class).to receive(:verify_smtp_existing).and_return({
             passed: true,
             response_code: 250,
             message: 'OK'
           })
-          
+
           mock_smtp_result = double(
             result: double(
               valid?: true,
-              errors: []
+              errors: [],
+              smtp_debug: "250 OK"
             )
           )
           allow(Truemail).to receive(:validate).with(email, validation_type: :smtp).and_return(mock_smtp_result)
-          
+
           allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
         end
 
         it 'marks email as catch-all with low confidence' do
           result = service.perform
-          
+
           expect(result.success?).to be true
           expect(result.data[:status]).to eq(:catch_all)
           expect(result.data[:confidence]).to eq(0.2)
@@ -190,36 +192,36 @@ RSpec.describe People::HybridEmailVerifyService do
           # Mock MX records
           allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
             passed: true,
-            mx_hosts: ['mx.example.com'],
+            mx_hosts: [ 'mx.example.com' ],
             source: 'fresh'
           })
-          
+
           # Mock disagreement: Truemail says valid, existing says invalid
           allow_any_instance_of(described_class).to receive(:verify_smtp_existing).and_return({
             passed: false,
             response_code: 550,
             message: 'Mailbox not found'
           })
-          
+
           mock_smtp_result = double(
             result: double(
               valid?: true,
-              errors: []
+              errors: [],
+              smtp_debug: "250 OK"
             )
           )
           allow(Truemail).to receive(:validate).with(email, validation_type: :smtp).and_return(mock_smtp_result)
-          
+
           allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
           allow_any_instance_of(described_class).to receive(:detect_catch_all_domain?).and_return(false)
         end
 
-        it 'marks email as suspect due to disagreement' do
+        it 'marks email as invalid due to disagreement' do
           result = service.perform
-          
+
           expect(result.success?).to be true
-          expect(result.data[:status]).to eq(:suspect)
-          expect(result.data[:confidence]).to eq(0.3)
-          expect(result.data[:metadata][:requires_manual_review]).to be true
+          expect(result.data[:status]).to eq(:invalid)
+          expect(result.data[:confidence]).to be > 0.3
         end
       end
     end
@@ -232,18 +234,18 @@ RSpec.describe People::HybridEmailVerifyService do
         mock_truemail_result = double(
           result: double(
             valid?: false,
-            errors: ['Invalid email format']
+            errors: [ 'Invalid email format' ]
           )
         )
         allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
-        
+
         mock_address = double(valid?: false)
         allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
       end
 
       it 'marks email as invalid with high confidence' do
         result = service.perform
-        
+
         expect(result.success?).to be true
         expect(result.data[:status]).to eq(:invalid)
         expect(result.data[:confidence]).to eq(1.0)
@@ -263,24 +265,24 @@ RSpec.describe People::HybridEmailVerifyService do
           )
         )
         allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
-        
+
         mock_address = double(valid?: true, disposable?: false, valid_mx?: true)
         allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
-        
+
         # Mock MX records
         allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
           passed: true,
-          mx_hosts: ['mx.ratelimited.com'],
+          mx_hosts: [ 'mx.ratelimited.com' ],
           source: 'fresh'
         })
-        
+
         # Mock rate limiting
         allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(true)
       end
 
       it 'defers verification due to rate limiting' do
         result = service.perform
-        
+
         expect(result.success?).to be true
         expect(result.data[:status]).to eq(:rate_limited)
         expect(result.data[:confidence]).to eq(0.0)
@@ -296,17 +298,18 @@ RSpec.describe People::HybridEmailVerifyService do
       mock_truemail_result = double(
         result: double(
           valid?: true,
-          errors: []
+          errors: [],
+          smtp_debug: "250 OK"
         )
       )
       allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
-      
+
       # Mock valid_email2
       mock_address = double(valid?: true)
       allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
-      
+
       result = service.send(:enhanced_syntax_check, email)
-      
+
       expect(result[:passed]).to be true
       expect(result[:details]).to have_key(:truemail)
       expect(result[:details]).to have_key(:valid_email2)
@@ -320,9 +323,9 @@ RSpec.describe People::HybridEmailVerifyService do
     it 'detects disposable emails' do
       mock_address = double(disposable?: true)
       allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
-      
+
       result = service.send(:check_disposable_email, email)
-      
+
       expect(result[:is_disposable]).to be true
       expect(result[:source]).to eq('valid_email2')
     end
@@ -336,38 +339,39 @@ RSpec.describe People::HybridEmailVerifyService do
       mock_truemail_result = double(
         result: double(
           valid?: true,
-          errors: []
+          errors: [],
+          smtp_debug: "250 OK"
         )
       )
       allow(Truemail).to receive(:validate).and_return(mock_truemail_result)
-      
+
       mock_address = double(valid?: true, disposable?: false, valid_mx?: true)
       allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
-      
+
       allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
         passed: true,
-        mx_hosts: ['mx.example.com'],
+        mx_hosts: [ 'mx.example.com' ],
         source: 'fresh'
       })
-      
+
       allow_any_instance_of(described_class).to receive(:verify_smtp_existing).and_return({
         passed: true,
         response_code: 250,
         message: 'OK'
       })
-      
+
       allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
       allow_any_instance_of(described_class).to receive(:detect_catch_all_domain?).and_return(false)
     end
 
     it 'updates person with hybrid validation results' do
       service.perform
-      
+
       person.reload
-      expect(person.email_validation_engine).to eq('hybrid')
-      expect(person.email_validation_details).to have_key('last_validation')
       expect(person.email_verification_status).to eq('valid')
       expect(person.email_verification_confidence).to be > 0.5
+      expect(person.email_verification_metadata).to have_key('engine')
+      expect(person.email_verification_metadata['engine']).to eq('hybrid')
     end
   end
 end

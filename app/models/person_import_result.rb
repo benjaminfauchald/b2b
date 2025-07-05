@@ -82,14 +82,14 @@ class PersonImportResult
 
   def track_email_verification(person, verification_attempted = false)
     return unless person && person.email.present?
-    
+
     if verification_attempted
       @email_verification_stats[:total_verified] += 1
-      
+
       case person.email_verification_status
-      when 'valid'
+      when "valid"
         @email_verification_stats[:passed] += 1
-      when 'invalid'
+      when "invalid"
         @email_verification_stats[:failed] += 1
       else
         @email_verification_stats[:pending] += 1
@@ -102,14 +102,14 @@ class PersonImportResult
   def email_verification_summary
     stats = @email_verification_stats
     return "No email verification performed" if stats[:total_verified] == 0 && stats[:skipped] == 0
-    
+
     parts = []
     parts << "#{stats[:passed]} passed" if stats[:passed] > 0
     parts << "#{stats[:failed]} failed" if stats[:failed] > 0
     parts << "#{stats[:pending]} pending" if stats[:pending] > 0
     parts << "#{stats[:skipped]} skipped" if stats[:skipped] > 0
-    
-    return "Email verification: " + (parts.empty? ? "none" : parts.join(", "))
+
+    "Email verification: " + (parts.empty? ? "none" : parts.join(", "))
   end
 
   def success?
