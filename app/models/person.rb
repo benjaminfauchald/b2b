@@ -46,6 +46,18 @@ class Person < ApplicationRecord
   scope :recent_extractions, -> { where("profile_extracted_at > ?", 7.days.ago) }
   scope :imported_with_tag, ->(tag) { where(import_tag: tag) }
 
+  # ZeroBounce data scopes
+  scope :with_zerobounce_data, -> { where.not(zerobounce_status: nil) }
+  scope :without_zerobounce_data, -> { where(zerobounce_status: nil) }
+  scope :zerobounce_valid, -> { where(zerobounce_status: "valid") }
+  scope :zerobounce_invalid, -> { where(zerobounce_status: "invalid") }
+  scope :verification_systems_agree, -> { 
+    with_zerobounce_data.where.not(email_verification_status: nil).select { |p| p.verification_systems_agree? }
+  }
+  scope :verification_systems_disagree, -> { 
+    with_zerobounce_data.where.not(email_verification_status: nil).reject { |p| p.verification_systems_agree? }
+  }
+
   # Service extraction scopes for consistency with button component
   scope :needing_profile_extraction, -> { where(profile_data: nil) }
   scope :needing_email_extraction, -> { where(email: [ nil, "" ]) }
@@ -95,6 +107,48 @@ class Person < ApplicationRecord
 
   def needs_email_verification?
     email.present? && (email_unverified? || email_verification_checked_at.nil? || email_verification_checked_at < 30.days.ago)
+  end
+
+  # ZeroBounce comparison methods
+  def has_zerobounce_data?
+    zerobounce_status.present?
+  end
+
+  def zerobounce_verified?
+    zerobounce_status == "valid"
+  end
+
+  def zerobounce_invalid?
+    zerobounce_status == "invalid"
+  end
+
+  def verification_systems_agree?
+    return false unless has_zerobounce_data? && email_verification_status.present?
+    
+    # Map our statuses to ZeroBounce equivalents for comparison
+    our_status_mapped = case email_verification_status
+    when "valid" then "valid"
+    when "invalid" then "invalid"
+    when "suspect" then "catch-all"
+    else "unknown"
+    end
+    
+    zerobounce_status == our_status_mapped
+  end
+
+  def confidence_score_comparison
+    return nil unless has_zerobounce_data? && email_verification_confidence.present?
+    
+    # Convert ZeroBounce 0-10 scale to our 0.0-1.0 scale
+    zb_confidence_normalized = zerobounce_quality_score&./ 10.0
+    our_confidence = email_verification_confidence
+    
+    {
+      our_confidence: our_confidence,
+      zerobounce_confidence: zb_confidence_normalized,
+      difference: (our_confidence - zb_confidence_normalized).abs,
+      systems_agree: verification_systems_agree?
+    }
   end
 
   def full_name

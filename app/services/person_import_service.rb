@@ -8,6 +8,12 @@ require "timeout"
 class PersonImportService < ApplicationService
   REQUIRED_COLUMNS = %w[email].freeze
   OPTIONAL_COLUMNS = %w[name first_name last_name title company_name location linkedin phone email_status zb_status].freeze
+  ZEROBOUNCE_COLUMNS = %w[
+    zb_status zb_sub_status zb_account zb_domain zb_first_name zb_last_name zb_gender
+    zb_free_email zb_mx_found zb_mx_record zb_smtp_provider zb_did_you_mean
+    zb_last_known_activity zb_activity_data_count zb_activity_data_types
+    zb_activity_data_channels zerobouncequalityscore
+  ].freeze
   MAX_FILE_SIZE = 200.megabytes # Support larger files for person imports
   VALID_MIME_TYPES = %w[text/csv application/csv].freeze
 
@@ -216,7 +222,43 @@ class PersonImportService < ApplicationService
       # Email status mappings
       "email status": :email_status,
       "zb status": :zb_status,
-      "zerobounce status": :zb_status
+      "zerobounce status": :zb_status,
+
+      # ZeroBounce field mappings
+      "zb sub status": :zb_sub_status,
+      "zb substatus": :zb_sub_status,
+      "zerobounce sub status": :zb_sub_status,
+      "zb account": :zb_account,
+      "zerobounce account": :zb_account,
+      "zb domain": :zb_domain,
+      "zerobounce domain": :zb_domain,
+      "zb first name": :zb_first_name,
+      "zerobounce first name": :zb_first_name,
+      "zb last name": :zb_last_name,
+      "zerobounce last name": :zb_last_name,
+      "zb gender": :zb_gender,
+      "zerobounce gender": :zb_gender,
+      "zb free email": :zb_free_email,
+      "zerobounce free email": :zb_free_email,
+      "zb mx found": :zb_mx_found,
+      "zerobounce mx found": :zb_mx_found,
+      "zb mx record": :zb_mx_record,
+      "zerobounce mx record": :zb_mx_record,
+      "zb smtp provider": :zb_smtp_provider,
+      "zerobounce smtp provider": :zb_smtp_provider,
+      "zb did you mean": :zb_did_you_mean,
+      "zerobounce did you mean": :zb_did_you_mean,
+      "zb last known activity": :zb_last_known_activity,
+      "zerobounce last known activity": :zb_last_known_activity,
+      "zb activity data count": :zb_activity_data_count,
+      "zerobounce activity data count": :zb_activity_data_count,
+      "zb activity data types": :zb_activity_data_types,
+      "zerobounce activity data types": :zb_activity_data_types,
+      "zb activity data channels": :zb_activity_data_channels,
+      "zerobounce activity data channels": :zb_activity_data_channels,
+      "zerobouncequalityscore": :zerobouncequalityscore,
+      "zerobounce quality score": :zerobouncequalityscore,
+      "zb quality score": :zerobouncequalityscore
     }
   end
 
@@ -256,6 +298,9 @@ class PersonImportService < ApplicationService
       phone: clean_phone_number(row_data[:phone]),
       import_tag: @import_tag
     }
+
+    # Add ZeroBounce fields if present
+    map_zerobounce_fields(row_data, person_attributes)
 
     # Store external email validation data in metadata but DON'T set verification status
     # The system should perform its own verification instead of trusting external sources
@@ -367,6 +412,66 @@ class PersonImportService < ApplicationService
 
     # Basic phone cleaning - remove non-digits except + and spaces
     phone.to_s.gsub(/[^\d\+\s\-\(\)]/, "").strip
+  end
+
+  def map_zerobounce_fields(row_data, person_attributes)
+    zerobounce_mapping = {
+      zb_status: :zerobounce_status,
+      zb_sub_status: :zerobounce_sub_status,
+      zb_account: :zerobounce_account,
+      zb_domain: :zerobounce_domain,
+      zb_first_name: :zerobounce_first_name,
+      zb_last_name: :zerobounce_last_name,
+      zb_gender: :zerobounce_gender,
+      zb_free_email: :zerobounce_free_email,
+      zb_mx_found: :zerobounce_mx_found,
+      zb_mx_record: :zerobounce_mx_record,
+      zb_smtp_provider: :zerobounce_smtp_provider,
+      zb_did_you_mean: :zerobounce_did_you_mean,
+      zb_last_known_activity: :zerobounce_last_known_activity,
+      zb_activity_data_count: :zerobounce_activity_data_count,
+      zb_activity_data_types: :zerobounce_activity_data_types,
+      zb_activity_data_channels: :zerobounce_activity_data_channels,
+      zerobouncequalityscore: :zerobounce_quality_score
+    }
+
+    zerobounce_data_present = false
+
+    zerobounce_mapping.each do |csv_key, model_attr|
+      next unless row_data[csv_key].present?
+
+      value = row_data[csv_key]
+      
+      # Handle specific field type conversions
+      case model_attr
+      when :zerobounce_free_email, :zerobounce_mx_found
+        # Convert to boolean
+        person_attributes[model_attr] = %w[true yes 1].include?(value.to_s.downcase)
+      when :zerobounce_activity_data_count
+        # Convert to integer
+        person_attributes[model_attr] = value.to_i if value.to_s.match?(/^\d+$/)
+      when :zerobounce_quality_score
+        # Convert to decimal
+        person_attributes[model_attr] = value.to_f if value.to_s.match?(/^\d*\.?\d+$/)
+      when :zerobounce_last_known_activity
+        # Parse timestamp if it looks like a date
+        begin
+          person_attributes[model_attr] = Time.parse(value.to_s) if value.to_s.present?
+        rescue ArgumentError
+          # Skip invalid dates
+        end
+      else
+        # String fields - clean and store
+        person_attributes[model_attr] = value.to_s.strip
+      end
+
+      zerobounce_data_present = true
+    end
+
+    # Set imported timestamp if any ZeroBounce data was found
+    person_attributes[:zerobounce_imported_at] = Time.current if zerobounce_data_present
+
+    person_attributes
   end
 
   def map_email_status(status)

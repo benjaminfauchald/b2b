@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_04_194645) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_05_110955) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -444,6 +444,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_194645) do
     t.string "import_tag"
     t.string "email_validation_engine"
     t.jsonb "email_validation_details", default: {}
+    t.string "zerobounce_status"
+    t.string "zerobounce_sub_status"
+    t.string "zerobounce_account"
+    t.string "zerobounce_domain"
+    t.string "zerobounce_first_name"
+    t.string "zerobounce_last_name"
+    t.string "zerobounce_gender"
+    t.boolean "zerobounce_free_email"
+    t.boolean "zerobounce_mx_found"
+    t.string "zerobounce_mx_record"
+    t.string "zerobounce_smtp_provider"
+    t.string "zerobounce_did_you_mean"
+    t.datetime "zerobounce_last_known_activity", precision: nil
+    t.integer "zerobounce_activity_data_count"
+    t.text "zerobounce_activity_data_types"
+    t.text "zerobounce_activity_data_channels"
+    t.decimal "zerobounce_quality_score", precision: 5, scale: 2
+    t.datetime "zerobounce_imported_at", precision: nil
     t.index ["email"], name: "index_people_on_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
     t.index ["email_validation_details"], name: "index_people_on_email_validation_details", using: :gin
     t.index ["email_validation_engine"], name: "index_people_on_email_validation_engine"
@@ -451,6 +469,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_194645) do
     t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
     t.index ["import_tag"], name: "index_people_on_import_tag"
     t.index ["profile_url"], name: "index_people_on_profile_url", unique: true, where: "((profile_url IS NOT NULL) AND ((profile_url)::text <> ''::text))"
+    t.index ["zerobounce_imported_at"], name: "index_people_on_zerobounce_imported_at"
+    t.index ["zerobounce_quality_score"], name: "index_people_on_zerobounce_quality_score"
+    t.index ["zerobounce_status"], name: "index_people_on_zerobounce_status"
   end
 
   create_table "service_audit_logs", force: :cascade do |t|
