@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       post :queue_mx_testing
       post :queue_a_record_testing
       post :queue_web_content_extraction
+      post :queue_all_dns
       get :queue_status
       get :import, to: "domains#import_csv"
       post :import, to: "domains#process_import"

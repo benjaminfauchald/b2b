@@ -59,7 +59,7 @@
       <input type="number" 
              name="count" 
              id="count"
-             value="<%= [domains_needing_service_raw, 10].min %>" 
+             value="<%= [domains_needing_service_raw, 100].min %>" 
              min="1" 
              max="<%= domains_needing_service_raw > 0 ? [domains_needing_service_raw, 1000].min : 1000 %>"
              class="<%= input_classes %>"

@@ -348,6 +348,90 @@ class DomainsController < ApplicationController
     }
   end
 
+  # POST /domains/queue_all_dns
+  def queue_all_dns
+    unless ServiceConfiguration.active?("domain_testing")
+      render json: { success: false, message: "DNS testing service is disabled" }
+      return
+    end
+
+    batch_size = params[:batch_size]&.to_i || 1000
+    max_total = params[:max_total]&.to_i || 10000
+
+    # Validate batch size
+    if batch_size <= 0 || batch_size > 1000
+      render json: { success: false, message: "Batch size must be between 1 and 1000" }
+      return
+    end
+
+    # Get domains that need testing
+    available_domains = Domain.needing_service("domain_testing")
+    total_available = available_domains.count
+    
+    if total_available == 0
+      render json: { success: false, message: "No domains need DNS testing" }
+      return
+    end
+
+    # Limit total processing to prevent overwhelming the system
+    total_to_process = [total_available, max_total].min
+    batches_needed = (total_to_process.to_f / batch_size).ceil
+
+    Rails.logger.info "🚀 BULK DNS QUEUEING:"
+    Rails.logger.info "  - Total domains available: #{total_available}"
+    Rails.logger.info "  - Total to process: #{total_to_process}"
+    Rails.logger.info "  - Batch size: #{batch_size}"
+    Rails.logger.info "  - Batches needed: #{batches_needed}"
+
+    queued_count = 0
+    processed_batches = 0
+
+    begin
+      batches_needed.times do |batch_num|
+        remaining = total_to_process - queued_count
+        current_batch_size = [remaining, batch_size].min
+        
+        break if current_batch_size <= 0
+
+        # Get domains for this batch
+        batch_domains = available_domains.limit(current_batch_size)
+        
+        # Queue each domain
+        batch_domains.each do |domain|
+          DomainDnsTestingWorker.perform_async(domain.id)
+          queued_count += 1
+        end
+
+        processed_batches += 1
+        Rails.logger.info "  - Batch #{batch_num + 1}/#{batches_needed}: Queued #{current_batch_size} domains"
+
+        # Small delay between batches to prevent overwhelming Redis
+        sleep(0.1) if batches_needed > 1
+      end
+
+      # Invalidate cache immediately when queue changes
+      Rails.cache.delete("domain_service_stats_data")
+
+      render json: {
+        success: true,
+        message: "Bulk DNS testing queued successfully",
+        queued_count: queued_count,
+        processed_batches: processed_batches,
+        batch_size: batch_size,
+        total_available: total_available,
+        queue_stats: get_queue_stats
+      }
+
+    rescue => e
+      Rails.logger.error "❌ BULK DNS QUEUEING ERROR: #{e.message}"
+      render json: {
+        success: false,
+        message: "Failed to queue bulk DNS testing: #{e.message}",
+        queued_count: queued_count
+      }
+    end
+  end
+
   # POST /domains/:id/queue_single_dns
   def queue_single_dns
     unless ServiceConfiguration.active?("domain_testing")
