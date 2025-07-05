@@ -291,7 +291,7 @@ module People
           result[:status] = :valid
           # Use consensus confidence but be more lenient
           result[:confidence] = [ smtp_check[:confidence], 0.8 ].min
-          
+
           # Add note if catch-all but still valid
           if detect_catch_all_domain?(domain, domain)
             result[:metadata][:catch_all_noted] = true
@@ -380,11 +380,11 @@ module People
       # Consider domains suspicious if they appear to be temporary or spam-friendly
       suspicious_patterns = [
         /^\d+\.\d+\.\d+\.\d+$/, # IP addresses
-        /^.{1,3}\.(com|net|org)$/, # Very short domains  
+        /^.{1,3}\.(com|net|org)$/, # Very short domains
         /temp|disposable|fake|test|spam/i, # Obviously temporary
         /^[a-z]{1,3}[0-9]+\./i # Short random domains like abc123.com
       ]
-      
+
       suspicious_patterns.any? { |pattern| domain.match?(pattern) }
     end
 

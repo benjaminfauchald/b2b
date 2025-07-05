@@ -56,16 +56,16 @@ class ZerobounceComparisonAnalysis
 
     @people_with_data.find_each do |person|
       agreement_stats[:total] += 1
-      
+
       our_status = person.email_verification_status
       zb_status = person.zerobounce_status
-      
+
       # Map our statuses to ZeroBounce equivalents
       our_mapped = map_our_status_to_zb(our_status)
       zb_mapped = normalize_zb_status(zb_status)
-      
+
       status_breakdown["#{our_mapped} vs #{zb_mapped}"] += 1
-      
+
       if our_mapped == zb_mapped
         agreement_stats[:agreements] += 1
       else
@@ -117,7 +117,7 @@ class ZerobounceComparisonAnalysis
 
       our_confidence = person.email_verification_confidence
       zb_confidence = person.zerobounce_quality_score / 10.0  # Normalize to 0-1 scale
-      
+
       confidence_data << {
         our: our_confidence,
         zb: zb_confidence,
@@ -126,7 +126,7 @@ class ZerobounceComparisonAnalysis
       }
 
       correlation_stats[:total_compared] += 1
-      
+
       # High confidence threshold: > 0.7
       if our_confidence > 0.7 && zb_confidence > 0.7
         correlation_stats[:high_confidence_both] += 1
@@ -141,7 +141,7 @@ class ZerobounceComparisonAnalysis
       avg_our_confidence = confidence_data.sum { |d| d[:our] } / confidence_data.size
       avg_zb_confidence = confidence_data.sum { |d| d[:zb] } / confidence_data.size
       avg_difference = confidence_data.sum { |d| d[:difference] } / confidence_data.size
-      
+
       puts "Total comparisons: #{correlation_stats[:total_compared]}"
       puts "Average our confidence: #{avg_our_confidence.round(3)}"
       puts "Average ZB confidence: #{avg_zb_confidence.round(3)}"
@@ -181,7 +181,7 @@ class ZerobounceComparisonAnalysis
     end
 
     puts "False positives found: #{false_positives.count}"
-    
+
     if false_positives.any?
       # Analyze patterns in false positives
       domain_patterns = Hash.new(0)
@@ -193,7 +193,7 @@ class ZerobounceComparisonAnalysis
         domain_patterns[domain] += 1 if domain
 
         smtp_provider_patterns[person.zerobounce_smtp_provider] += 1 if person.zerobounce_smtp_provider.present?
-        
+
         confidence = person.email_verification_confidence
         if confidence
           case confidence
@@ -241,7 +241,7 @@ class ZerobounceComparisonAnalysis
     end
 
     puts "False negatives found: #{false_negatives.count}"
-    
+
     if false_negatives.any?
       # Analyze patterns
       confidence_ranges = Hash.new(0)
@@ -344,7 +344,7 @@ class ZerobounceComparisonAnalysis
       recommendations << "HIGH FALSE POSITIVE RATE: Consider stricter validation criteria for 'valid' status"
     end
 
-    # False negative recommendations  
+    # False negative recommendations
     fn_count = @analysis_results[:false_negatives][:count]
     if fn_count > @total_count * 0.1
       recommendations << "HIGH FALSE NEGATIVE RATE: Consider more lenient validation criteria"
@@ -376,7 +376,7 @@ class ZerobounceComparisonAnalysis
 
   def save_analysis_results
     filename = "tmp/zerobounce_analysis_#{Time.current.strftime('%Y%m%d_%H%M%S')}.json"
-    
+
     @analysis_results[:metadata] = {
       analyzed_at: Time.current,
       total_people: @total_count,

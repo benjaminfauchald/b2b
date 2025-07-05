@@ -919,6 +919,28 @@ class DomainsController < ApplicationController
     end
   end
 
+  # GET /domains/import_progress (AJAX endpoint)
+  def import_progress
+    progress_key = "domain_import_progress_#{current_user.id}"
+    progress_data = Rails.cache.read(progress_key)
+
+    if progress_data
+      render json: {
+        status: "in_progress",
+        current: progress_data[:current],
+        total: progress_data[:total],
+        percent: progress_data[:percent],
+        message: progress_data[:message],
+        updated_at: progress_data[:updated_at]
+      }
+    else
+      render json: {
+        status: "not_found",
+        message: "No import progress found"
+      }
+    end
+  end
+
   # GET /domains/:id/test_status
   def test_status
     # Reload domain to ensure we have the latest data

@@ -21,17 +21,17 @@ RSpec.describe PersonImportService, type: :service do
       end
 
       let(:csv_file) do
-        file = Tempfile.new(['zerobounce_test', '.csv'])
+        file = Tempfile.new([ 'zerobounce_test', '.csv' ])
         file.write(csv_content)
         file.rewind
-        
+
         # Create mock object with ActionDispatch::Http::UploadedFile interface
         uploaded_file = double('uploaded_file')
         allow(uploaded_file).to receive(:path).and_return(file.path)
         allow(uploaded_file).to receive(:original_filename).and_return('zerobounce_test.csv')
         allow(uploaded_file).to receive(:content_type).and_return('text/csv')
         allow(uploaded_file).to receive(:size).and_return(csv_content.bytesize)
-        
+
         uploaded_file
       end
 
@@ -43,10 +43,10 @@ RSpec.describe PersonImportService, type: :service do
       it 'imports ZeroBounce fields correctly' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         expect(result.success?).to be true
         expect(result.data[:imported]).to eq(3)
-        
+
         # Check first person with complete ZeroBounce data
         john = Person.find_by(email: 'john@example.com')
         expect(john).to be_present
@@ -72,7 +72,7 @@ RSpec.describe PersonImportService, type: :service do
       it 'handles invalid ZeroBounce data correctly' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         # Check second person with invalid status and typo suggestion
         jane = Person.find_by(email: 'jane@invalid.com')
         expect(jane).to be_present
@@ -87,7 +87,7 @@ RSpec.describe PersonImportService, type: :service do
       it 'handles free email detection' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         # Check third person with free email
         test_user = Person.find_by(email: 'test@freemail.com')
         expect(test_user).to be_present
@@ -101,7 +101,7 @@ RSpec.describe PersonImportService, type: :service do
       it 'sets zerobounce_imported_at timestamp' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         Person.all.each do |person|
           expect(person.zerobounce_imported_at).to be_within(1.minute).of(Time.current)
         end
@@ -118,16 +118,16 @@ RSpec.describe PersonImportService, type: :service do
       end
 
       let(:csv_file) do
-        file = Tempfile.new(['partial_zb_test', '.csv'])
+        file = Tempfile.new([ 'partial_zb_test', '.csv' ])
         file.write(csv_content)
         file.rewind
-        
+
         uploaded_file = double('uploaded_file')
         allow(uploaded_file).to receive(:path).and_return(file.path)
         allow(uploaded_file).to receive(:original_filename).and_return('partial_zb_test.csv')
         allow(uploaded_file).to receive(:content_type).and_return('text/csv')
         allow(uploaded_file).to receive(:size).and_return(csv_content.bytesize)
-        
+
         uploaded_file
       end
 
@@ -139,16 +139,16 @@ RSpec.describe PersonImportService, type: :service do
       it 'imports partial ZeroBounce data correctly' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         expect(result.success?).to be true
-        
+
         # Person with partial data
         partial = Person.find_by(email: 'partial@example.com')
         expect(partial.zerobounce_status).to eq('valid')
         expect(partial.zerobounce_quality_score).to eq(9.2)
         expect(partial.zerobounce_sub_status).to be_nil
         expect(partial.zerobounce_imported_at).to be_present
-        
+
         # Person with no ZeroBounce data
         minimal = Person.find_by(email: 'minimal@example.com')
         expect(minimal.zerobounce_status).to be_nil
@@ -169,16 +169,16 @@ RSpec.describe PersonImportService, type: :service do
       end
 
       let(:csv_file) do
-        file = Tempfile.new(['bool_test', '.csv'])
+        file = Tempfile.new([ 'bool_test', '.csv' ])
         file.write(csv_content)
         file.rewind
-        
+
         uploaded_file = double('uploaded_file')
         allow(uploaded_file).to receive(:path).and_return(file.path)
         allow(uploaded_file).to receive(:original_filename).and_return('bool_test.csv')
         allow(uploaded_file).to receive(:content_type).and_return('text/csv')
         allow(uploaded_file).to receive(:size).and_return(csv_content.bytesize)
-        
+
         uploaded_file
       end
 
@@ -190,24 +190,24 @@ RSpec.describe PersonImportService, type: :service do
       it 'converts boolean values correctly' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         expect(result.success?).to be true
-        
+
         # Test true values
         bool1 = Person.find_by(email: 'bool1@example.com')
         expect(bool1.zerobounce_free_email).to be true
         expect(bool1.zerobounce_mx_found).to be true
-        
+
         # Test false values
         bool2 = Person.find_by(email: 'bool2@example.com')
         expect(bool2.zerobounce_free_email).to be false
         expect(bool2.zerobounce_mx_found).to be false
-        
+
         # Test numeric values
         bool3 = Person.find_by(email: 'bool3@example.com')
         expect(bool3.zerobounce_free_email).to be true
         expect(bool3.zerobounce_mx_found).to be false
-        
+
         # Test invalid values
         bool4 = Person.find_by(email: 'bool4@example.com')
         expect(bool4.zerobounce_free_email).to be false
@@ -226,16 +226,16 @@ RSpec.describe PersonImportService, type: :service do
       end
 
       let(:csv_file) do
-        file = Tempfile.new(['date_test', '.csv'])
+        file = Tempfile.new([ 'date_test', '.csv' ])
         file.write(csv_content)
         file.rewind
-        
+
         uploaded_file = double('uploaded_file')
         allow(uploaded_file).to receive(:path).and_return(file.path)
         allow(uploaded_file).to receive(:original_filename).and_return('date_test.csv')
         allow(uploaded_file).to receive(:content_type).and_return('text/csv')
         allow(uploaded_file).to receive(:size).and_return(csv_content.bytesize)
-        
+
         uploaded_file
       end
 
@@ -247,19 +247,19 @@ RSpec.describe PersonImportService, type: :service do
       it 'parses valid dates and skips invalid ones' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         expect(result.success?).to be true
-        
+
         # Valid ISO date
         date1 = Person.find_by(email: 'date1@example.com')
         expect(date1.zerobounce_last_known_activity).to be_present
         expect(date1.zerobounce_last_known_activity).to be_a(Time)
-        
+
         # Valid standard date
         date2 = Person.find_by(email: 'date2@example.com')
         expect(date2.zerobounce_last_known_activity).to be_present
         expect(date2.zerobounce_last_known_activity).to be_a(Time)
-        
+
         # Invalid date should be nil
         date3 = Person.find_by(email: 'date3@example.com')
         expect(date3.zerobounce_last_known_activity).to be_nil
@@ -275,16 +275,16 @@ RSpec.describe PersonImportService, type: :service do
       end
 
       let(:csv_file) do
-        file = Tempfile.new(['regular_test', '.csv'])
+        file = Tempfile.new([ 'regular_test', '.csv' ])
         file.write(csv_content)
         file.rewind
-        
+
         uploaded_file = double('uploaded_file')
         allow(uploaded_file).to receive(:path).and_return(file.path)
         allow(uploaded_file).to receive(:original_filename).and_return('regular_test.csv')
         allow(uploaded_file).to receive(:content_type).and_return('text/csv')
         allow(uploaded_file).to receive(:size).and_return(csv_content.bytesize)
-        
+
         uploaded_file
       end
 
@@ -296,10 +296,10 @@ RSpec.describe PersonImportService, type: :service do
       it 'imports normally without ZeroBounce fields' do
         service = PersonImportService.new(file: csv_file, user: user)
         result = service.perform
-        
+
         expect(result.success?).to be true
         expect(result.data[:imported]).to eq(1)
-        
+
         person = Person.find_by(email: 'regular@example.com')
         expect(person).to be_present
         expect(person.name).to eq('Regular User')
@@ -312,7 +312,7 @@ RSpec.describe PersonImportService, type: :service do
 
   describe '#map_zerobounce_fields' do
     let(:service) { PersonImportService.new(file: nil, user: user) }
-    
+
     it 'maps all ZeroBounce fields correctly' do
       row_data = {
         zb_status: 'valid',
@@ -333,10 +333,10 @@ RSpec.describe PersonImportService, type: :service do
         zb_activity_data_channels: 'email,web',
         zerobouncequalityscore: '8.5'
       }
-      
+
       person_attributes = {}
       result = service.send(:map_zerobounce_fields, row_data, person_attributes)
-      
+
       expect(result[:zerobounce_status]).to eq('valid')
       expect(result[:zerobounce_sub_status]).to eq('mailbox_verified')
       expect(result[:zerobounce_account]).to eq('test')
@@ -356,12 +356,12 @@ RSpec.describe PersonImportService, type: :service do
       expect(result[:zerobounce_quality_score]).to eq(8.5)
       expect(result[:zerobounce_imported_at]).to be_within(1.second).of(Time.current)
     end
-    
+
     it 'handles empty row data gracefully' do
       row_data = {}
       person_attributes = {}
       result = service.send(:map_zerobounce_fields, row_data, person_attributes)
-      
+
       expect(result).to eq(person_attributes)
       expect(result[:zerobounce_imported_at]).to be_nil
     end

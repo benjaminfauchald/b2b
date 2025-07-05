@@ -1,0 +1,207 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'date'
+
+# Feature Memory Management Script
+# Helps create and manage feature memory files for AI agents
+
+class FeatureMemoryManager
+  FEATURES_DIR = File.join(Dir.pwd, 'docs', 'features')
+  TEMPLATE_FILE = File.join(FEATURES_DIR, 'templates', 'feature_template.md')
+  
+  def initialize
+    ensure_directories_exist
+  end
+  
+  def run(args)
+    command = args[0]
+    
+    case command
+    when 'create', 'new'
+      create_feature_memory(args[1])
+    when 'list', 'ls'
+      list_feature_memories
+    when 'status'
+      show_status
+    when 'update'
+      update_feature_memory(args[1])
+    when 'complete'
+      complete_feature_memory(args[1])
+    when 'help', '--help', '-h'
+      show_help
+    else
+      puts "Unknown command: #{command}"
+      show_help
+    end
+  end
+  
+  private
+  
+  def ensure_directories_exist
+    FileUtils.mkdir_p(FEATURES_DIR) unless Dir.exist?(FEATURES_DIR)
+    FileUtils.mkdir_p(File.join(FEATURES_DIR, 'templates')) unless Dir.exist?(File.join(FEATURES_DIR, 'templates'))
+  end
+  
+  def create_feature_memory(feature_name)
+    if feature_name.nil? || feature_name.empty?
+      puts "Error: Feature name is required"
+      puts "Usage: ./bin/feature-memory create <feature_name>"
+      return
+    end
+    
+    filename = "#{feature_name.downcase.gsub(/[^a-z0-9_]/, '_')}.md"
+    filepath = File.join(FEATURES_DIR, filename)
+    
+    if File.exist?(filepath)
+      puts "Error: Feature memory file already exists: #{filepath}"
+      return
+    end
+    
+    unless File.exist?(TEMPLATE_FILE)
+      puts "Error: Template file not found: #{TEMPLATE_FILE}"
+      return
+    end
+    
+    template_content = File.read(TEMPLATE_FILE)
+    
+    # Replace template placeholders
+    content = template_content.gsub('[Feature Name]', feature_name.gsub('_', ' ').split.map(&:capitalize).join(' '))
+    content = content.gsub('[Date]', Date.today.to_s)
+    content = content.gsub('[planning|in_progress|completed|failed|paused]', 'planning')
+    
+    File.write(filepath, content)
+    
+    puts "Created feature memory file: #{filepath}"
+    puts "Next steps:"
+    puts "1. Edit the file to add your feature requirements"
+    puts "2. Update the technical plan and implementation steps"
+    puts "3. Begin implementation with regular updates"
+  end
+  
+  def list_feature_memories
+    files = Dir.glob(File.join(FEATURES_DIR, '*.md')).reject { |f| f.include?('templates/') }
+    
+    if files.empty?
+      puts "No feature memory files found."
+      return
+    end
+    
+    puts "Feature Memory Files:"
+    puts "=" * 50
+    
+    files.each do |file|
+      status = extract_status(file)
+      name = File.basename(file, '.md').gsub('_', ' ').split.map(&:capitalize).join(' ')
+      puts "#{name.ljust(30)} [#{status}]"
+    end
+  end
+  
+  def show_status
+    files = Dir.glob(File.join(FEATURES_DIR, '*.md')).reject { |f| f.include?('templates/') }
+    
+    if files.empty?
+      puts "No feature memory files found."
+      return
+    end
+    
+    status_counts = Hash.new(0)
+    
+    files.each do |file|
+      status = extract_status(file)
+      status_counts[status] += 1
+    end
+    
+    puts "Feature Memory Status Summary:"
+    puts "=" * 40
+    status_counts.each do |status, count|
+      puts "#{status.capitalize.ljust(15)} #{count}"
+    end
+    puts "=" * 40
+    puts "Total: #{files.length}"
+  end
+  
+  def update_feature_memory(feature_name)
+    if feature_name.nil? || feature_name.empty?
+      puts "Error: Feature name is required"
+      puts "Usage: ./bin/feature-memory update <feature_name>"
+      return
+    end
+    
+    filename = "#{feature_name.downcase.gsub(/[^a-z0-9_]/, '_')}.md"
+    filepath = File.join(FEATURES_DIR, filename)
+    
+    unless File.exist?(filepath)
+      puts "Error: Feature memory file not found: #{filepath}"
+      return
+    end
+    
+    # Update the "Last Updated" field
+    content = File.read(filepath)
+    content = content.gsub(/- \*\*Last Updated\*\*: .+/, "- **Last Updated**: #{Date.today}")
+    File.write(filepath, content)
+    
+    puts "Updated feature memory file: #{filepath}"
+  end
+  
+  def complete_feature_memory(feature_name)
+    if feature_name.nil? || feature_name.empty?
+      puts "Error: Feature name is required"
+      puts "Usage: ./bin/feature-memory complete <feature_name>"
+      return
+    end
+    
+    filename = "#{feature_name.downcase.gsub(/[^a-z0-9_]/, '_')}.md"
+    filepath = File.join(FEATURES_DIR, filename)
+    
+    unless File.exist?(filepath)
+      puts "Error: Feature memory file not found: #{filepath}"
+      return
+    end
+    
+    # Update status to completed and last updated date
+    content = File.read(filepath)
+    content = content.gsub(/- \*\*Status\*\*: .+/, "- **Status**: completed")
+    content = content.gsub(/- \*\*Last Updated\*\*: .+/, "- **Last Updated**: #{Date.today}")
+    File.write(filepath, content)
+    
+    puts "Marked feature as completed: #{filepath}"
+  end
+  
+  def extract_status(filepath)
+    content = File.read(filepath)
+    match = content.match(/- \*\*Status\*\*: (.+)/)
+    return match ? match[1].strip : 'unknown'
+  rescue
+    'unknown'
+  end
+  
+  def show_help
+    puts <<~HELP
+      Feature Memory Management Tool
+      
+      Commands:
+        create <name>    Create a new feature memory file
+        list            List all feature memory files
+        status          Show status summary of all features
+        update <name>   Update last modified date for a feature
+        complete <name> Mark a feature as completed
+        help            Show this help message
+      
+      Examples:
+        ./bin/feature-memory create user_authentication
+        ./bin/feature-memory list
+        ./bin/feature-memory status
+        ./bin/feature-memory update user_authentication
+        ./bin/feature-memory complete user_authentication
+      
+      Files are created in: docs/features/
+    HELP
+  end
+end
+
+# Run the script
+if __FILE__ == $0
+  manager = FeatureMemoryManager.new
+  manager.run(ARGV)
+end

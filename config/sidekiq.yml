@@ -1,5 +1,5 @@
-# Sidekiq configuration with 5 workers per queue
-:concurrency: 5
+# Sidekiq configuration with 25 total workers (to handle multiple queues concurrently)
+:concurrency: 25
 :timeout: 30
 :max_retries: 3
 :pidfile: tmp/pids/sidekiq.pid

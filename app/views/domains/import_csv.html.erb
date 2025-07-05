@@ -26,7 +26,7 @@
   <!-- Import Form -->
   <%= render CardComponent.new(title: "Upload CSV File") do %>
     <%= form_with url: import_domains_path, method: :post, multipart: true, local: true, 
-                  data: { controller: "csv-upload", action: "submit->csv-upload#beforeSubmit" }, 
+                  data: { controller: "csv-upload", action: "submit->csv-upload#beforeSubmit", "csv-upload-progress-url-value": import_progress_domains_path }, 
                   class: "space-y-6" do |form| %>
       
       <%= render CsvUploadComponent.new %>

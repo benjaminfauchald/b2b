@@ -55,15 +55,15 @@ class DomainImportService < ApplicationService
         # Return appropriate result based on whether the import was successful
         if @result.success?
           success_result("Domain import completed successfully",
-                        imported: @result.imported_domains.count,
-                        failed: @result.failed_domains.count,
-                        duplicates: @result.duplicate_domains.count,
+                        imported: @result.imported_count,
+                        failed: @result.failed_count,
+                        duplicates: @result.duplicate_count,
                         result: @result)
         else
           error_result("Domain import completed with errors",
-                      imported: @result.imported_domains.count,
-                      failed: @result.failed_domains.count,
-                      duplicates: @result.duplicate_domains.count,
+                      imported: @result.imported_count,
+                      failed: @result.failed_count,
+                      duplicates: @result.duplicate_count,
                       result: @result)
         end
 
@@ -302,7 +302,13 @@ class DomainImportService < ApplicationService
   def process_simple_domain_list
     Rails.logger.info "🔍 IMPORT DEBUG: Entering process_simple_domain_list method"
 
+    # Count total non-empty lines for progress
+    total_rows = count_csv_rows(false)
     row_count = 0
+
+    # Initialize progress tracking
+    update_progress(0, total_rows, "Starting domain import...")
+
     File.foreach(file.path).with_index do |line, index|
       Rails.logger.info "🔍 IMPORT DEBUG: Processing line #{index}: '#{line.strip}'"
 
@@ -328,9 +334,17 @@ class DomainImportService < ApplicationService
         Rails.logger.error "🔍 IMPORT DEBUG: Row processing backtrace: #{e.backtrace.join("\n")}"
         raise e
       end
+
+      # Update progress every row for small imports, every 10 rows for large imports
+      if total_rows <= 100 || row_count % 10 == 0 || row_count == total_rows
+        update_progress(row_count, total_rows, "Processing domain #{row_count} of #{total_rows}")
+      end
     end
 
     Rails.logger.info "🔍 Total rows processed: #{row_count}"
+
+    # Final progress update
+    update_progress(total_rows, total_rows, "Import completed successfully")
   end
 
   def process_headerless_csv
@@ -345,7 +359,13 @@ class DomainImportService < ApplicationService
       remove_empty_hashes: false
     }
 
+    # Count total rows for progress calculation
+    total_rows = count_csv_rows(false)
     row_count = 0
+
+    # Initialize progress tracking
+    update_progress(0, total_rows, "Starting domain import...")
+
     SmarterCSV.process(file.path, csv_options) do |chunk|
       # puts "Processing headerless chunk with #{chunk.size} rows"
 
@@ -353,10 +373,18 @@ class DomainImportService < ApplicationService
         row_count += 1
         # puts "Processing row #{row_count}: #{row_data.inspect}"
         process_single_row(row_data, row_count)
+
+        # Update progress every row for small imports, every 10 rows for large imports
+        if total_rows <= 100 || row_count % 10 == 0 || row_count == total_rows
+          update_progress(row_count, total_rows, "Processing domain #{row_count} of #{total_rows}")
+        end
       end
     end
 
     # puts "Total rows processed: #{row_count}"
+
+    # Final progress update
+    update_progress(total_rows, total_rows, "Import completed successfully")
   end
 
   def process_standard_csv(has_headers)
@@ -382,7 +410,13 @@ class DomainImportService < ApplicationService
       Rails.logger.info "🔍 About to process with SmarterCSV"
       Rails.logger.info "🔍 CSV options: #{csv_options.inspect}"
 
+      # Count total rows for progress calculation
+      total_rows = count_csv_rows(has_headers)
       row_count = 0
+
+      # Initialize progress tracking
+      update_progress(0, total_rows, "Starting domain import...")
+
       Rails.logger.info "🔍 IMPORT DEBUG: About to call SmarterCSV.process"
 
       SmarterCSV.process(file.path, csv_options) do |chunk|
@@ -400,10 +434,18 @@ class DomainImportService < ApplicationService
             Rails.logger.error "🔍 IMPORT DEBUG: process_single_row backtrace: #{e.backtrace.join("\n")}"
             raise e
           end
+
+          # Update progress every row for small imports, every 10 rows for large imports
+          if total_rows <= 100 || row_count % 10 == 0 || row_count == total_rows
+            update_progress(row_count, total_rows, "Processing domain #{row_count} of #{total_rows}")
+          end
         end
       end
 
       Rails.logger.info "🔍 Total rows processed: #{row_count}"
+
+      # Final progress update
+      update_progress(total_rows, total_rows, "Import completed successfully")
     rescue CSV::MalformedCSVError => e
       Rails.logger.error "🔍 IMPORT DEBUG: CSV::MalformedCSVError: #{e.message}"
       result.add_csv_error("CSV parsing error: #{e.message}")
@@ -438,5 +480,32 @@ class DomainImportService < ApplicationService
       error: message,
       data: data
     )
+  end
+
+  def count_csv_rows(has_headers = true)
+    row_count = 0
+    CSV.foreach(file.path) { |row| row_count += 1 }
+    has_headers ? row_count - 1 : row_count
+  rescue StandardError => e
+    Rails.logger.warn "Failed to count CSV rows: #{e.message}"
+    0
+  end
+
+  def update_progress(current, total, message)
+    return unless @user # Only track progress if we have a user
+
+    progress_key = "domain_import_progress_#{@user.id}"
+    progress_data = {
+      current: current,
+      total: total,
+      percent: total > 0 ? (current.to_f / total * 100).round(1) : 0,
+      message: message,
+      updated_at: Time.current.iso8601
+    }
+
+    # Store progress in Rails cache (Redis if available, memory otherwise)
+    Rails.cache.write(progress_key, progress_data, expires_in: 10.minutes)
+  rescue StandardError => e
+    Rails.logger.warn "Failed to update import progress: #{e.message}"
   end
 end

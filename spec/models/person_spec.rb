@@ -153,7 +153,7 @@ RSpec.describe Person, type: :model do
 
         it 'returns comparison data' do
           result = person.confidence_score_comparison
-          
+
           expect(result).to be_a(Hash)
           expect(result[:our_confidence]).to eq(0.8)
           expect(result[:zerobounce_confidence]).to eq(0.75) # 7.5 / 10.0
@@ -164,7 +164,7 @@ RSpec.describe Person, type: :model do
         it 'calculates difference correctly' do
           person.update!(email_verification_confidence: 0.9)
           result = person.confidence_score_comparison
-          
+
           expect(result[:difference]).to eq(0.15) # |0.9 - 0.75|
         end
       end

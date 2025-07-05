@@ -181,7 +181,7 @@ RSpec.describe EmailVerificationStatusComponent, type: :component do
 
     it 'includes ZeroBounce comparison section' do
       render_inline(component)
-      
+
       expect(page).to have_text('ZeroBounce Comparison')
       expect(page).to have_text('Our System')
       expect(page).to have_text('ZeroBounce')
@@ -189,13 +189,13 @@ RSpec.describe EmailVerificationStatusComponent, type: :component do
 
     it 'shows agreement status' do
       render_inline(component)
-      
+
       expect(page).to have_text('Agree')
     end
 
     it 'shows ZeroBounce features' do
       render_inline(component)
-      
+
       expect(page).to have_text('Free Email')
       expect(page).to have_text('MX Found')
       expect(page).to have_text('Gmail')
@@ -203,7 +203,7 @@ RSpec.describe EmailVerificationStatusComponent, type: :component do
 
     it 'shows typo suggestion' do
       render_inline(component)
-      
+
       expect(page).to have_text('Suggested correction')
       expect(page).to have_text('corrected@example.com')
     end
@@ -220,7 +220,7 @@ RSpec.describe EmailVerificationStatusComponent, type: :component do
 
     it 'renders without ZeroBounce comparison section' do
       render_inline(component)
-      
+
       expect(page).not_to have_text('ZeroBounce Comparison')
       expect(page).to have_text('Valid')  # Our system status should still show
     end
@@ -239,7 +239,7 @@ RSpec.describe EmailVerificationStatusComponent, type: :component do
 
     it 'shows disagreement status' do
       render_inline(component)
-      
+
       expect(page).to have_text('Disagree')
     end
   end

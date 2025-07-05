@@ -187,9 +187,9 @@ class EmailVerificationStatusComponent < ViewComponent::Base
 
   def zerobounce_imported_text
     return nil unless zerobounce_imported_at
-    
+
     days_ago = ((Time.current - zerobounce_imported_at) / 1.day).round
-    
+
     if days_ago == 0
       "Imported today"
     elsif days_ago == 1

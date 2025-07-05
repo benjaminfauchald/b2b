@@ -18,6 +18,7 @@ Rails.application.routes.draw do
       get :import_results, to: "domains#import_results"
       get :import_status, to: "domains#import_status"
       get :check_import_status, to: "domains#check_import_status"
+      get :import_progress, to: "domains#import_progress"
       get :template, to: "domains#download_template"
       get :export_errors, to: "domains#export_errors"
     end

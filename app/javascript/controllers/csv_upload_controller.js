@@ -5,6 +5,10 @@ export default class extends Controller {
     "dropZone", "fileInput", "progress", "progressBar", "progressText",
     "fileInfo", "fileName", "fileSize", "errors", "errorMessage", "submitButton"
   ]
+  
+  static values = { 
+    progressUrl: String 
+  }
 
   connect() {
     console.log('CSV Upload Controller connected')
@@ -315,7 +319,9 @@ export default class extends Controller {
 
   async fetchProgress() {
     try {
-      const response = await fetch('/people/import_progress', {
+      // Use dynamic progress URL or fall back to default
+      const progressUrl = this.progressUrlValue || '/people/import_progress'
+      const response = await fetch(progressUrl, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'

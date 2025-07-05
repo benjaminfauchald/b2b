@@ -51,10 +51,10 @@ class Person < ApplicationRecord
   scope :without_zerobounce_data, -> { where(zerobounce_status: nil) }
   scope :zerobounce_valid, -> { where(zerobounce_status: "valid") }
   scope :zerobounce_invalid, -> { where(zerobounce_status: "invalid") }
-  scope :verification_systems_agree, -> { 
+  scope :verification_systems_agree, -> {
     with_zerobounce_data.where.not(email_verification_status: nil).select { |p| p.verification_systems_agree? }
   }
-  scope :verification_systems_disagree, -> { 
+  scope :verification_systems_disagree, -> {
     with_zerobounce_data.where.not(email_verification_status: nil).reject { |p| p.verification_systems_agree? }
   }
 
@@ -124,7 +124,7 @@ class Person < ApplicationRecord
 
   def verification_systems_agree?
     return false unless has_zerobounce_data? && email_verification_status.present?
-    
+
     # Map our statuses to ZeroBounce equivalents for comparison
     our_status_mapped = case email_verification_status
     when "valid" then "valid"
@@ -132,17 +132,17 @@ class Person < ApplicationRecord
     when "suspect" then "catch-all"
     else "unknown"
     end
-    
+
     zerobounce_status == our_status_mapped
   end
 
   def confidence_score_comparison
     return nil unless has_zerobounce_data? && email_verification_confidence.present?
-    
+
     # Convert ZeroBounce 0-10 scale to our 0.0-1.0 scale
     zb_confidence_normalized = zerobounce_quality_score&./ 10.0
     our_confidence = email_verification_confidence
-    
+
     {
       our_confidence: our_confidence,
       zerobounce_confidence: zb_confidence_normalized,

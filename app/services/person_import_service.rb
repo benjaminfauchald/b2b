@@ -441,7 +441,7 @@ class PersonImportService < ApplicationService
       next unless row_data[csv_key].present?
 
       value = row_data[csv_key]
-      
+
       # Handle specific field type conversions
       case model_attr
       when :zerobounce_free_email, :zerobounce_mx_found
