@@ -23,6 +23,9 @@
     <%# Flowbite CSS %>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
     
+    <%# Alpine.js for interactive components %>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    
     <%= javascript_importmap_tags %>
     
     <%# Apply dark mode immediately to prevent flash %>
@@ -74,6 +77,8 @@
                     class: "#{request.path.start_with?('/companies') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
                 <%= link_to "People", people_path, 
                     class: "#{request.path.start_with?('/people') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
+                <%= link_to "IDM", idm_dashboard_path, 
+                    class: "#{request.path.start_with?('/idm') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
                 <% if current_user.admin? %>
                   <%= link_to "Quality", quality_dashboard_index_path, 
                       class: "#{request.path.start_with?('/quality') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white'} inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium transition-colors duration-200" %>
@@ -121,6 +126,8 @@
                 class: "#{request.path.start_with?('/companies') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
             <%= link_to "People", people_path,
                 class: "#{request.path.start_with?('/people') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+            <%= link_to "IDM", idm_dashboard_path,
+                class: "#{request.path.start_with?('/idm') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
             <% if current_user.admin? %>
               <%= link_to "Quality", quality_dashboard_index_path,
                   class: "#{request.path.start_with?('/quality') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>

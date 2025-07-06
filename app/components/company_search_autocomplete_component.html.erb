@@ -1,0 +1,22 @@
+<div class="relative" 
+     data-controller="company-search-autocomplete"
+     data-company-search-autocomplete-url-value="<%= autocomplete_url %>"
+     data-company-search-autocomplete-min-characters-value="2"
+     data-company-search-autocomplete-debounce-delay-value="300"
+     data-company-search-autocomplete-max-suggestions-value="10">
+  <%= text_field_tag name, current_search, 
+      placeholder: placeholder,
+      id: id,
+      class: css_classes,
+      autocomplete: "off",
+      data: { 
+        company_search_autocomplete_target: "input",
+        action: "input->company-search-autocomplete#onInput"
+      } %>
+  
+  <!-- Dropdown container -->
+  <div class="<%= dropdown_css_classes %>" 
+       data-company-search-autocomplete-target="dropdown">
+    <!-- Suggestions will be dynamically populated here -->
+  </div>
+</div>

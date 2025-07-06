@@ -106,6 +106,8 @@ class EmailVerificationStatusComponent < ViewComponent::Base
     status != "unverified" && verification_metadata.present?
   end
 
+  public
+
   # ZeroBounce comparison methods
   def has_zerobounce_data?
     person.has_zerobounce_data?

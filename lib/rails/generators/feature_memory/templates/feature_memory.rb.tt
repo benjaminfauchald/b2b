@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+class FeatureMemories::<%= feature_class_name %> < ApplicationFeatureMemory
+  FEATURE_ID = "<%= file_name %>"
+  self.feature_id = FEATURE_ID
+  
+  # Auto-populated during initial generation
+  feature_spec do
+    description "<%= feature_description %>"
+    requested_by "@<%= current_user %>"
+    created_at "<%= current_date %>"
+    
+    requirements do
+      # TODO: Fill in actual requirements based on feature type
+      # Examples:
+      # For services: input_fields, output, queue_system
+      # For UI features: ui_location, user_interaction, components
+      # For API endpoints: endpoints, request_format, response_format
+      # For models: attributes, associations, validations
+      # For migrations: tables_affected, columns_added, indexes
+      
+      feature_type :unknown  # :service, :ui, :api, :model, :migration, :integration, etc.
+      dependencies []        # e.g., ["gem_name", "external_service", "other_feature"]
+    end
+    
+    test_data do
+      # TODO: Fill in test data
+      example_id 12345
+      expected_result "sample result"
+    end
+  end
+  
+  # Plan your implementation before starting
+  implementation_plan do
+    # Example tasks - replace with actual implementation steps:
+    # task "Research existing patterns and dependencies" do
+    #   priority :high
+    #   estimated_time "30 minutes"
+    #   tags :research, :planning
+    # end
+    # 
+    # task "Implement core functionality" do
+    #   priority :high
+    #   estimated_time "2 hours"
+    #   dependencies ["research_task_id"]
+    # end
+    # 
+    # task "Write tests" do
+    #   priority :high
+    #   estimated_time "1 hour"
+    #   dependencies ["implementation_task_id"]
+    # end
+    # 
+    # task "Add error handling and edge cases" do
+    #   priority :medium
+    #   estimated_time "45 minutes"
+    # end
+    # 
+    # task "Document and deploy" do
+    #   priority :medium
+    #   estimated_time "30 minutes"
+    # end
+  end
+  
+  # Update this as you implement the feature
+  implementation_log do
+    step "<%= Time.current %>" do
+      action "Feature memory initialized"
+      status :planning
+    end
+  end
+  
+  # Add issues and solutions as you encounter them
+  troubleshooting do
+    # Example:
+    # issue "Description of problem" do
+    #   cause "Why it happens"
+    #   solution "How to fix it"
+    #   code_example "sample_code"
+    #   prevention "How to avoid it"
+    # end
+  end
+  
+  # Track performance metrics
+  performance_metrics do
+    # Example:
+    # processing_time "2-5 seconds"
+    # memory_usage "50MB"
+    # success_rate "95%"
+  end
+end

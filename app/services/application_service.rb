@@ -2,6 +2,7 @@ class ApplicationService
   include ActiveModel::Model
   include ActiveModel::Attributes
   include ActiveModel::Validations
+  include FeatureMemoryIntegration if defined?(FeatureMemoryIntegration)
 
   attr_reader :service_name, :action, :batch_size
 

@@ -1,0 +1,205 @@
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">IDM Dashboard</h1>
+    <p class="mt-2 text-gray-600 dark:text-gray-400">Integrated Development Memory - Feature Progress Tracker</p>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-6">
+    <%= form_with url: idm_dashboard_path, method: :get, local: true, class: "flex gap-4" do |f| %>
+      <%= f.text_field :q, 
+          value: @search_query,
+          placeholder: "Search features...", 
+          class: "flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" %>
+      <%= f.submit "Search", class: "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" %>
+      <% if @search_query.present? %>
+        <%= link_to "Clear", idm_dashboard_path, class: "px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400" %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Features -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Features</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= @stats[:total_features] %></p>
+        </div>
+        <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+          <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall Progress -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Overall Progress</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= @stats[:overall_completion] %>%</p>
+        </div>
+        <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+          <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Features -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">In Progress</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= @stats[:by_status][:in_progress] %></p>
+        </div>
+        <div class="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full">
+          <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Tasks -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Tasks</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= @stats[:total_tasks] %></p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            <%= @stats[:completed_tasks] %> done, <%= @stats[:in_progress_tasks] %> active
+          </p>
+        </div>
+        <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+          <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Type Breakdown -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-8 p-6">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Features by Type</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <% @stats[:by_type].each do |type, count| %>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-gray-900 dark:text-white"><%= count %></p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 capitalize"><%= type %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Features List -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Features (<%= @features.size %>)</h2>
+    </div>
+    
+    <div class="divide-y divide-gray-200 dark:divide-gray-700">
+      <% @features.each do |feature| %>
+        <% 
+          plan_status = feature.plan_status
+          feature_type = feature.feature_data.dig(:spec, :requirements, :feature_type) || :unknown
+          description = feature.feature_data.dig(:spec, :description) || "No description"
+          status = feature.status
+          
+          status_color = case status
+          when :completed then "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900"
+          when :in_progress then "text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900"
+          when :planning then "text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900"
+          else "text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-900"
+          end
+        %>
+        
+        <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" 
+             onclick="toggleFeatureDetails('<%= feature.feature_id %>')">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                <%= feature.feature_id.humanize %>
+              </h3>
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400"><%= description %></p>
+              
+              <!-- Progress Bar -->
+              <div class="mt-3">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    Progress: <%= plan_status[:completed] %>/<%= plan_status[:total] %> tasks
+                  </span>
+                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <%= plan_status[:completion_percentage] %>%
+                  </span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                  <div class="bg-blue-600 h-2 rounded-full" style="width: <%= plan_status[:completion_percentage] %>%"></div>
+                </div>
+              </div>
+              
+              <!-- Tags -->
+              <div class="mt-3 flex items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= status_color %>">
+                  <%= status.to_s.humanize %>
+                </span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <%= feature_type %>
+                </span>
+                <% if plan_status[:in_progress] > 0 %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+                    <%= plan_status[:in_progress] %> active
+                  </span>
+                <% end %>
+              </div>
+            </div>
+            
+            <!-- Expand Icon -->
+            <div class="ml-4">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Expandable Details (hidden by default) -->
+          <div id="feature-<%= feature.feature_id %>" class="hidden mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <!-- Details will be loaded via AJAX -->
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleFeatureDetails(featureId) {
+  const detailsDiv = document.getElementById(`feature-${featureId}`);
+  
+  if (detailsDiv.classList.contains('hidden')) {
+    // Load details if not already loaded
+    if (detailsDiv.innerHTML.trim() === '') {
+      detailsDiv.innerHTML = '<p class="text-gray-500">Loading...</p>';
+      
+      fetch(`/idm/${featureId}`)
+        .then(response => response.text())
+        .then(html => {
+          detailsDiv.innerHTML = html;
+        })
+        .catch(error => {
+          detailsDiv.innerHTML = '<p class="text-red-500">Error loading details</p>';
+        });
+    }
+    
+    detailsDiv.classList.remove('hidden');
+  } else {
+    detailsDiv.classList.add('hidden');
+  }
+}
+</script>

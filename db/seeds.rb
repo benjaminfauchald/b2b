@@ -111,6 +111,24 @@ ServiceConfiguration.find_or_create_by(service_name: 'company_employee_discovery
   }
 end
 
+# LinkedIn Discovery Internal Service Configuration (Beta)
+ServiceConfiguration.find_or_create_by(service_name: 'linkedin_discovery_internal') do |config|
+  config.refresh_interval_hours = 2160  # 90 days
+  config.batch_size = 10  # Small batch for testing
+  config.retry_attempts = 3
+  config.active = false  # Disabled by default - enable for testing
+  config.depends_on_services = []
+  config.settings = {
+    browser_timeout_seconds: 60,
+    page_load_wait_seconds: 5,
+    random_delay_range: [2, 5],  # Random delay between actions
+    max_profiles_per_page: 25,
+    use_headless: true,
+    viewport_width: 1920,
+    viewport_height: 1080
+  }
+end
+
 # Automatic Audit Configuration
 ServiceConfiguration.find_or_create_by(service_name: 'automatic_audit') do |config|
   config.refresh_interval_hours = 0  # No refresh needed for automatic audits

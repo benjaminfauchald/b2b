@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_05_110955) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_06_152100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -348,11 +348,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_05_110955) do
     t.datetime "web_discovery_updated_at"
     t.jsonb "employees_data"
     t.datetime "employee_discovery_updated_at"
+    t.boolean "linkedin_internal_processed", default: false
+    t.datetime "linkedin_internal_last_processed_at"
+    t.text "linkedin_internal_sales_navigator_url"
+    t.integer "linkedin_internal_profile_count"
+    t.text "linkedin_internal_error_message"
     t.index ["employee_discovery_updated_at"], name: "index_companies_on_employee_discovery_updated_at"
     t.index ["employees_data"], name: "index_companies_on_employees_data", using: :gin
     t.index ["financial_data_updated_at"], name: "index_companies_on_financial_data_updated_at"
     t.index ["id"], name: "index_companies_needing_web_discovery", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)) AND ((web_pages IS NULL) OR (web_pages = '{}'::jsonb) OR (jsonb_array_length(web_pages) = 0)))"
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["linkedin_internal_last_processed_at"], name: "index_companies_on_linkedin_internal_last_processed_at"
+    t.index ["linkedin_internal_processed"], name: "index_companies_on_linkedin_internal_processed"
     t.index ["linkedin_last_processed_at"], name: "index_companies_on_linkedin_last_processed_at"
     t.index ["operating_revenue", "website"], name: "index_companies_web_discovery_candidates", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)))"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
@@ -462,6 +469,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_05_110955) do
     t.text "zerobounce_activity_data_channels"
     t.decimal "zerobounce_quality_score", precision: 5, scale: 2
     t.datetime "zerobounce_imported_at", precision: nil
+    t.string "source"
     t.index ["email"], name: "index_people_on_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
     t.index ["email_validation_details"], name: "index_people_on_email_validation_details", using: :gin
     t.index ["email_validation_engine"], name: "index_people_on_email_validation_engine"

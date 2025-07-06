@@ -1,0 +1,161 @@
+<div class="space-y-6">
+  <% 
+    spec = feature.feature_data[:spec] || {}
+    plan = feature.feature_data[:implementation_plan] || []
+    log = feature.feature_data[:implementation_log] || []
+    troubleshooting = feature.feature_data[:troubleshooting] || []
+    metrics = feature.feature_data[:performance_metrics] || {}
+  %>
+  
+  <!-- Requirements -->
+  <% if spec[:requirements] %>
+    <div>
+      <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Requirements</h4>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
+        <% spec[:requirements].each do |key, value| %>
+          <% next if key == :feature_type %>
+          <div class="flex">
+            <span class="font-medium text-gray-700 dark:text-gray-300 capitalize min-w-[150px]"><%= key.to_s.humanize %>:</span>
+            <span class="text-gray-600 dark:text-gray-400">
+              <% if value.is_a?(Array) %>
+                <%= value.join(", ") %>
+              <% elsif value.is_a?(Hash) %>
+                <%= value.to_json %>
+              <% else %>
+                <%= value %>
+              <% end %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Implementation Plan -->
+  <% if plan.any? %>
+    <div>
+      <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Implementation Plan</h4>
+      <div class="space-y-2">
+        <% plan.each_with_index do |task, index| %>
+          <% 
+            task_color = case task[:status]
+            when :completed then "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
+            when :in_progress then "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20"
+            when :blocked then "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
+            else "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/20"
+            end
+            
+            icon = case task[:status]
+            when :completed then "✅"
+            when :in_progress then "▶️"
+            when :blocked then "⊗"
+            when :cancelled then "×"
+            else "⭕"
+            end
+          %>
+          
+          <div class="border rounded-lg p-3 <%= task_color %>">
+            <div class="flex items-start gap-2">
+              <span class="text-lg"><%= icon %></span>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900 dark:text-white"><%= task[:description] %></p>
+                <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <% if task[:priority] %>
+                    <span class="mr-3">Priority: <%= task[:priority] %></span>
+                  <% end %>
+                  <% if task[:estimated_time] %>
+                    <span class="mr-3">Time: <%= task[:estimated_time] %></span>
+                  <% end %>
+                  <% if task[:tags] %>
+                    <span>Tags: <%= task[:tags].join(", ") %></span>
+                  <% end %>
+                </div>
+                <% if task[:notes] %>
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Notes: <%= task[:notes] %></p>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Implementation Log -->
+  <% if log.any? %>
+    <div>
+      <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Implementation History</h4>
+      <div class="space-y-2">
+        <% log.last(5).reverse.each do |step| %>
+          <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <p class="font-medium text-gray-900 dark:text-white"><%= step[:action] %></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <%= DateTime.parse(step[:timestamp]).strftime("%B %d, %Y at %I:%M %p") %>
+                </p>
+                <% if step[:decision] %>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    <strong>Decision:</strong> <%= step[:decision] %>
+                  </p>
+                <% end %>
+                <% if step[:code_ref] %>
+                  <p class="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                    <strong>Code:</strong> <%= step[:code_ref] %>
+                  </p>
+                <% end %>
+              </div>
+              <% if step[:status] %>
+                <span class="px-2 py-1 text-xs rounded-full <%= step[:status] == :completed ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' %>">
+                  <%= step[:status] %>
+                </span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        
+        <% if log.size > 5 %>
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+            Showing last 5 of <%= log.size %> entries
+          </p>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Troubleshooting -->
+  <% if troubleshooting.any? %>
+    <div>
+      <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Troubleshooting Guide</h4>
+      <div class="space-y-3">
+        <% troubleshooting.each do |issue| %>
+          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+            <p class="font-medium text-orange-900 dark:text-orange-200"><%= issue[:description] %></p>
+            <% if issue[:solution] %>
+              <p class="text-sm text-gray-700 dark:text-gray-300 mt-2">
+                <strong>Solution:</strong> <%= issue[:solution] %>
+              </p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Performance Metrics -->
+  <% if metrics.any? %>
+    <div>
+      <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Performance Metrics</h4>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <div class="grid grid-cols-2 gap-4">
+          <% metrics.each do |key, value| %>
+            <div>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><%= key.to_s.humanize %>:</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400"><%= value %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

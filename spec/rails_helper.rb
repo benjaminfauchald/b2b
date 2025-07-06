@@ -2,14 +2,12 @@
 require 'spec_helper'
 ENV['RAILS_ENV'] ||= 'test'
 
+# Load .env.test file if it exists
+require 'dotenv'
+Dotenv.load('.env.test')
+
 # Ensure test environment before loading Rails
-begin
-  require_relative '../config/environment'
-rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
-  puts "Credentials error: #{e.message}"
-  puts "Run: RAILS_ENV=test rails credentials:edit --environment=test"
-  exit 1
-end
+require_relative '../config/environment'
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'

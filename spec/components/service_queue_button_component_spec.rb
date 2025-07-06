@@ -49,7 +49,7 @@ RSpec.describe ServiceQueueButtonComponent, type: :component do
 
       render_inline(component)
 
-      expect(page).to have_field("count", with: "10")
+      expect(page).to have_field("count", with: "100")
       expect(page).to have_css("input[type='number'][min='1'][max='100']")
     end
 

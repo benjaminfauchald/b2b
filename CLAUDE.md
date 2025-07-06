@@ -2,6 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 IMPORTANT: Claude Hooks Active
+
+This project uses Claude hooks to enforce IDM (Integrated Development Memory) usage:
+- **Pre-edit hook**: Blocks edits to IDM-tracked files until you acknowledge IDM requirements
+- **Post-edit hook**: Reminds you to update IDM logs after changes
+- **Pre-read hook**: Shows IDM status when reading tracked files
+
+To bypass hooks in emergencies: `export SKIP_IDM=1` (NOT RECOMMENDED)
+
+## 🚀 Quick Start for New AI Agents
+
+When starting work on this codebase:
+
+1. **First, check for existing feature work:**
+   ```bash
+   rails idm:instructions     # See IDM workflow
+   rails idm:list            # List all features with IDM tracking
+   rails idm:find[keyword]   # Search for specific features
+   ```
+
+2. **Look for IDM indicators in code:**
+   - Search for "Feature tracked by IDM:" comments in files
+   - These point to the IDM documentation file
+
+3. **Follow the IDM Communication Protocol** (see section below)
+
+4. **Read the complete IDM Rules:**
+   - 📚 **MANDATORY**: Read `docs/IDM_RULES.md` for full IDM guidelines
+   - This file contains all rules, examples, and workflows
+
 ## Quick Reference - Deployment
 
 **One Workflow**: `.github/workflows/main.yml` - Handles all CI/CD needs
@@ -286,6 +316,175 @@ Guard automatically monitors tests and logs failures for easy fixing:
 - Easy integration with Claude for fixes
 - Historical tracking of test failures
 - Live monitoring with `watch` command
+
+## Feature Development with Integrated Development Memory (IDM) - MANDATORY
+
+Every feature implementation MUST use the Integrated Development Memory system for documentation and progress tracking. This applies to ALL features:
+- Services and background jobs
+- UI components and frontend features  
+- API endpoints and integrations
+- Models and database changes
+- Infrastructure and configuration
+- Bug fixes and refactoring
+- ANY code change that implements functionality
+
+### IDM Communication Requirements - CRITICAL
+
+**For EVERY code change, you MUST show the user:**
+
+1. **BEFORE making changes** - Show current IDM plan status:
+   ```
+   📋 IDM Plan Status for [Feature Name]:
+   Progress: X% Complete (Y/Z tasks)
+   Current Task: [Task description]
+   Status: [in_progress/pending]
+   ```
+
+2. **DURING implementation** - Update user on task transitions:
+   ```
+   ✅ Completed: [Previous task]
+   ▶️  Starting: [New task]
+   Est. Time: [time estimate]
+   ```
+
+3. **AFTER changes** - Show what was logged to IDM:
+   ```
+   📝 IDM Log Updated:
+   - Action: [What was done]
+   - Decision: [Why it was done this way]
+   - Code Ref: [file:line]
+   - Next: [What comes next]
+   ```
+
+**Communication Template for Feature Work:**
+
+When working on ANY feature with an IDM entry, structure your responses like this:
+
+1. Start with IDM status check
+2. Explain what you're about to do
+3. Make the changes
+4. Show IDM updates
+5. Preview what comes next
+
+This keeps the user informed about:
+- Where we are in the plan
+- Why decisions are being made
+- What was implemented
+- What's coming next
+
+### Example IDM Communication Pattern
+
+```
+User: Add validation to the email field
+
+Assistant:
+📋 IDM Plan Status for Email Validation:
+Progress: 25% Complete (2/8 tasks)
+Current Task: Research existing validation patterns
+Status: in_progress
+
+I'll search for existing email validation patterns in the codebase...
+
+[Makes code changes]
+
+✅ Completed: Research existing validation patterns
+▶️  Starting: Add email format validation to User model
+Est. Time: 15 minutes
+
+[Implements validation]
+
+📝 IDM Log Updated:
+- Action: Added email format validation using built-in Rails validators
+- Decision: Used validates :email, format: { with: URI::MailTo::EMAIL_REGEXP } for RFC compliance
+- Code Ref: app/models/user.rb:42
+- Next: Write RSpec tests for email validation
+```
+
+### Feature Command Workflow
+
+When the user uses the `/feature` command OR requests ANY new functionality, follow these steps:
+
+1. **Generate Feature Memory** - Create IDM entry with initial requirements (`rails generate feature_memory <name>`)
+2. **Git commit** - Commit current changes to separate from new feature work
+3. **Understand the problem** - Analyze the feature request and requirements
+4. **Search the codebase** - Find relevant files and existing patterns
+5. **Check for useful gems** - Research libraries that could help implementation
+6. **Use context7 MCP** - Look up documentation for any frameworks or libraries
+7. **Follow guidelines**:
+   - SCT Service Control Table patterns
+   - ViewComponent, Tailwind, and Flowbite best practices
+8. **Create implementation plan** in IDM:
+   - Add tasks to implementation_plan block
+   - Set priorities and time estimates
+   - Define clear task descriptions
+9. **Show plan to user** - Display IDM plan status before starting
+10. **Await user acceptance** - Get approval before starting implementation
+11. **Update IDM continuously**:
+    - Show task transitions to user
+    - Update implementation_log at each major step
+    - Document decisions, challenges, and solutions
+    - Link to code and test references
+12. **Implement the feature** - Write code following the plan
+13. **Write tests** - Create comprehensive tests for the implementation
+14. **Review quality** - Must score 7/10 or higher, iterate if needed
+15. **Complete IDM documentation** - Final implementation details, lessons learned
+16. **Create descriptive commit** and **Push with PR**
+
+### IDM Quick Reference
+
+```bash
+# Generate new feature memory
+rails generate feature_memory feature_name "Description"
+
+# Check status
+rails feature_memory:status feature_name
+
+# Export to markdown
+rails feature_memory:export feature_name
+
+# Resume work
+rails feature_memory:resume feature_name
+```
+
+### Accessing IDM in Your Responses
+
+**Always check and show IDM status before working on a feature:**
+
+```ruby
+# Get the feature memory
+memory = ApplicationFeatureMemory.find('feature_name')
+# OR for specific features:
+memory = FeatureMemories::LinkedinDiscoveryInternal
+
+# Check plan status
+status = memory.plan_status
+# => { total: 8, pending: 2, in_progress: 1, completed: 5, completion_percentage: 62.5 }
+
+# Get current task
+current = memory.current_tasks.first
+# => { description: "Write tests", status: :in_progress, priority: :high }
+
+# Update task when starting work
+memory.update_task(task_id, status: :in_progress)
+
+# Log decisions and progress
+memory.log_step("Added validation", 
+                decision: "Used Rails built-in validators for simplicity",
+                code_ref: "app/models/user.rb:42",
+                status: :completed)
+```
+
+### Required IDM Components
+
+Every feature must document:
+- Requirements and test data
+- Implementation progress with timestamps
+- Code and test references
+- Challenges and solutions
+- Performance metrics
+- Troubleshooting guides
+
+See `docs/INTEGRATED_DEVELOPMENT_MEMORY.md` for full IDM documentation.
 
 ## Git Commit Guidelines
 - When creating commits, DO NOT include the "Generated with Claude Code" or "Co-Authored-By: Claude" lines

@@ -287,6 +287,11 @@
       </div>
     </div>
   </div>
+  
+  <!-- LinkedIn Discovery Internal (Beta) -->
+  <div class="mb-6">
+    <%= render LinkedinDiscoveryInternalComponent.new(company: @company) %>
+  </div>
 
   <!-- Enhancement Status -->
   <%= render CompanyEnhancementStatusComponent.new(company: @company) %>

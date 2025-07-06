@@ -7,6 +7,8 @@ Rails.application.configure do
   # Disable credentials requirement in test environment
   config.require_master_key = false
   config.read_encrypted_secrets = false
+  # Use environment variables instead of credentials in test
+  config.credentials.dig = ->(key) { ENV["RAILS_#{key.to_s.upcase}"] }
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.

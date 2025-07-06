@@ -136,6 +136,9 @@ gem "public_suffix", "~> 6.0"  # Domain name validation and parsing
 gem "truemail"        # Multi-layer email validation (syntax, DNS, SMTP)
 gem "valid_email2"    # Disposable email detection + MX validation
 
+# Web scraping and browser automation
+gem "ferrum"          # Chrome DevTools Protocol for Ruby (Puppeteer alternative)
+
 # Console enhancements for all environments
 gem "pry-rails"
 gem "awesome_print"

@@ -502,6 +502,37 @@ class CompaniesController < ApplicationController
     redirect_to companies_path
   end
 
+  # GET /companies/search_suggestions
+  def search_suggestions
+    query = params[:q]&.strip
+    limit = [params[:limit]&.to_i || 10, 50].min # Max 50 suggestions
+
+    if query.blank? || query.length < 2
+      render json: { suggestions: [] }
+      return
+    end
+
+    # Search companies by name and registration number
+    companies = Company.by_country(@selected_country)
+                      .where(
+                        "company_name ILIKE :query OR registration_number ILIKE :query",
+                        query: "%#{query}%"
+                      )
+                      .select(:id, :company_name, :registration_number)
+                      .limit(limit)
+                      .order(:company_name)
+
+    suggestions = companies.map do |company|
+      {
+        id: company.id,
+        company_name: company.company_name,
+        registration_number: company.registration_number
+      }
+    end
+
+    render json: { suggestions: suggestions }
+  end
+
   def service_stats
     respond_to do |format|
       format.turbo_stream do
@@ -729,6 +760,86 @@ class CompaniesController < ApplicationController
         success: false,
         message: "Failed to queue company for employee discovery: #{e.message}"
       }
+    end
+  end
+
+  def queue_linkedin_discovery_internal
+    @company = Company.find(params[:id])
+    
+    unless ServiceConfiguration.active?("linkedin_discovery_internal")
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = "LinkedIn Discovery Internal service is disabled"
+          render turbo_stream: turbo_stream.replace(
+            "linkedin-discovery-internal",
+            LinkedinDiscoveryInternalComponent.new(company: @company)
+          )
+        end
+        format.json { render json: { success: false, message: "Service is disabled" } }
+      end
+      return
+    end
+
+    sales_navigator_url = params[:sales_navigator_url]
+    
+    if sales_navigator_url.blank?
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = "Sales Navigator URL is required"
+          render turbo_stream: turbo_stream.replace(
+            "linkedin-discovery-internal",
+            LinkedinDiscoveryInternalComponent.new(company: @company)
+          )
+        end
+        format.json { render json: { success: false, message: "Sales Navigator URL required" } }
+      end
+      return
+    end
+
+    begin
+      # Create service audit log
+      audit_log = ServiceAuditLog.create!(
+        auditable: @company,
+        service_name: "linkedin_discovery_internal",
+        operation_type: "queue_individual",
+        status: "pending",
+        table_name: @company.class.table_name,
+        record_id: @company.id.to_s,
+        columns_affected: ["linkedin_internal_sales_navigator_url"],
+        metadata: {
+          action: "manual_queue",
+          user_id: current_user.id,
+          sales_navigator_url: sales_navigator_url,
+          timestamp: Time.current
+        }
+      )
+
+      # Queue the job
+      LinkedinDiscoveryInternalWorker.perform_async(@company.id, sales_navigator_url)
+      
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:notice] = "Company queued for LinkedIn Discovery Internal processing"
+          render turbo_stream: turbo_stream.replace(
+            "linkedin-discovery-internal",
+            LinkedinDiscoveryInternalComponent.new(company: @company.reload)
+          )
+        end
+        format.json { render json: { success: true, message: "Company queued successfully" } }
+      end
+    rescue StandardError => e
+      Rails.logger.error "Failed to queue LinkedIn Discovery Internal: #{e.message}"
+      
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = "Failed to queue company: #{e.message}"
+          render turbo_stream: turbo_stream.replace(
+            "linkedin-discovery-internal",
+            LinkedinDiscoveryInternalComponent.new(company: @company)
+          )
+        end
+        format.json { render json: { success: false, message: e.message } }
+      end
     end
   end
 

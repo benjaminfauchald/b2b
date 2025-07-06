@@ -5,6 +5,10 @@ Rails.application.routes.draw do
     omniauth_callbacks: "users/omniauth_callbacks",
     sessions: "users/sessions"
   }
+  
+  # IDM Dashboard
+  get 'idm', to: 'idm_dashboard#index', as: :idm_dashboard
+  get 'idm/:id', to: 'idm_dashboard#show', as: :idm_feature
   resources :domains do
     collection do
       post :queue_testing
@@ -43,6 +47,8 @@ Rails.application.routes.draw do
       get :enhancement_queue_status
       get :service_stats
       post :set_country
+      # Autocomplete endpoint
+      get :search_suggestions
     end
 
     member do
@@ -51,6 +57,7 @@ Rails.application.routes.draw do
       post :queue_single_web_discovery
       post :queue_single_linkedin_discovery
       post :queue_single_employee_discovery
+      post :queue_linkedin_discovery_internal
       get :financial_data
       get :profile_extraction_status
       get :linkedin_profiles
@@ -137,6 +144,11 @@ Rails.application.routes.draw do
       post :refresh, to: "quality_dashboard#refresh_stats"
     end
   end
+
+  # IDM (Integrated Development Memory) Dashboard
+  # ------------------------------------------------------------------
+  # Visualize feature development progress and statistics
+  resources :idm_dashboard, only: [:index], path: "idm"
 
   # Sidekiq Web UI with environment-specific authentication
   require "sidekiq/web"

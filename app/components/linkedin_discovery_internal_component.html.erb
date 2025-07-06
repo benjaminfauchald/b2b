@@ -1,0 +1,81 @@
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+        LinkedIn Discovery Internal (Beta)
+      </h2>
+      <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium <%= status_badge_class %>">
+        <%= status_text %>
+      </span>
+    </div>
+
+  <div class="space-y-4">
+    <% if company.linkedin_internal_error_message.present? %>
+      <div class="flex p-4 mb-4 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-800" role="alert">
+        <svg class="flex-shrink-0 inline w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <div>
+          <span class="font-medium">Processing Error!</span> <%= company.linkedin_internal_error_message %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= form_with url: queue_linkedin_discovery_internal_company_path(company), 
+                  method: :post,
+                  local: false,
+                  authenticity_token: true,
+                  data: { turbo: true },
+                  class: "space-y-4" do |form| %>
+      
+      <div>
+        <label for="sales_navigator_url" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Sales Navigator URL
+        </label>
+        <%= form.text_area :sales_navigator_url,
+                           value: prefilled_sales_navigator_url,
+                           rows: 3,
+                           class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+                           placeholder: "https://www.linkedin.com/sales/search/people?..." %>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Enter the LinkedIn Sales Navigator search URL for this company's employees
+        </p>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+          <p>Company ID: <span class="font-mono"><%= company.id %></span></p>
+          <p>Last processed: <%= last_processed_text %></p>
+        </div>
+        
+        <% if can_process? %>
+          <%= form.submit "Process Company",
+                          class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
+                          data: { disable_with: "Processing..." } %>
+        <% else %>
+          <button type="button" disabled class="text-white bg-gray-400 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+          </button>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if company.linkedin_internal_processed && company.linkedin_internal_profile_count.to_i > 0 %>
+      <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">
+          Discovered Profiles
+        </h4>
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Found <%= company.linkedin_internal_profile_count %> employee profiles from Sales Navigator.
+          <%= link_to "View People", company_people_path(company), 
+                      class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+  </div>
+</div>
