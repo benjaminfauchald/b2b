@@ -48,8 +48,21 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
-  # Don't care if the mailer can't send.
-  config.action_mailer.raise_delivery_errors = false
+  # Enable delivery errors for debugging
+  config.action_mailer.raise_delivery_errors = true
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.delivery_method = :smtp
+  
+  # SMTP configuration for messages@connectica.no via Domeneshop
+  config.action_mailer.smtp_settings = {
+    address: 'smtp.domeneshop.no',
+    port: 25,
+    user_name: 'connectica8',
+    password: 'CodemyFTW1024!',
+    authentication: 'plain',
+    enable_starttls_auto: false,
+    domain: 'connectica.no'
+  }
 
   config.action_mailer.perform_caching = false
 

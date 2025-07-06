@@ -250,62 +250,16 @@ module People
     end
 
     def detect_catch_all_domain(domain, smtp_check)
-      # Enhanced catch-all detection based on ZeroBounce analysis
+      # Conservative approach: Disable catch-all detection due to SMTP vs delivery discrepancies
+      # Real-world evidence shows SMTP RCPT TO can accept emails that later bounce during delivery
       
-      # Known catch-all domains from our analysis (ZeroBounce confirmed)
-      known_catch_all_domains = %w[
-        krungsri.com kasikornbank.com tmbbank.com bot.or.th scb.co.th
-      ]
+      Rails.logger.info "Skipping catch-all detection for #{domain} - using conservative validation approach"
+      Rails.logger.debug "SMTP RCPT TO testing can differ from actual delivery behavior"
+      Rails.logger.debug "Example: bot.or.th accepts during SMTP but rejects during delivery with '550 5.1.10 RESOLVER.ADR.RecipientNotFound'"
       
-      if known_catch_all_domains.include?(domain.downcase)
-        return "Known catch-all domain from ZeroBounce analysis"
-      end
-      
-      # Don't test Google Workspace domains as catch-all - they have proper mailbox validation
-      google_workspace_indicators = %w[aspmx.l.google.com google.com g-suite]
-      smtp_provider = smtp_check.dig(:details, :truemail, :smtp_debug) || ""
-      
-      if google_workspace_indicators.any? { |indicator| smtp_provider.downcase.include?(indicator) }
-        Rails.logger.debug "Skipping catch-all test for Google Workspace domain: #{domain}"
-        return false
-      end
-      
-      # For other domains, test for catch-all by checking if obviously invalid emails are accepted
-      # Only test if we're confident this isn't a single-mailbox failure
-      test_emails = [
-        "definitely-nonexistent-test-#{SecureRandom.hex(6)}@#{domain}",
-        "invalid-user-#{Time.current.to_i}@#{domain}"
-      ]
-      
-      accepted_count = 0
-      test_emails.each do |test_email|
-        begin
-          # Use lighter MX validation for catch-all testing to avoid SMTP rate limits
-          Truemail.configure do |config|
-            config.verifier_email = 'noreply@connectica.no'
-            config.verifier_domain = 'connectica.no'
-            config.default_validation_type = :smtp
-            config.smtp_safe_check = false  # Lighter validation for testing
-            config.connection_timeout = 5
-            config.response_timeout = 5
-            config.connection_attempts = 1
-          end
-          
-          test_result = Truemail.validate(test_email)
-          accepted_count += 1 if test_result.result.valid?
-        rescue => e
-          # If test fails, assume domain is not catch-all
-          Rails.logger.debug "Catch-all test failed for #{domain}: #{e.message}"
-          break  # Stop testing if we get errors
-        end
-      end
-      
-      # Only consider it catch-all if BOTH obviously invalid emails are accepted
-      # This reduces false positives
-      if accepted_count >= 2
-        return "Catch-all detected: #{accepted_count}/#{test_emails.length} invalid emails accepted"
-      end
-      
+      # Return false - trust Truemail's primary SMTP validation only
+      # This avoids false positives where domains appear catch-all during SMTP testing
+      # but actually validate individual mailboxes during real delivery
       false
     end
 
@@ -458,32 +412,11 @@ module People
     end
 
     def build_domain_validation_rules(settings)
-      # Base domain rules for enhanced validation
-      base_rules = {
-        # Google domains - require SMTP for mailbox-level validation
-        'gmail.com' => :smtp,
-        'googlemail.com' => :smtp,
-        'g.co' => :smtp,
-        'google.com' => :smtp,
-        
-        # Microsoft domains
-        'outlook.com' => :smtp,
-        'hotmail.com' => :smtp,
-        'live.com' => :smtp,
-        
-        # Known problematic domains from ZeroBounce analysis
-        'ascendcorp.com' => :smtp,  # Google Workspace - original problem case
-        'omise.co' => :smtp,        # Another invalid case found
-        
-        # Banking domains with catch-all issues
-        'krungsri.com' => :smtp,
-        'kasikornbank.com' => :smtp,
-        'tmbbank.com' => :smtp,
-        'bot.or.th' => :smtp,
-        'scb.co.th' => :smtp
-      }
+      # Default to SMTP validation for all domains - no hardcoded domain lists
+      # Let Truemail handle validation type decisions based on actual SMTP testing
+      base_rules = {}
       
-      # Allow custom domain rules from settings
+      # Only use custom rules from settings if explicitly configured
       if settings[:domain_validation_rules].is_a?(Hash)
         base_rules.merge!(settings[:domain_validation_rules].symbolize_keys)
       end
