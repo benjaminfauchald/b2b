@@ -6,17 +6,7 @@ export default class extends Controller {
   static values = { updateUrl: String }
 
   connect() {
-    console.log("Postal code form controller connected")
     this.updatePreview()
-    
-    // Add form submit debugging
-    this.element.addEventListener('submit', (event) => {
-      console.log("Form submit detected", event)
-      console.log("Form action:", this.element.action)
-      console.log("Form method:", this.element.method)
-      console.log("Postal code:", this.getPostalCode())
-      console.log("Batch size:", this.getBatchSize())
-    })
   }
 
   updatePreview() {
@@ -93,12 +83,5 @@ export default class extends Controller {
     return batchSizeSelect ? parseInt(batchSizeSelect.value) : 100
   }
 
-  debugClick(event) {
-    console.log("Submit button clicked!", event)
-    console.log("Postal code:", this.getPostalCode())
-    console.log("Batch size:", this.getBatchSize())
-    
-    // Let the form submit normally after logging
-    return true
-  }
+  // Form submits normally
 }

@@ -11,10 +11,9 @@
 
     <%= form_with url: queue_linkedin_discovery_by_postal_code_companies_path,
                   method: :post,
-                  local: false,
+                  local: true,
                   authenticity_token: true,
                   data: { 
-                    turbo_frame: "_top",
                     controller: "postal-code-form"
                   },
                   class: "space-y-4",
@@ -92,10 +91,7 @@
         <% if can_process? %>
           <%= form.submit "Queue LinkedIn Discovery",
                           class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
-                          data: { 
-                            disable_with: "Queueing...",
-                            action: "click->postal-code-form#debugClick"
-                          } %>
+                          data: { disable_with: "Queueing..." } %>
         <% else %>
           <button type="button" disabled class="text-white bg-gray-400 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 text-center">
             <%= company_preview[:count] == 0 ? "No Companies Found" : "Batch Size Too Large" %>
