@@ -9,15 +9,12 @@
       </span>
     </div>
 
-    <%= form_with url: queue_linkedin_discovery_by_postal_code_companies_path,
-                  method: :post,
-                  local: true,
-                  authenticity_token: true,
-                  data: { 
-                    controller: "postal-code-form"
-                  },
-                  class: "space-y-4",
-                  id: "linkedin-postal-code-form" do |form| %>
+    <form action="<%= queue_linkedin_discovery_by_postal_code_companies_path %>" 
+          method="post" 
+          class="space-y-4" 
+          id="linkedin-postal-code-form"
+          data-controller="postal-code-form">
+      <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Postal Code Selection -->
@@ -26,10 +23,10 @@
             Postal Code
           </label>
           <div class="relative">
-            <%= form.select :postal_code,
+            <%= select_tag :postal_code,
                            options_for_select(postal_code_options.map { |code| [code, code] }, postal_code),
-                           { include_blank: "Enter custom postal code..." },
                            {
+                             include_blank: "Enter custom postal code...",
                              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
                              data: { action: "change->postal-code-form#updatePreview" }
                            } %>
@@ -44,8 +41,8 @@
           <label for="custom_postal_code" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
             Custom Postal Code
           </label>
-          <%= form.text_field :custom_postal_code,
-                             value: postal_code,
+          <%= text_field_tag :custom_postal_code,
+                             postal_code,
                              class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
                              placeholder: "e.g., 2000",
                              data: { action: "input->postal-code-form#updatePreview" } %>
@@ -56,9 +53,8 @@
           <label for="batch_size" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
             Batch Size
           </label>
-          <%= form.select :batch_size,
+          <%= select_tag :batch_size,
                          options_for_select(batch_size_options.map { |size| [size, size] }, batch_size),
-                         {},
                          {
                            class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
                            data: { action: "change->postal-code-form#updatePreview" }
@@ -89,7 +85,7 @@
         </div>
         
         <% if can_process? %>
-          <%= form.submit "Queue LinkedIn Discovery",
+          <%= submit_tag "Queue LinkedIn Discovery",
                           class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
                           data: { disable_with: "Queueing..." } %>
         <% else %>
@@ -98,6 +94,6 @@
           </button>
         <% end %>
       </div>
-    <% end %>
+    </form>
   </div>
 </div>
