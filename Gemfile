@@ -112,7 +112,7 @@ gem "rubocop", "~> 1.76", group: :development
 gem "rubocop-rails", "~> 2.32", group: :development
 gem "rubocop-performance", "~> 1.25", group: :development
 gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
-gem "tailwindcss-rails", "~> 4.2"
+gem "tailwindcss-rails", "~> 4.3"
 gem "view_component", "~> 3.0"
 
 gem "sidekiq", "~> 8.0"
