@@ -120,7 +120,7 @@ gem "sidekiq", "~> 8.0"
 # Kafka
 gem "ruby-kafka", "~> 1.5.0"  # Kafka client
 gem "waterdrop", "~> 2.8.4"   # Kafka producer
-gem "karafka", "~> 2.4.0"     # Kafka consumer framework
+gem "karafka", "~> 2.5.0"     # Kafka consumer framework
 gem "dry-monitor"           # For monitoring Kafka operations
 
 gem "httparty"              # For making HTTP requests
