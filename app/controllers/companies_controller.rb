@@ -495,15 +495,30 @@ class CompaniesController < ApplicationController
     # Invalidate cache immediately when queue changes
     Rails.cache.delete("service_stats_data")
 
-    render json: {
-      success: true,
-      message: "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery",
-      queued_count: queued,
-      available_count: available_count,
-      postal_code: postal_code,
-      batch_size: batch_size,
-      queue_stats: get_queue_stats
-    }
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "company_queue_statistics", 
+          partial: "companies/queue_statistics", 
+          locals: { queue_stats: get_queue_stats }
+        )
+      end
+      format.json do
+        render json: {
+          success: true,
+          message: "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery",
+          queued_count: queued,
+          available_count: available_count,
+          postal_code: postal_code,
+          batch_size: batch_size,
+          queue_stats: get_queue_stats
+        }
+      end
+      format.html do
+        flash[:notice] = "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery"
+        redirect_to companies_path
+      end
+    end
   end
 
   # POST /companies/queue_employee_discovery
