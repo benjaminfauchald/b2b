@@ -43,12 +43,15 @@ Rails.application.routes.draw do
       post :queue_financial_data
       post :queue_web_discovery
       post :queue_linkedin_discovery
+      post :queue_linkedin_discovery_by_postal_code
       post :queue_employee_discovery
       get :enhancement_queue_status
       get :service_stats
       post :set_country
       # Autocomplete endpoint
       get :search_suggestions
+      # Postal code preview endpoint
+      get :postal_code_preview
     end
 
     member do

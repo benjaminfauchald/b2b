@@ -426,6 +426,86 @@ class CompaniesController < ApplicationController
     }
   end
 
+  # POST /companies/queue_linkedin_discovery_by_postal_code
+  def queue_linkedin_discovery_by_postal_code
+    Rails.logger.info "========== queue_linkedin_discovery_by_postal_code called =========="
+    Rails.logger.info "Params: #{params.inspect}"
+
+    unless ServiceConfiguration.active?("company_linkedin_discovery")
+      render json: { success: false, message: "LinkedIn discovery service is disabled" }
+      return
+    end
+
+    postal_code = params[:postal_code]&.strip
+    batch_size = params[:batch_size]&.to_i || 100
+
+    # Validate postal code is provided
+    if postal_code.blank?
+      render json: { success: false, message: "Postal code is required" }
+      return
+    end
+
+    # Validate batch size is positive and reasonable
+    if batch_size <= 0
+      render json: { success: false, message: "Batch size must be greater than 0" }
+      return
+    end
+
+    if batch_size > 1000
+      render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
+      return
+    end
+
+    # Get available companies by postal code with revenue ordering
+    available_companies = Company.where(postal_code: postal_code)
+                                .where.not(operating_revenue: nil)
+                                .order(operating_revenue: :desc)
+    
+    available_count = available_companies.count
+
+    # Check if we have companies for this postal code
+    if available_count == 0
+      render json: {
+        success: false,
+        message: "No companies found in postal code #{postal_code} with operating revenue data",
+        available_count: 0,
+        postal_code: postal_code
+      }
+      return
+    end
+
+    if batch_size > available_count
+      render json: {
+        success: false,
+        message: "Only #{available_count} companies available in postal code #{postal_code}, but #{batch_size} were requested",
+        available_count: available_count,
+        postal_code: postal_code
+      }
+      return
+    end
+
+    companies = available_companies.limit(batch_size)
+
+    queued = 0
+    companies.each do |company|
+      CompanyLinkedinDiscoveryWorker.perform_async(company.id)
+      queued += 1
+    end
+
+    # Invalidate cache immediately when queue changes
+    Rails.cache.delete("service_stats_data")
+
+    render json: {
+      success: true,
+      message: "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery",
+      queued_count: queued,
+      available_count: available_count,
+      postal_code: postal_code,
+      batch_size: batch_size,
+      queue_stats: get_queue_stats
+    }
+  end
+
   # POST /companies/queue_employee_discovery
   def queue_employee_discovery
     unless ServiceConfiguration.active?("company_employee_discovery")
@@ -531,6 +611,46 @@ class CompaniesController < ApplicationController
     end
 
     render json: { suggestions: suggestions }
+  end
+
+  # GET /companies/postal_code_preview
+  def postal_code_preview
+    postal_code = params[:postal_code]&.strip
+    batch_size = params[:batch_size]&.to_i || 100
+
+    if postal_code.blank?
+      render json: { 
+        count: 0, 
+        postal_code: postal_code,
+        batch_size: batch_size,
+        revenue_range: nil 
+      }
+      return
+    end
+
+    # Get companies by postal code with revenue ordering
+    companies = Company.where(postal_code: postal_code)
+                      .where.not(operating_revenue: nil)
+                      .order(operating_revenue: :desc)
+    
+    count = companies.count
+    
+    revenue_range = if count > 0
+      limited_companies = companies.limit(batch_size)
+      {
+        highest: format_revenue(companies.first.operating_revenue),
+        lowest: format_revenue(limited_companies.last&.operating_revenue || companies.first.operating_revenue)
+      }
+    else
+      nil
+    end
+
+    render json: {
+      count: count,
+      postal_code: postal_code,
+      batch_size: batch_size,
+      revenue_range: revenue_range
+    }
   end
 
   def service_stats
@@ -861,6 +981,20 @@ class CompaniesController < ApplicationController
 
   def set_company
     @company = Company.find(params[:id])
+  end
+
+  def format_revenue(amount)
+    return 'N/A' unless amount
+
+    if amount >= 1_000_000_000
+      "#{(amount / 1_000_000_000.0).round(1)}B NOK"
+    elsif amount >= 1_000_000
+      "#{(amount / 1_000_000.0).round(1)}M NOK" 
+    elsif amount >= 1_000
+      "#{(amount / 1_000.0).round(0)}K NOK"
+    else
+      "#{amount} NOK"
+    end
   end
 
   def calculate_service_stats

@@ -1,0 +1,104 @@
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+        LinkedIn Discovery by Postal Code
+      </h3>
+      <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+        Targeted Processing
+      </span>
+    </div>
+
+    <%= form_with url: queue_linkedin_discovery_by_postal_code_companies_path,
+                  method: :post,
+                  local: false,
+                  authenticity_token: true,
+                  data: { 
+                    turbo: true,
+                    controller: "postal-code-form",
+                    action: "submit->postal-code-form#submit"
+                  },
+                  class: "space-y-4" do |form| %>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Postal Code Selection -->
+        <div>
+          <label for="postal_code" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            Postal Code
+          </label>
+          <div class="relative">
+            <%= form.select :postal_code,
+                           options_for_select(postal_code_options.map { |code| [code, code] }, postal_code),
+                           { include_blank: "Enter custom postal code..." },
+                           {
+                             class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+                             data: { action: "change->postal-code-form#updatePreview" }
+                           } %>
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Select a postal code or enter custom one
+          </p>
+        </div>
+
+        <!-- Custom Postal Code Input (shown when blank is selected) -->
+        <div data-postal-code-form-target="customInput" class="hidden">
+          <label for="custom_postal_code" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            Custom Postal Code
+          </label>
+          <%= form.text_field :custom_postal_code,
+                             value: postal_code,
+                             class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+                             placeholder: "e.g., 2000",
+                             data: { action: "input->postal-code-form#updatePreview" } %>
+        </div>
+
+        <!-- Batch Size Selection -->
+        <div>
+          <label for="batch_size" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            Batch Size
+          </label>
+          <%= form.select :batch_size,
+                         options_for_select(batch_size_options.map { |size| [size, size] }, batch_size),
+                         {},
+                         {
+                           class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+                           data: { action: "change->postal-code-form#updatePreview" }
+                         } %>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Number of companies to process
+          </p>
+        </div>
+      </div>
+
+      <!-- Company Preview -->
+      <div data-postal-code-form-target="preview" class="bg-gray-50 border border-gray-200 rounded-lg p-4 dark:bg-gray-700 dark:border-gray-600">
+        <div class="flex items-center space-x-2 mb-2">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6m-6 4h6"></path>
+          </svg>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Processing Preview</h4>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-300" data-postal-code-form-target="previewText">
+          <%= preview_text %>
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between pt-4">
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+          <p>Companies will be processed by operating revenue (highest first)</p>
+        </div>
+        
+        <% if can_process? %>
+          <%= form.submit "Queue LinkedIn Discovery",
+                          class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
+                          data: { disable_with: "Queueing..." } %>
+        <% else %>
+          <button type="button" disabled class="text-white bg-gray-400 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+            <%= company_preview[:count] == 0 ? "No Companies Found" : "Batch Size Too Large" %>
+          </button>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -21,7 +21,7 @@ namespace :feature_memory do
       exit 1
     end
 
-    memory = ApplicationFeatureMemory.find(args[:feature_name])
+    memory = FeatureMemories::ApplicationFeatureMemory.find(args[:feature_name])
     unless memory
       puts "Feature memory '#{args[:feature_name]}' not found"
       exit 1
@@ -41,7 +41,7 @@ namespace :feature_memory do
       exit 1
     end
 
-    memory = ApplicationFeatureMemory.find(args[:feature_name])
+    memory = FeatureMemories::ApplicationFeatureMemory.find(args[:feature_name])
     unless memory
       puts "Feature memory '#{args[:feature_name]}' not found"
       exit 1
