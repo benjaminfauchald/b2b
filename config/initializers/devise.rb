@@ -289,19 +289,18 @@ Devise.setup do |config|
       access_type: "online"
     }
 
-  # GitHub OAuth configuration with explicit environment variable loading
-  github_client_id = ENV["GITHUB_CLIENT_ID"]
-  github_client_secret = ENV["GITHUB_CLIENT_SECRET"]
-  
-  if github_client_id.present? && github_client_secret.present?
-    config.omniauth :github,
-      github_client_id,
-      github_client_secret,
-      {
-        scope: "user:email"
-      }
-  else
-    Rails.logger.error "GitHub OAuth credentials missing: CLIENT_ID=#{github_client_id.present?}, CLIENT_SECRET=#{github_client_secret.present?}"
+  # GitHub OAuth configuration - Always configure to prevent initialization issues
+  # The strategy will be available but will fail gracefully if credentials are missing
+  config.omniauth :github,
+    ENV.fetch("GITHUB_CLIENT_ID", "dummy_client_id"),
+    ENV.fetch("GITHUB_CLIENT_SECRET", "dummy_client_secret"),
+    {
+      scope: "user:email"
+    }
+    
+  # Log warning if real credentials are missing
+  if ENV["GITHUB_CLIENT_ID"].blank? || ENV["GITHUB_CLIENT_SECRET"].blank?
+    Rails.logger.warn "GitHub OAuth credentials not found - using dummy values. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
   end
 
   # ==> Warden configuration

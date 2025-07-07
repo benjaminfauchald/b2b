@@ -3,6 +3,15 @@ ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../Gemfile", __dir__)
 require "bundler/setup" # Set up gems listed in the Gemfile.
 require "bootsnap/setup" # Speed up boot time by caching expensive operations.
 
+# Load environment variables early in the boot process to ensure they're available
+# for initializers that depend on them (like OAuth configuration)
+begin
+  require 'dotenv'
+  Dotenv.load('.env.local', '.env')
+rescue LoadError
+  # dotenv gem not available in production, which is fine
+end
+
 # Rails 8 Autoload Paths Freeze Protection - Applied at boot level
 # This must be done before any Rails classes are loaded
 if ENV["CI"] || ENV["RAILS_ENV"] == "test"
