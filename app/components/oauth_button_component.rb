@@ -13,7 +13,15 @@ class OauthButtonComponent < ViewComponent::Base
   attr_reader :provider, :name, :icon, :color, :button_text, :options
 
   def oauth_url
-    "/users/auth/#{provider}"
+    # Use Rails URL helpers to generate proper OAuth URLs with client_id parameters
+    case provider.to_s
+    when "github"
+      Rails.application.routes.url_helpers.user_github_omniauth_authorize_path
+    when "google_oauth2", "google"
+      Rails.application.routes.url_helpers.user_google_oauth2_omniauth_authorize_path
+    else
+      "/users/auth/#{provider}"
+    end
   end
 
   def button_classes

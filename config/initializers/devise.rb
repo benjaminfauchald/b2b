@@ -289,13 +289,21 @@ Devise.setup do |config|
       access_type: "online"
     }
 
-  config.omniauth :github,
-    ENV["GITHUB_CLIENT_ID"],
-    ENV["GITHUB_CLIENT_SECRET"],
-    {
-      scope: "user:email",
-      redirect_uri: "#{ENV.fetch('GITHUB_APP_HOST', 'https://local.connectica.no')}/users/auth/github/callback"
-    }
+  # GitHub OAuth configuration with explicit environment variable loading
+  github_client_id = ENV["GITHUB_CLIENT_ID"]
+  github_client_secret = ENV["GITHUB_CLIENT_SECRET"]
+  
+  if github_client_id.present? && github_client_secret.present?
+    config.omniauth :github,
+      github_client_id,
+      github_client_secret,
+      {
+        scope: "user:email",
+        redirect_uri: "#{ENV.fetch('GITHUB_APP_HOST', 'https://local.connectica.no')}/users/auth/github/callback"
+      }
+  else
+    Rails.logger.error "GitHub OAuth credentials missing: CLIENT_ID=#{github_client_id.present?}, CLIENT_SECRET=#{github_client_secret.present?}"
+  end
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or
