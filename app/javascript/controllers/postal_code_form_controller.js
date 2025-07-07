@@ -83,19 +83,5 @@ export default class extends Controller {
     return batchSizeSelect ? parseInt(batchSizeSelect.value) : 100
   }
 
-  submit(event) {
-    const postalCode = this.getPostalCode()
-    if (!postalCode) {
-      event.preventDefault()
-      alert('Please select or enter a postal code')
-      return
-    }
-
-    // Set the correct postal code value for submission
-    const hiddenInput = document.createElement('input')
-    hiddenInput.type = 'hidden'
-    hiddenInput.name = 'postal_code'
-    hiddenInput.value = postalCode
-    event.target.appendChild(hiddenInput)
-  }
+  // Form should submit normally, no custom submit handler needed
 }

@@ -298,8 +298,7 @@ Devise.setup do |config|
       github_client_id,
       github_client_secret,
       {
-        scope: "user:email",
-        redirect_uri: "#{ENV.fetch('GITHUB_APP_HOST', 'https://local.connectica.no')}/users/auth/github/callback"
+        scope: "user:email"
       }
   else
     Rails.logger.error "GitHub OAuth credentials missing: CLIENT_ID=#{github_client_id.present?}, CLIENT_SECRET=#{github_client_secret.present?}"
