@@ -475,6 +475,22 @@ module FeatureMemories
     def notes(text)
       @data[:notes] = text
     end
+
+    def features(feature_list)
+      @data[:features] = feature_list
+    end
+
+    def method_missing(method_name, *args, &block)
+      if args.length == 1 && !block_given?
+        @data[method_name] = args.first
+      else
+        super
+      end
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      true
+    end
   end
 
   class TroubleshootingDSL
@@ -508,6 +524,18 @@ module FeatureMemories
 
     def prevention(text)
       @data[:prevention] = text
+    end
+
+    def method_missing(method_name, *args, &block)
+      if args.length == 1 && !block_given?
+        @data[method_name] = args.first
+      else
+        super
+      end
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      true
     end
   end
 

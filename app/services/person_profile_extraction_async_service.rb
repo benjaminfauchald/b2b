@@ -12,36 +12,33 @@ class PersonProfileExtractionAsyncService < ApplicationService
     @phantom_id = ENV["PHANTOMBUSTER_PHANTOM_ID"]
     @api_key = ENV["PHANTOMBUSTER_API_KEY"]
     @base_url = "https://api.phantombuster.com/api/v2"
-    super(service_name: "person_profile_extraction_async", action: "extract", **options)
+    super(service_name: "person_profile_extraction", action: "extract", **options)
   end
 
   def perform
     return error_result("Service is disabled") unless service_active?
     return error_result("Missing PhantomBuster configuration") unless phantombuster_configured?
-
     return error_result("Company not found or not provided") unless @company
+    
     linkedin_url = @company.best_linkedin_url
     return error_result("Company has no valid LinkedIn URL") unless linkedin_url.present?
 
-    # Create audit log manually to control its lifecycle
-    audit_log = ServiceAuditLog.create!(
-      auditable: @company,
-      service_name: "person_profile_extraction_async",
-      operation_type: "extract",
-      status: :pending,
-      table_name: @company.class.table_name,
-      record_id: @company.id.to_s,
-      columns_affected: [ "profiles" ],
-      metadata: { status: "initializing" },
-      started_at: Time.current
-    )
-
-    begin
+    # Use proper SCT pattern with audit_service_operation
+    audit_service_operation(@company) do |audit_log|
       url_source = @company.linkedin_url.present? ? "manual" : "AI-discovered"
       confidence_info = @company.linkedin_ai_confidence.present? ? " (#{@company.linkedin_ai_confidence}% confidence)" : ""
 
       Rails.logger.info "🚀 Starting LinkedIn Profile Extraction for #{@company.company_name}"
       Rails.logger.info "📎 Using #{url_source} LinkedIn URL: #{linkedin_url}#{confidence_info}"
+
+      # Add initial metadata to audit log
+      audit_log.add_metadata(
+        linkedin_url: linkedin_url,
+        url_source: url_source,
+        linkedin_ai_confidence: @company.linkedin_ai_confidence,
+        status: "initializing",
+        phantom_id: @phantom_id
+      )
 
       # Update phantom configuration with best available LinkedIn URL
       update_phantom_configuration(@company.company_name, linkedin_url)
@@ -53,24 +50,14 @@ class PersonProfileExtractionAsyncService < ApplicationService
       if container_id.nil? || container_id.blank?
         audit_log.add_metadata(
           error: "Failed to launch PhantomBuster - no container ID returned",
-          phantom_id: @phantom_id,
           launch_attempted_at: Time.current.iso8601
         )
-        audit_log.update!(
-          status: "failed",
-          completed_at: Time.current,
-          error_message: "Failed to launch PhantomBuster - no container ID returned"
-        )
-        return error_result("Failed to launch PhantomBuster - no container ID returned")
+        raise "Failed to launch PhantomBuster - no container ID returned"
       end
 
       # Store container ID in audit log for async processing
       audit_log.add_metadata(
         container_id: container_id,
-        phantom_id: @phantom_id,
-        linkedin_url: linkedin_url,
-        url_source: url_source,
-        linkedin_ai_confidence: @company.linkedin_ai_confidence,
         status: "phantom_launched",
         launched_at: Time.current.iso8601
       )
@@ -78,30 +65,15 @@ class PersonProfileExtractionAsyncService < ApplicationService
       # Schedule async check job instead of synchronous monitoring
       schedule_status_check(container_id, audit_log.id)
 
-      # CRITICAL: Also schedule a safety check to prevent stuck jobs
-      # This ensures we have a backup check in case the initial schedule fails
-      # TODO: Implement PersonProfileExtractionCheckWorker as a backup safety mechanism
-      # PersonProfileExtractionCheckWorker.perform_in(30.seconds, container_id, audit_log.id)
-
       # Schedule monitor as additional safety net
       PhantomJobMonitorWorker.perform_in(11.minutes)
 
-      # Return immediately with pending status - DO NOT mark as success
+      # Return immediately with pending status - DO NOT mark as success yet
+      # The audit_service_operation will handle marking as success/failed
       success_result("Profile extraction launched. Monitoring in background.",
                     container_id: container_id,
                     audit_log_id: audit_log.id,
                     status: "processing")
-    rescue StandardError => e
-      audit_log.add_metadata(
-        error: e.message,
-        error_class: e.class.name
-      )
-      audit_log.update!(
-        status: "failed",
-        completed_at: Time.current,
-        error_message: e.message
-      )
-      error_result("Service error: #{e.message}")
     end
   end
 
@@ -136,7 +108,7 @@ class PersonProfileExtractionAsyncService < ApplicationService
       process_completed_phantom(container_id, audit_log)
 
     when "error", "failed", "timeout", "cancelled"
-      # Failed
+      # Failed - use SCT pattern for error handling
       audit_log.add_metadata(
         error: "Phantom execution failed with status: #{status}",
         phantom_status: status,
@@ -145,7 +117,8 @@ class PersonProfileExtractionAsyncService < ApplicationService
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
-        error_message: "Phantom execution failed with status: #{status}"
+        error_message: "Phantom execution failed with status: #{status}",
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
       )
       error_result("Phantom execution failed", status: status)
 
@@ -180,7 +153,8 @@ class PersonProfileExtractionAsyncService < ApplicationService
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
-        error_message: "Failed to fetch phantom output"
+        error_message: "Failed to fetch phantom output",
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
       )
       return error_result("Failed to fetch phantom output")
     end
@@ -195,7 +169,8 @@ class PersonProfileExtractionAsyncService < ApplicationService
       audit_log.update!(
         status: "failed",
         completed_at: Time.current,
-        error_message: "Could not find JSON result URL in phantom output"
+        error_message: "Could not find JSON result URL in phantom output",
+        execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
       )
       return error_result("No JSON URL found in output")
     end
@@ -203,17 +178,19 @@ class PersonProfileExtractionAsyncService < ApplicationService
     # Fetch and save results
     profile_count = fetch_and_save_results(json_url, container_id)
 
-    # Update audit log with success
-    audit_log.update!(
-      status: "success",
-      completed_at: Time.current
-    )
-
+    # Update audit log with success using SCT pattern
     audit_log.add_metadata(
       profiles_extracted: profile_count,
       json_url: json_url,
       phantom_status: "finished",
       completed_at: Time.current.iso8601
+    )
+    
+    # Mark as success - let ApplicationService handle the completion
+    audit_log.update!(
+      status: "success",
+      completed_at: Time.current,
+      execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round
     )
 
     success_result("Profile extraction completed",
@@ -227,7 +204,7 @@ class PersonProfileExtractionAsyncService < ApplicationService
   end
 
   def service_active?
-    config = ServiceConfiguration.find_by(service_name: "person_profile_extraction")
+    config = ServiceConfiguration.find_by(service_name: service_name)
     return false unless config
     config.active?
   end

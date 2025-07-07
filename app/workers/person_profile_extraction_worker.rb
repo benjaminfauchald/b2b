@@ -6,9 +6,9 @@ class PersonProfileExtractionWorker
   def perform(company_id)
     Rails.logger.info "🚀 PersonProfileExtractionWorker: Starting profile extraction for company #{company_id}"
 
-    # Use the async service
+    # Use the async service with proper SCT pattern
     service = PersonProfileExtractionAsyncService.new(company_id: company_id)
-    result = service.perform
+    result = service.call
 
     if result.success?
       Rails.logger.info "✅ PersonProfileExtractionWorker: Profile extraction launched for company #{company_id}: #{result.message}"

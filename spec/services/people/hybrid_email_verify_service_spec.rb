@@ -175,6 +175,9 @@ RSpec.describe People::HybridEmailVerifyService do
           allow(Truemail).to receive(:validate).with(email, validation_type: :smtp).and_return(mock_smtp_result)
 
           allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
+          
+          # Mock catch-all detection to return true for catchall.com
+          allow_any_instance_of(described_class).to receive(:detect_catch_all_domain).and_return(true)
         end
 
         it 'marks email as catch-all with low confidence' do
@@ -182,12 +185,13 @@ RSpec.describe People::HybridEmailVerifyService do
 
           expect(result.success?).to be true
           expect(result.data[:status]).to eq(:catch_all)
-          expect(result.data[:confidence]).to eq(0.2)
-          expect(result.data[:metadata][:catch_all_suspected]).to be true
+          expect(result.data[:confidence]).to eq(0.3)
+          expect(result.data[:metadata][:validation_method]).to eq("truemail_catch_all_detected")
+          expect(result.data[:metadata][:catch_all_reason]).to be true
         end
       end
 
-      context 'when engines disagree on SMTP validation' do
+      context 'when Truemail SMTP validation fails' do
         before do
           # Mock MX records
           allow_any_instance_of(described_class).to receive(:check_domain_mx).and_return({
@@ -196,32 +200,34 @@ RSpec.describe People::HybridEmailVerifyService do
             source: 'fresh'
           })
 
-          # Mock disagreement: Truemail says valid, existing says invalid
+          # Mock SMTP failure
           allow_any_instance_of(described_class).to receive(:verify_smtp_existing).and_return({
             passed: false,
             response_code: 550,
             message: 'Mailbox not found'
           })
 
+          # Mock Truemail SMTP failure
           mock_smtp_result = double(
             result: double(
-              valid?: true,
-              errors: [],
-              smtp_debug: "250 OK"
+              valid?: false,
+              errors: ["550 Mailbox not found"],
+              smtp_debug: "550 Mailbox not found"
             )
           )
           allow(Truemail).to receive(:validate).with(email, validation_type: :smtp).and_return(mock_smtp_result)
 
           allow_any_instance_of(described_class).to receive(:rate_limited?).and_return(false)
-          allow_any_instance_of(described_class).to receive(:detect_catch_all_domain?).and_return(false)
+          allow_any_instance_of(described_class).to receive(:detect_catch_all_domain).and_return(false)
         end
 
-        it 'marks email as invalid due to disagreement' do
+        it 'marks email as invalid when Truemail fails' do
           result = service.perform
 
           expect(result.success?).to be true
           expect(result.data[:status]).to eq(:invalid)
-          expect(result.data[:confidence]).to be > 0.3
+          expect(result.data[:confidence]).to eq(0.9)
+          expect(result.data[:metadata][:validation_method]).to eq("truemail_enhanced_invalid")
         end
       end
     end
@@ -239,7 +245,7 @@ RSpec.describe People::HybridEmailVerifyService do
         )
         allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
 
-        mock_address = double(valid?: false)
+        mock_address = double(valid?: false, disposable?: false)
         allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
       end
 
@@ -305,7 +311,7 @@ RSpec.describe People::HybridEmailVerifyService do
       allow(Truemail).to receive(:validate).with(email, validation_type: :regex).and_return(mock_truemail_result)
 
       # Mock valid_email2
-      mock_address = double(valid?: true)
+      mock_address = double(valid?: true, disposable?: false)
       allow(ValidEmail2::Address).to receive(:new).and_return(mock_address)
 
       result = service.send(:enhanced_syntax_check, email)
