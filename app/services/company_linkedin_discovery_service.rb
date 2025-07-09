@@ -108,8 +108,11 @@ class CompanyLinkedinDiscoveryService < ApplicationService
     unique_results.each do |result|
       if valid_linkedin_profile?(result[:url])
         validated = validate_and_score_linkedin_profile(result)
-        validated_results << validated if validated
-      end
+        # Store ALL validated results (including low confidence ones)
+        # Store ALL validated results (including low confidence ones)
+        if validated
+          validated_results << validated
+        end      end
     end
 
     # Sort by confidence score
@@ -198,8 +201,8 @@ class CompanyLinkedinDiscoveryService < ApplicationService
       return false unless uri.scheme =~ /^https?$/
       return false unless uri.host&.include?("linkedin.com")
 
-      # Check if it's a company page (not personal profile)
-      url.include?("/company/") || url.include?("/in/") || url.include?("/showcase/")
+      # ONLY allow company pages - no personal profiles or other types
+      url.include?("/company/") || url.include?("/showcase/")
 
     rescue StandardError => e
       Rails.logger.debug "LinkedIn URL validation failed for #{url}: #{e.message}"
@@ -297,32 +300,40 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
   def build_validation_prompt(data)
     <<~PROMPT
-      Validate if this LinkedIn profile belongs to the Norwegian company and assign a confidence score.
-
-      Company Information:
+      CRITICAL: You must validate if this LinkedIn profile belongs to the EXACT Norwegian company specified below.
+      
+      This is NOT about similar companies or companies in the same industry.
+      This is about finding the EXACT company match.
+      
+      TARGET COMPANY (must match exactly):
       - Name: #{@company.company_name}
       - Industry: #{@company.primary_industry_description || 'Unknown'}
       - Location: #{@company.business_city}, Norway
       - Organization Type: #{@company.organization_form_description || 'Unknown'}
 
-      LinkedIn Profile Information:
+      LINKEDIN PROFILE TO VALIDATE:
       - URL: #{data[:url]}
       - Title: #{data[:title]}
       - Description: #{data[:description]}
       - Profile Type: #{data[:profile_type]}
 
-      Question: Does this LinkedIn profile belong to or represent this Norwegian company?
-
-      Consider:
-      1. Company name match in title/description
-      2. Industry/business alignment
-      3. Geographic relevance (Norwegian company)
-      4. Profile type appropriateness (company vs personal)
+      VALIDATION CRITERIA (ALL must be met for a Yes match):
+      1. The LinkedIn profile title/description must contain the EXACT company name or a clear variation
+      2. The company name in the profile must match the target company (not just similar)
+      3. The profile must be for a Norwegian company (not international subsidiaries with similar names)
+      4. The profile must be a company page, not a personal profile
+      5. The industry/business must align with the target company
+      
+      IMPORTANT: If the LinkedIn profile is for a different company with a similar name, answer "No".
+      IMPORTANT: If the company name doesn't match exactly, answer "No".
+      IMPORTANT: If you're unsure, answer "No".
+      
+      QUESTION: Is this LinkedIn profile for the EXACT company "#{@company.company_name}"?
 
       Respond with:
       MATCH: Yes/No
       CONFIDENCE: [0-100]
-      REASONING: [Brief explanation]
+      REASONING: [Brief explanation of why this is/isn't the exact company]
     PROMPT
   end
 
@@ -333,40 +344,109 @@ class CompanyLinkedinDiscoveryService < ApplicationService
     # Check if it's a match
     is_match = response.match(/MATCH:\s*Yes/i)
 
-    # If not a match, cap confidence at 40
-    is_match ? confidence : [ confidence, 40 ].min
+    # If AI says it's NOT a match, return 0 confidence (reject it)
+    # Only return the confidence score if AI confirms it's a match
+    is_match ? confidence : 0
   end
 
   def basic_confidence_score(data)
-    score = 50
+    score = 0  # Start at 0 - require strong matches
     company_name = @company.company_name.downcase
-    base_name = company_name.gsub(/\s+(as|asa|sa|da)$/i, "").strip.downcase
-
-    # Check URL
-    if data[:url].downcase.include?(base_name.gsub(/\s+/, ""))
-      score += 20
+    
+    # Remove legal suffixes (AS, ASA, DA are Norwegian company types like Ltd/LLC)
+    base_name = company_name.gsub(/\s+(as|asa|sa|da|ans|ba|nuf|enk|ks|al|bbl)$/i, "").strip.downcase
+    
+    # Extract core company name (before geographical descriptors)
+    # Common Norwegian geographical terms that indicate subsidiaries/branches
+    geographical_terms = GeographicalTerm.subsidiary_indicator_terms('NO')
+    
+    # Create core name by removing geographical descriptors
+    core_name = base_name.dup
+    geographical_terms.each do |geo_term|
+      core_name = core_name.gsub(/\s+#{geo_term}(?:\s|$)/i, " ").strip
     end
+    core_name = core_name.strip
+    
+    # Create variations for matching
+    name_variations = [
+      base_name.gsub(/\s+/, ""),           # Full name without spaces
+      base_name.gsub(/\s+/, "-"),          # Full name with hyphens
+      core_name.gsub(/\s+/, ""),           # Core name without spaces (for subsidiaries)
+      core_name.gsub(/\s+/, "-"),          # Core name with hyphens
+      base_name,                           # Full name with spaces
+      core_name                            # Core name with spaces
+    ].uniq.reject(&:empty?)
 
-    # Check title
-    if data[:title].downcase.include?(base_name)
-      score += 15
+    # Check URL for company name match (most reliable)
+    url_lower = data[:url].downcase
+    url_score = 0
+    name_variations.each do |variation|
+      if variation.length > 3 && url_lower.include?(variation)
+        if variation == base_name.gsub(/\s+/, "") || variation == base_name.gsub(/\s+/, "-")
+          url_score = 50  # Perfect match for full company name
+        else
+          url_score = 40  # Good match for core name (subsidiary case)
+        end
+        break
+      end
     end
+    score += url_score
 
-    # Check description
-    if data[:description].downcase.include?(base_name)
-      score += 10
+    # Check title for company name match
+    title_lower = data[:title].downcase
+    title_score = 0
+    name_variations.each do |variation|
+      if variation.length > 3 && title_lower.include?(variation)
+        if variation == base_name || variation == base_name.gsub(/\s+/, "")
+          title_score = 30  # Perfect match for full company name
+        else
+          title_score = 25  # Good match for core name
+        end
+        break
+      end
     end
+    score += title_score
 
-    # Company profile bonus
+    # Check description for company name match
+    description_lower = data[:description].downcase
+    description_score = 0
+    name_variations.each do |variation|
+      if variation.length > 3 && description_lower.include?(variation)
+        description_score = 15  # Any name match in description
+        break
+      end
+    end
+    score += description_score
+
+    # Require company profile type (not personal)
     if data[:profile_type] == "company"
       score += 10
     elsif data[:profile_type] == "showcase"
       score += 5
+    else
+      # Penalize non-company profiles
+      score -= 20
     end
 
-    [ score, 95 ].min
-  end
+    # Industry match bonus if available
+    if @company.primary_industry_description.present?
+      industry_lower = @company.primary_industry_description.downcase
+      if description_lower.include?(industry_lower) || title_lower.include?(industry_lower)
+        score += 10
+      end
+    end
 
+    # Location match bonus if available
+    if @company.business_city.present?
+      city_lower = @company.business_city.downcase
+      if description_lower.include?(city_lower) || title_lower.include?(city_lower)
+        score += 10
+      end
+    end
+
+    # Ensure score is between 0 and 100
+    [ [ score, 0 ].max, 100 ].min
+  end
   def normalize_url(url)
     url.downcase.gsub(/\/$/, "").gsub(/^https?:\/\/(www\.)?/, "https://")
   end
@@ -382,17 +462,27 @@ class CompanyLinkedinDiscoveryService < ApplicationService
   end
 
   def update_company_linkedin_data(discovered_profiles)
-    # Store ALL discovered LinkedIn profiles, regardless of confidence
     if discovered_profiles.any?
       best_match = discovered_profiles.first
-
-      # Always store the best match in linkedin_ai_url with its confidence
-      @company.linkedin_ai_url = best_match[:url]
-      # Convert confidence to integer if it's a float between 0 and 1
-      confidence = best_match[:confidence]
-      @company.linkedin_ai_confidence = confidence < 1 ? (confidence * 100).to_i : confidence.to_i
-
-      # Store all discovered profiles in linkedin_alternatives as JSON
+      
+      # Only store the match as main URL if confidence is >= 60%
+      if best_match[:confidence] >= 60
+        @company.linkedin_ai_url = best_match[:url]
+        # Convert confidence to integer if it's a float between 0 and 1
+        confidence = best_match[:confidence]
+        @company.linkedin_ai_confidence = confidence < 1 ? (confidence * 100).to_i : confidence.to_i
+        
+        # Update employee count if available in the best match company_info
+        if best_match[:company_info] && best_match[:company_info][:employees]
+          @company.linkedin_employee_count = best_match[:company_info][:employees]
+        end
+      else
+        # Clear any existing AI URL if new results are low confidence
+        @company.linkedin_ai_url = nil
+        @company.linkedin_ai_confidence = nil
+      end
+      
+      # Store ALL discovered profiles in linkedin_alternatives (including low confidence ones)
       @company.linkedin_alternatives = discovered_profiles.map do |profile|
         {
           url: profile[:url],
@@ -401,11 +491,11 @@ class CompanyLinkedinDiscoveryService < ApplicationService
           profile_type: profile[:profile_type]
         }
       end
-
-      # Update employee count if available in the best match company_info
-      if best_match[:company_info] && best_match[:company_info][:employees]
-        @company.linkedin_employee_count = best_match[:company_info][:employees]
-      end
+    else
+      # Clear any existing AI URL if no profiles found
+      @company.linkedin_ai_url = nil
+      @company.linkedin_ai_confidence = nil
+      @company.linkedin_alternatives = []
     end
 
     # Always mark as processed, even if no profiles found
