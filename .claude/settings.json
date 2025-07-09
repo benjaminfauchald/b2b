@@ -1,0 +1,100 @@
+{
+  "toolDefaults": {
+    "mcp__puppeteer__puppeteer_navigate": {
+      "launchOptions": {
+        "headless": false,
+        "defaultViewport": { "width": 1920, "height": 1080 },
+        "args": [
+          "--window-size=1920,1080",
+          "--start-maximized",
+          "--no-sandbox",
+          "--disable-setuid-sandbox"
+        ]
+      }
+    },
+    "mcp__puppeteer__puppeteer_screenshot": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py pre-read",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py pre-edit",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py pre-task",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py post-edit",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-auto-update.py post-test",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py stop-check",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/idm-intelligence.py stop-check",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
