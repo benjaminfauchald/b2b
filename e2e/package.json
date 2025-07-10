@@ -1,0 +1,45 @@
+{
+  "name": "b2b-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for B2B Rails application",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "test:debug": "jest --runInBand --verbose",
+    "test:auth": "jest __tests__/auth",
+    "test:companies": "jest __tests__/companies",
+    "test:specific": "jest --testNamePattern"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-puppeteer": "^10.0.1",
+    "puppeteer": "^22.15.0",
+    "jest-html-reporters": "^3.1.5",
+    "jest-junit": "^16.0.0",
+    "expect-puppeteer": "^10.0.1"
+  },
+  "jest": {
+    "preset": "jest-puppeteer",
+    "testMatch": [
+      "<rootDir>/__tests__/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/config/setup.js"
+    ],
+    "testTimeout": 60000,
+    "maxWorkers": "50%",
+    "reporters": [
+      "default",
+      [
+        "jest-html-reporters",
+        {
+          "publicPath": "./reports",
+          "filename": "test-report.html",
+          "expand": true
+        }
+      ]
+    ]
+  }
+}
