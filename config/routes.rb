@@ -52,6 +52,8 @@ Rails.application.routes.draw do
       get :search_suggestions
       # Postal code preview endpoint
       get :postal_code_preview
+      # Google API quota check endpoint
+      get :check_google_api_quota
     end
 
     member do

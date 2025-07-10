@@ -49,16 +49,6 @@ class LinkedinDiscoveryPostalCodeComponent < ViewComponent::Base
     company_preview[:count] > 0 && batch_size <= company_preview[:count]
   end
 
-  def postal_code_options
-    # Get most common postal codes with companies that have operating revenue
-    Company.where.not(operating_revenue: nil)
-           .where.not(postal_code: nil)
-           .group(:postal_code)
-           .having('COUNT(*) >= 10')
-           .order(Arel.sql('COUNT(*) DESC'))
-           .limit(20)
-           .pluck(:postal_code)
-  end
 
   def batch_size_options
     base_options = [10, 25, 50, 100, 200, 500, 1000]
@@ -69,14 +59,18 @@ class LinkedinDiscoveryPostalCodeComponent < ViewComponent::Base
       valid_options = base_options.select { |option| option <= available_count }
       
       # Always include the exact available count if it's not already in the list
-      unless valid_options.include?(available_count)
+      # and it's greater than the largest valid option
+      if valid_options.empty? || available_count < base_options.first
+        # If available count is less than 10, just show that number
+        valid_options = [available_count]
+      elsif available_count > valid_options.last
         valid_options << available_count
-        valid_options.sort!
       end
       
-      valid_options
+      valid_options.sort
     else
-      base_options
+      # If no companies available, return empty array
+      []
     end
   end
 

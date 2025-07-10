@@ -117,8 +117,9 @@ class Company < ApplicationRecord
       WHERE service_audit_logs.auditable_type = 'Company' 
       AND service_audit_logs.auditable_id = companies.id 
       AND service_audit_logs.service_name = 'company_linkedin_discovery'
+      AND service_audit_logs.status = ?
       AND service_audit_logs.completed_at > ?
-    )", 720.hours.ago)
+    )", ServiceAuditLog::STATUS_SUCCESS, 720.hours.ago)
   }
 
   # Companies that are LinkedIn discovery candidates regardless of processing status

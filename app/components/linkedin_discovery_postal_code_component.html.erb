@@ -11,44 +11,37 @@
 
     <%= form_with url: queue_linkedin_discovery_by_postal_code_companies_path, 
                     method: :post, 
-                    local: false,
-                    format: :turbo_stream,
                     class: "space-y-4", 
                     id: "linkedin-postal-code-form",
-                    data: { controller: "postal-code-form", turbo_stream: true } do |form| %>
+                    data: { 
+                      controller: "postal-code-form"
+                    } do |form| %>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Postal Code Selection -->
+        <!-- Postal Code Input -->
         <div>
           <label for="postal_code" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
             Postal Code
           </label>
           <div class="relative">
-            <%= form.select :postal_code,
-                           options_for_select(postal_code_options.map { |code| [code, code] }, postal_code),
-                           {
-                             include_blank: "Enter custom postal code...",
-                           },
-                           {
-                             class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-                             data: { action: "change->postal-code-form#updatePreview" }
-                           } %>
+            <%= form.text_field :postal_code,
+                               value: postal_code,
+                               class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
+                               placeholder: "e.g., 0150",
+                               pattern: "[0-9]{4}",
+                               maxlength: 4,
+                               required: true,
+                               data: { 
+                                 action: "input->postal-code-form#validateAndUpdatePreview",
+                                 postal_code_form_target: "postalCodeInput"
+                               } %>
           </div>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Select a postal code or enter custom one
+            Enter a 4-digit postal code (e.g., 0150, 2000)
           </p>
-        </div>
-
-        <!-- Custom Postal Code Input (shown when blank is selected) -->
-        <div data-postal-code-form-target="customInput" class="hidden">
-          <label for="custom_postal_code" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            Custom Postal Code
-          </label>
-          <%= form.text_field :custom_postal_code,
-                             value: postal_code,
-                             class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500",
-                             placeholder: "e.g., 2000",
-                             data: { action: "input->postal-code-form#updatePreview" } %>
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400 hidden" data-postal-code-form-target="errorMessage">
+            Postal code must be exactly 4 digits
+          </p>
         </div>
 
         <!-- Batch Size Selection -->
@@ -82,16 +75,35 @@
         </p>
       </div>
 
+      <!-- Quota Status Warning -->
+      <div id="quota-status" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 dark:bg-amber-900 dark:border-amber-700">
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+          </svg>
+          <div class="flex-1">
+            <h4 class="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+              Google API Quota Warning
+            </h4>
+            <p id="quota-message" class="text-sm text-amber-700 dark:text-amber-400"></p>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div class="flex items-center justify-between pt-4">
         <div class="text-sm text-gray-500 dark:text-gray-400">
           <p>Companies will be processed by operating revenue (highest first)</p>
+          <p id="quota-info" class="text-xs text-gray-400 dark:text-gray-500 mt-1"></p>
         </div>
         
         <%= form.submit "Queue LinkedIn Discovery",
                         class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800",
-                        data: { disable_with: "Queueing..." },
-                        disabled: !can_process? %>
+                        data: { 
+                          disable_with: "Queueing...",
+                          postal_code_form: "submit"
+                        },
+                        id: "postal-code-submit-button" %>
       </div>
     <% end %>
   </div>

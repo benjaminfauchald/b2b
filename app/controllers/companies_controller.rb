@@ -428,24 +428,36 @@ class CompaniesController < ApplicationController
 
   # POST /companies/queue_linkedin_discovery_by_postal_code
   def queue_linkedin_discovery_by_postal_code
+    # Write to a file to ensure logging works
+    File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+      f.puts "========== queue_linkedin_discovery_by_postal_code called at #{Time.now} =========="
+      f.puts "Params: #{params.inspect}"
+      f.puts "Request format: #{request.format}"
+      f.puts "Request headers: #{request.headers['Accept']}"
+    end
+    
     Rails.logger.info "========== queue_linkedin_discovery_by_postal_code called =========="
     Rails.logger.info "Params: #{params.inspect}"
+    Rails.logger.info "Request format: #{request.format}"
+    Rails.logger.info "Request headers: #{request.headers['Accept']}"
 
     unless ServiceConfiguration.active?("company_linkedin_discovery")
       render json: { success: false, message: "LinkedIn discovery service is disabled" }
       return
     end
 
-    # Handle both postal_code and custom_postal_code (same logic as JavaScript)
+    # Get postal code from params
     postal_code = params[:postal_code]&.strip
-    if postal_code.blank?
-      postal_code = params[:custom_postal_code]&.strip
-    end
     batch_size = params[:batch_size]&.to_i || 100
 
-    # Validate postal code is provided
+    # Validate postal code is provided and is 4 digits
     if postal_code.blank?
       render json: { success: false, message: "Postal code is required" }
+      return
+    end
+    
+    unless postal_code.match?(/\A\d{4}\z/)
+      render json: { success: false, message: "Postal code must be exactly 4 digits" }
       return
     end
 
@@ -468,33 +480,108 @@ class CompaniesController < ApplicationController
     
     available_count = available_companies.count
 
+    # Debug logging
+    File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+      f.puts "Available companies count: #{available_count}"
+    end
+    
     # Check if we have companies for this postal code
     if available_count == 0
-      render json: {
-        success: false,
-        message: "No companies found in postal code #{postal_code} with operating revenue data",
-        available_count: 0,
-        postal_code: postal_code
-      }
+      File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+        f.puts "No companies found - returning warning"
+      end
+      
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append("body", 
+            partial: "shared/toast_notification", 
+            locals: { 
+              message: "No companies found in postal code #{postal_code} with operating revenue data", 
+              type: "warning",
+              duration: 5000
+            }
+          )
+        end
+        format.json do
+          render json: {
+            success: false,
+            message: "No companies found in postal code #{postal_code} with operating revenue data",
+            available_count: 0,
+            postal_code: postal_code
+          }
+        end
+      end
+      return
+    end
+
+    # Check Google API quota before queuing jobs
+    quota_check = perform_google_api_quota_check(batch_size)
+    unless quota_check[:available]
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append("body", 
+            partial: "shared/toast_notification", 
+            locals: { 
+              message: quota_check[:message], 
+              type: "warning",
+              duration: 8000
+            }
+          )
+        end
+        format.json do
+          render json: {
+            success: false,
+            message: quota_check[:message],
+            quota_used: quota_check[:used],
+            quota_limit: quota_check[:limit],
+            quota_remaining: quota_check[:remaining]
+          }
+        end
+      end
       return
     end
 
     if batch_size > available_count
-      render json: {
-        success: false,
-        message: "Only #{available_count} companies available in postal code #{postal_code}, but #{batch_size} were requested",
-        available_count: available_count,
-        postal_code: postal_code
-      }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append("body", 
+            partial: "shared/toast_notification", 
+            locals: { 
+              message: "Only #{available_count} companies available in postal code #{postal_code}, but #{batch_size} were requested", 
+              type: "warning",
+              duration: 5000
+            }
+          )
+        end
+        format.json do
+          render json: {
+            success: false,
+            message: "Only #{available_count} companies available in postal code #{postal_code}, but #{batch_size} were requested",
+            available_count: available_count,
+            postal_code: postal_code
+          }
+        end
+      end
       return
     end
 
     companies = available_companies.limit(batch_size)
 
     queued = 0
+    
+    # Debug logging
+    File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+      f.puts "About to queue #{companies.count} companies"
+    end
+    
     companies.each do |company|
       CompanyLinkedinDiscoveryWorker.perform_async(company.id)
       queued += 1
+    end
+    
+    # Debug logging
+    File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+      f.puts "Successfully queued #{queued} companies"
     end
 
     # Invalidate cache immediately when queue changes
@@ -502,6 +589,11 @@ class CompaniesController < ApplicationController
 
     respond_to do |format|
       format.turbo_stream do
+        # Debug logging
+        File.open(Rails.root.join('tmp', 'postal_code_debug.log'), 'a') do |f|
+          f.puts "Rendering turbo stream response"
+        end
+        
         # Get fresh stats data for immediate update
         stats_data = calculate_service_stats
         queue_stats = get_queue_stats
@@ -522,8 +614,8 @@ class CompaniesController < ApplicationController
               queue_depth: queue_stats["company_linkedin_discovery"] || 0
             }
           ),
-          turbo_stream.prepend(
-            "companies-page",
+          turbo_stream.append(
+            "toast-container",
             partial: "shared/toast_notification",
             locals: { 
               message: "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery",
@@ -690,10 +782,14 @@ class CompaniesController < ApplicationController
       nil
     end
 
+    # Calculate batch size options based on available count
+    batch_size_options = calculate_batch_size_options(count)
+    
     render json: {
       count: count,
       postal_code: postal_code,
       batch_size: batch_size,
+      batch_size_options: batch_size_options,
       revenue_range: revenue_range
     }
   end
@@ -1008,7 +1104,97 @@ class CompaniesController < ApplicationController
     end
   end
 
+  def check_google_api_quota
+    batch_size = params[:batch_size].to_i
+    quota_check = perform_google_api_quota_check(batch_size)
+    
+    render json: quota_check
+  end
+
   private
+  
+  def calculate_batch_size_options(available_count)
+    base_options = [10, 25, 50, 100, 200, 500, 1000]
+    
+    if available_count > 0
+      # Only show options that don't exceed available company count
+      valid_options = base_options.select { |option| option <= available_count }
+      
+      # Always include the exact available count if it's not already in the list
+      # and it's greater than the largest valid option
+      if valid_options.empty? || available_count < base_options.first
+        # If available count is less than 10, just show that number
+        valid_options = [available_count]
+      elsif available_count > valid_options.last
+        valid_options << available_count
+      end
+      
+      valid_options.sort
+    else
+      # If no companies available, return empty array
+      []
+    end
+  end
+
+  def perform_google_api_quota_check(requested_jobs)
+    # Calculate estimated API calls for the requested jobs
+    # With optimized queries: each job makes ~3 API calls on average
+    estimated_calls = requested_jobs * 3
+
+    # Count API calls made today (successful + rate limited)
+    # This tracks actual Google API usage regardless of our job status
+    today_jobs = ServiceAuditLog
+      .where(service_name: "company_linkedin_discovery")
+      .where("created_at > ?", 24.hours.ago)
+      .where(status: [ServiceAuditLog::STATUS_SUCCESS, ServiceAuditLog::STATUS_RATE_LIMITED])
+      .count
+
+    # Estimate API calls made today
+    api_calls_today = today_jobs * 3
+
+    # Check for recent rate limiting (indicates quota exhaustion)
+    recent_rate_limited = ServiceAuditLog
+      .where(service_name: "company_linkedin_discovery", status: ServiceAuditLog::STATUS_RATE_LIMITED)
+      .where("created_at > ?", 2.hours.ago)
+      .exists?
+
+    # Get quota limits from configuration or use defaults
+    daily_quota_limit = Rails.application.credentials.dig(:google, :daily_quota_limit) || 10000
+    safety_buffer = (daily_quota_limit * 0.1).to_i # 10% safety buffer
+
+    # Calculate remaining quota
+    remaining_quota = daily_quota_limit - api_calls_today - safety_buffer
+
+    # Check if we have quota for the requested jobs
+    if recent_rate_limited
+      {
+        available: false,
+        message: "Google API recently hit rate limits. Processing temporarily paused to prevent quota exhaustion.",
+        used: api_calls_today,
+        limit: daily_quota_limit,
+        remaining: remaining_quota,
+        reason: "recent_rate_limited"
+      }
+    elsif estimated_calls > remaining_quota
+      {
+        available: false,
+        message: "Insufficient Google API quota. Need #{estimated_calls} calls but only #{remaining_quota} remaining today.",
+        used: api_calls_today,
+        limit: daily_quota_limit,
+        remaining: remaining_quota,
+        reason: "quota_insufficient"
+      }
+    else
+      {
+        available: true,
+        message: "Quota available",
+        used: api_calls_today,
+        limit: daily_quota_limit,
+        remaining: remaining_quota,
+        estimated_usage: estimated_calls
+      }
+    end
+  end
 
   def set_selected_country
     # Get available countries

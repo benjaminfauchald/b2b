@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py pre-read",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py pre-read",
             "timeout": 10
           }
         ]
@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py pre-edit",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py pre-edit",
             "timeout": 15
           }
         ]
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py pre-task",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py pre-task",
             "timeout": 10
           }
         ]
@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py post-edit",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py post-edit",
             "timeout": 15
           }
         ]
@@ -66,7 +66,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-auto-update.py post-test",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-auto-update.py post-test",
             "timeout": 5
           }
         ]
@@ -78,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py stop-check",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py stop-check",
             "timeout": 10
           }
         ]
@@ -90,7 +90,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./bin/idm-intelligence.py stop-check",
+            "command": "/Users/benjamin/Documents/Projects/b2b/bin/idm-intelligence.py stop-check",
             "timeout": 10
           }
         ]
