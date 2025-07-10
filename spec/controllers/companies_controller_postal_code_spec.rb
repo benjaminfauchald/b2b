@@ -29,7 +29,7 @@ RSpec.describe CompaniesController, type: :controller do
           post :queue_linkedin_discovery_by_postal_code, params: {
             postal_code: '2000',
             batch_size: 3
-          }
+          }, format: :json
         }.to change { CompanyLinkedinDiscoveryWorker.jobs.size }.by(3)
 
         expect(response).to have_http_status(:success)
@@ -131,7 +131,7 @@ RSpec.describe CompaniesController, type: :controller do
 
         post :queue_linkedin_discovery_by_postal_code, params: {
           postal_code: '2000'
-        }
+        }, format: :json
 
         expect(response).to have_http_status(:success)
         json_response = JSON.parse(response.body)

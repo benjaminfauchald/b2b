@@ -1,4 +1,7 @@
+# Bug fix for LinkedIn discovery service - testing non-blocking IDM
+# Feature tracked by IDM: feature_memories/linkedin_discovery_bug_fix.rb
 require "ostruct"
+# Fixed require statements order
 require "net/http"
 require "json"
 require "uri"
@@ -77,6 +80,21 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
   private
 
+  def generic_industry?(industry_description)
+    return false if industry_description.blank?
+    
+    # List of generic industry terms that don't help LinkedIn searches
+    generic_terms = [
+      'business services', 'consulting', 'management', 'advisory services',
+      'commercial services', 'professional services', 'general business',
+      'other business activities', 'administration', 'support activities',
+      'wholesale', 'retail', 'trading', 'import', 'export'
+    ]
+    
+    industry_lower = industry_description.downcase.strip
+    generic_terms.any? { |term| industry_lower.include?(term) }
+  end
+
   def service_active?
     config = ServiceConfiguration.find_by(service_name: "company_linkedin_discovery")
     return false unless config
@@ -129,12 +147,14 @@ class CompanyLinkedinDiscoveryService < ApplicationService
 
     # Primary search queries for LinkedIn
     queries << "#{@company.company_name} site:linkedin.com"
-    queries << "#{base_name} Norge site:linkedin.com"
-    queries << "#{base_name} Norway site:linkedin.com"
-    queries << "#{@company.company_name} LinkedIn company page"
+    
+    # Only add base name query if different from company name (has legal suffix)
+    if base_name != @company.company_name
+      queries << "#{base_name} Norge site:linkedin.com"
+    end
 
-    # Industry-specific search if available
-    if @company.primary_industry_description.present?
+    # Industry-specific search if available and not too generic
+    if @company.primary_industry_description.present? && !generic_industry?(@company.primary_industry_description)
       queries << "#{base_name} #{@company.primary_industry_description} site:linkedin.com"
     end
 

@@ -18,7 +18,7 @@ if [[ "$PWD" == "$PROJECT_ROOT"* ]] && grep -q "Feature tracked by IDM:" "$FILE_
   echo ""
   echo "Example Ruby code to add to your next message:"
   echo ""
-  echo "memory = FeatureMemories::${FEATURE_ID^}"
+  echo "memory = FeatureMemories::$(echo $FEATURE_ID | tr "[:lower:]" "[:upper:]")"
   echo "memory.log_step(\"Fixed dark mode styling\","
   echo "                decision: \"Used Flowbite alert component patterns\","
   echo "                code_ref: \"$(basename $FILE_PATH):LINE_NUMBER\","

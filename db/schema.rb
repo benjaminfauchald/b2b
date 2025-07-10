@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_07_143119) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_09_110057) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -418,6 +418,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_07_143119) do
     t.index ["domain"], name: "index_email_verification_attempts_on_domain"
     t.index ["email"], name: "index_email_verification_attempts_on_email"
     t.index ["person_id"], name: "index_email_verification_attempts_on_person_id"
+  end
+
+  create_table "geographical_terms", force: :cascade do |t|
+    t.string "term", null: false
+    t.string "term_type", null: false
+    t.string "language", default: "NO", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["language"], name: "index_geographical_terms_on_language"
+    t.index ["term", "language"], name: "index_geographical_terms_on_term_and_language", unique: true
+    t.index ["term"], name: "index_geographical_terms_on_term"
+    t.index ["term_type"], name: "index_geographical_terms_on_term_type"
   end
 
   create_table "people", force: :cascade do |t|

@@ -7,6 +7,18 @@ export default class extends Controller {
 
   connect() {
     this.updatePreview()
+    
+    // Listen for successful form submissions
+    this.element.addEventListener('turbo:submit-end', this.handleFormSubmission.bind(this))
+  }
+
+  handleFormSubmission(event) {
+    // Check if the form submission was successful
+    if (event.detail.success) {
+      // Dispatch event to trigger immediate service stats update
+      const serviceStatsEvent = new CustomEvent('service-stats:update')
+      document.dispatchEvent(serviceStatsEvent)
+    }
   }
 
   updatePreview() {
@@ -52,6 +64,7 @@ export default class extends Controller {
   updatePreviewText(data) {
     if (data.count === 0) {
       this.previewTextTarget.textContent = `No companies found in postal code ${data.postal_code}`
+      this.updateButtonState(false, "No Companies Found")
       return
     }
 
@@ -62,6 +75,29 @@ export default class extends Controller {
       this.previewTextTarget.textContent = text
     } else {
       this.previewTextTarget.textContent = `${data.count} companies found. Will process ${batchText}`
+    }
+    
+    // Update button state based on validation
+    const canProcess = data.count > 0 && data.batch_size <= data.count
+    if (canProcess) {
+      this.updateButtonState(true, "Queue LinkedIn Discovery")
+    } else {
+      this.updateButtonState(false, "Batch Size Too Large")
+    }
+  }
+
+  updateButtonState(enabled, buttonText) {
+    const submitButton = this.element.querySelector('input[type="submit"], button[type="submit"]')
+    if (submitButton) {
+      submitButton.disabled = !enabled
+      submitButton.value = buttonText
+      
+      // Update button styling
+      if (enabled) {
+        submitButton.className = "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+      } else {
+        submitButton.className = "text-white bg-gray-400 cursor-not-allowed font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+      }
     }
   }
 

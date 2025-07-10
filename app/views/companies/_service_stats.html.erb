@@ -62,11 +62,15 @@
     <div class="mb-3">
       <%
         # Calculate companies that have actually been successfully processed by LinkedIn discovery service
-        companies_completed = ServiceAuditLog
-          .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
-          .where(service_name: "company_linkedin_discovery", status: "success")
-          .where("companies.operating_revenue > ?", 10_000_000)
-          .count
+        # Cache bust by including current time in minute precision to refresh every minute
+        cache_key = "linkedin_completion_stats_#{@selected_country || 'NO'}_#{Time.current.strftime('%Y%m%d%H%M')}"
+        companies_completed = Rails.cache.fetch(cache_key, expires_in: 1.minute) do
+          ServiceAuditLog
+            .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
+            .where(service_name: "company_linkedin_discovery", status: ServiceAuditLog::STATUS_SUCCESS)
+            .where("companies.operating_revenue > ? AND companies.source_country = ?", 10_000_000, @selected_country || 'NO')
+            .count
+        end
         
         completion_percentage = companies_potential > 0 ? (companies_completed.to_f / companies_potential.to_f) * 100 : 0
         completion_percentage = completion_percentage < 1 ? completion_percentage.round(1) : completion_percentage.round
@@ -81,6 +85,37 @@
       <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
         <%= number_with_delimiter(companies_completed) %> of <%= number_with_delimiter(companies_potential) %> companies processed
       </p>
+      <%
+        # Check for recent rate limiting vs recent success
+        recent_rate_limited = ServiceAuditLog
+          .where(service_name: "company_linkedin_discovery", status: ServiceAuditLog::STATUS_RATE_LIMITED)
+          .where("created_at > ?", 30.minutes.ago)
+          .count > 0
+          
+        # Check if there are recent successful jobs (API working again)
+        recent_success = ServiceAuditLog
+          .where(service_name: "company_linkedin_discovery", status: ServiceAuditLog::STATUS_SUCCESS)
+          .where("created_at > ?", 10.minutes.ago)
+          .count > 0
+          
+        # Only show warning if rate limited AND no recent success
+        show_rate_limit_warning = recent_rate_limited && !recent_success
+      %>
+      <% if show_rate_limit_warning %>
+        <p class="text-xs text-orange-600 dark:text-orange-400 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+          </svg>
+          API rate limited - processing paused
+        </p>
+      <% elsif recent_success %>
+        <p class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
+          <svg class="w-3 h-3 mr-1 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          Processing active - optimized queries
+        </p>
+      <% end %>
     </div>
   <% else %>
     <div class="text-sm text-gray-600 dark:text-gray-400">

@@ -108,9 +108,17 @@ class Company < ApplicationRecord
   }
 
   # Companies that are LinkedIn discovery candidates AND have no LinkedIn data yet
+  # AND haven't been processed recently (within the refresh interval)
   scope :needing_linkedin_discovery, -> {
     linkedin_discovery_candidates
     .where("(linkedin_url IS NULL OR linkedin_url = '') AND (linkedin_ai_url IS NULL OR linkedin_ai_url = '')")
+    .where("NOT EXISTS (
+      SELECT 1 FROM service_audit_logs 
+      WHERE service_audit_logs.auditable_type = 'Company' 
+      AND service_audit_logs.auditable_id = companies.id 
+      AND service_audit_logs.service_name = 'company_linkedin_discovery'
+      AND service_audit_logs.completed_at > ?
+    )", 720.hours.ago)
   }
 
   # Companies that are LinkedIn discovery candidates regardless of processing status

@@ -32,6 +32,83 @@ When starting work on this codebase:
    - 📚 **MANDATORY**: Read `docs/IDM_RULES.md` for full IDM guidelines
    - This file contains all rules, examples, and workflows
 
+## 🖥️ Browser Testing & Puppeteer Configuration
+
+### MANDATORY: Always Use Large Viewport for Screenshots
+
+**IMPORTANT**: When using MCP Puppeteer tools or browser testing, ALWAYS use these settings for proper full-page screenshots:
+
+#### MCP Puppeteer Navigate
+```javascript
+mcp__puppeteer__puppeteer_navigate({
+  url: "https://example.com",
+  launchOptions: {
+    headless: false,
+    defaultViewport: { width: 1920, height: 1080 },
+    args: [
+      "--window-size=1920,1080",
+      "--start-maximized",
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ]
+  }
+})
+```
+
+#### MCP Puppeteer Screenshot
+```javascript
+mcp__puppeteer__puppeteer_screenshot({
+  name: "screenshot_name",
+  width: 1920,
+  height: 1080
+})
+```
+
+#### Standard Puppeteer Tests
+All Puppeteer test files should use:
+```javascript
+const browser = await puppeteer.launch({ 
+  headless: false,
+  defaultViewport: { width: 1920, height: 1080 },
+  args: [
+    '--window-size=1920,1080',
+    '--start-maximized'
+  ]
+});
+```
+
+### Configuration Files
+- **Common Config**: `test/puppeteer/puppeteer_config.js` - Use for consistent settings
+- **Claude Settings**: `.claude/settings.json` - Contains toolDefaults for MCP tools
+- **Test Files**: Updated to use 1920x1080 viewport automatically
+
+### Why Large Viewport Required
+- ❌ **Old (1400x900)**: Incomplete screenshots, missing content below fold
+- ✅ **New (1920x1080)**: Full page capture, complete visibility, professional quality
+
+**NEVER use smaller viewport sizes unless specifically requested - screenshots must capture the full page**
+
+### ⚠️ CRITICAL: MCP Tool Parameters Required
+
+Since Claude toolDefaults may not be applied automatically, you MUST manually specify these parameters:
+
+**EVERY TIME you use `mcp__puppeteer__puppeteer_navigate`:**
+```javascript
+launchOptions: {
+  headless: false,
+  defaultViewport: { width: 1920, height: 1080 },
+  args: ["--window-size=1920,1080", "--start-maximized"]
+}
+```
+
+**EVERY TIME you use `mcp__puppeteer__puppeteer_screenshot`:**
+```javascript
+width: 1920,
+height: 1080
+```
+
+**DO NOT** use these tools without the above parameters - screenshots will be too small and incomplete.
+
 ## Quick Reference - Deployment
 
 **One Workflow**: `.github/workflows/main.yml` - Handles all CI/CD needs
@@ -338,6 +415,11 @@ Every feature implementation MUST use the Integrated Development Memory system f
    Progress: X% Complete (Y/Z tasks)
    Current Task: [Task description]
    Status: [in_progress/pending]
+   
+   🧪 UI Testing Status:
+   Coverage: X% (Y/Z tests passing)
+   Status: [passed/incomplete/failed]
+   Blockers: [List any UI testing blockers]
    ```
 
 2. **DURING implementation** - Update user on task transitions:
@@ -345,6 +427,10 @@ Every feature implementation MUST use the Integrated Development Memory system f
    ✅ Completed: [Previous task]
    ▶️  Starting: [New task]
    Est. Time: [time estimate]
+   
+   🧪 UI Testing Update:
+   Added: [New test scenarios]
+   Status: [Current test execution status]
    ```
 
 3. **AFTER changes** - Show what was logged to IDM:
@@ -353,7 +439,12 @@ Every feature implementation MUST use the Integrated Development Memory system f
    - Action: [What was done]
    - Decision: [Why it was done this way]
    - Code Ref: [file:line]
+   - Test Ref: [test file:line]
    - Next: [What comes next]
+   
+   🧪 UI Test Status:
+   Scenarios Updated: [Number of test scenarios affected]
+   Coverage: [Current test coverage percentage]
    ```
 
 **Communication Template for Feature Work:**
@@ -425,10 +516,25 @@ When the user uses the `/feature` command OR requests ANY new functionality, fol
     - Document decisions, challenges, and solutions
     - Link to code and test references
 12. **Implement the feature** - Write code following the plan
-13. **Write tests** - Create comprehensive tests for the implementation
-14. **Review quality** - Must score 7/10 or higher, iterate if needed
-15. **Complete IDM documentation** - Final implementation details, lessons learned
-16. **Create descriptive commit** and **Push with PR**
+13. **Add UI Testing Requirements** - Create comprehensive UI test scenarios:
+    - Happy path tests for core functionality
+    - Edge case tests for boundary conditions
+    - Error state tests for graceful failure handling
+    - Accessibility tests for WCAG compliance
+    - Performance tests for load times and responsiveness
+14. **Write and Execute Tests** - Create comprehensive tests for the implementation:
+    - Unit tests for components and services
+    - Integration tests for API endpoints
+    - System tests for user workflows
+    - Execute UI tests and update status in IDM
+15. **Verify Completion Requirements**:
+    - Check `rails idm:completion_status[feature_id]`
+    - Ensure 90%+ UI test coverage
+    - All critical tests must pass
+    - No completion blockers remaining
+16. **Review quality** - Must score 7/10 or higher, iterate if needed
+17. **Complete IDM documentation** - Final implementation details, lessons learned
+18. **Create descriptive commit** and **Push with PR**
 
 ### IDM Quick Reference
 
@@ -444,6 +550,11 @@ rails feature_memory:export feature_name
 
 # Resume work
 rails feature_memory:resume feature_name
+
+# UI Testing Commands
+rails idm:ui_status[feature_id]                    # Check UI test status
+rails idm:completion_status[feature_id]            # Full completion check
+rails idm:update_ui_test[feature_id,scenario_id,status] # Update test status
 ```
 
 ### Accessing IDM in Your Responses

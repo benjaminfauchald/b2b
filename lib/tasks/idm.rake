@@ -277,6 +277,146 @@ namespace :idm do
     puts "\n\nTotal features: #{features.count}"
   end
   
+  desc "Show UI testing status for a feature"
+  task :ui_status, [:feature_id] => :environment do |_t, args|
+    feature_id = args[:feature_id]
+    
+    if feature_id.blank?
+      puts "Usage: rails idm:ui_status[feature_id]"
+      puts "Example: rails idm:ui_status[linkedin_discovery_internal]"
+      exit 1
+    end
+    
+    memory = FeatureMemories::ApplicationFeatureMemory.find(feature_id)
+    
+    if memory.nil?
+      puts "❌ Feature '#{feature_id}' not found"
+      exit 1
+    end
+    
+    ui_status = memory.ui_testing_status
+    
+    puts "\n🧪 UI Testing Status for #{feature_id}"
+    puts "=" * 60
+    
+    case ui_status[:status]
+    when :no_tests
+      puts "❌ No UI tests defined"
+      puts "\nRecommendation: Add UI testing block to feature memory"
+    when :passed
+      puts "✅ All UI tests passing (#{ui_status[:passed]}/#{ui_status[:total]})"
+      puts "Coverage: #{ui_status[:pass_percentage]}% (Requirement: #{ui_status[:coverage_requirement]}%)"
+    when :failed
+      puts "❌ UI tests failing (#{ui_status[:failed]} failures)"
+      puts "Passed: #{ui_status[:passed]}/#{ui_status[:total]} (#{ui_status[:pass_percentage]}%)"
+    when :incomplete
+      puts "⚠️  UI tests incomplete"
+      puts "Status: #{ui_status[:passed]} passed, #{ui_status[:pending]} pending, #{ui_status[:in_progress]} in progress"
+    when :insufficient_coverage
+      puts "⚠️  Insufficient test coverage: #{ui_status[:pass_percentage]}% (Requirement: #{ui_status[:coverage_requirement]}%)"
+    end
+    
+    # Show scenarios by type
+    scenarios_by_type = memory.ui_test_scenarios_by_type
+    if scenarios_by_type.any?
+      puts "\n📋 Test Scenarios by Type:"
+      scenarios_by_type.each do |type, scenarios|
+        status_counts = scenarios.group_by { |s| s[:status] }.transform_values(&:count)
+        puts "  #{type.to_s.humanize}: #{scenarios.count} scenarios"
+        puts "    #{status_counts.map { |status, count| "#{status}: #{count}" }.join(', ')}"
+      end
+    end
+    
+    # Show blockers if any
+    blockers = memory.ui_testing_blockers
+    if blockers.any?
+      puts "\n🚫 Completion Blockers:"
+      blockers.each { |blocker| puts "  • #{blocker}" }
+    end
+    
+    puts "\nFor full status: rails idm:completion_status[#{feature_id}]"
+  end
+  
+  desc "Show comprehensive completion status including UI tests"
+  task :completion_status, [:feature_id] => :environment do |_t, args|
+    feature_id = args[:feature_id]
+    
+    if feature_id.blank?
+      puts "Usage: rails idm:completion_status[feature_id]"
+      exit 1
+    end
+    
+    memory = FeatureMemories::ApplicationFeatureMemory.find(feature_id)
+    
+    if memory.nil?
+      puts "❌ Feature '#{feature_id}' not found"
+      exit 1
+    end
+    
+    status_report = memory.completion_status_report
+    
+    puts "\n📊 Completion Status Report for #{feature_id}"
+    puts "=" * 70
+    
+    puts "\n🎯 Overall Status: #{status_report[:overall_status]}"
+    puts "Ready for Completion: #{status_report[:ready_for_completion] ? '✅ Yes' : '❌ No'}"
+    
+    # Implementation Plan Status
+    plan = status_report[:implementation_plan]
+    puts "\n📋 Implementation Plan:"
+    puts "  Progress: #{plan[:completion_percentage]}% (#{plan[:completed]}/#{plan[:total]} tasks)"
+    puts "  Remaining: #{plan[:pending]} pending, #{plan[:in_progress]} in progress"
+    
+    # UI Testing Status  
+    ui = status_report[:ui_testing]
+    puts "\n🧪 UI Testing:"
+    puts "  Status: #{ui[:status]}"
+    if ui[:total] > 0
+      puts "  Coverage: #{ui[:pass_percentage]}% (#{ui[:passed]}/#{ui[:total]} tests)"
+      puts "  Required: #{ui[:coverage_requirement]}% minimum"
+      puts "  Mandatory: #{ui[:mandatory_completion] ? 'Yes' : 'No'}"
+    end
+    
+    # Blockers
+    if status_report[:blockers].any?
+      puts "\n🚫 Completion Blockers:"
+      status_report[:blockers].each { |blocker| puts "  • #{blocker}" }
+    else
+      puts "\n✅ No blockers - ready for completion!"
+    end
+  end
+  
+  desc "Update UI test status"
+  task :update_ui_test, [:feature_id, :scenario_id, :status] => :environment do |_t, args|
+    feature_id = args[:feature_id]
+    scenario_id = args[:scenario_id] 
+    status = args[:status]&.to_sym
+    
+    if [feature_id, scenario_id, status].any?(&:blank?)
+      puts "Usage: rails idm:update_ui_test[feature_id,scenario_id,status]"
+      puts "Status options: pending, in_progress, passed, failed, skipped"
+      exit 1
+    end
+    
+    unless [:pending, :in_progress, :passed, :failed, :skipped].include?(status)
+      puts "Invalid status. Options: pending, in_progress, passed, failed, skipped"
+      exit 1
+    end
+    
+    memory = FeatureMemories::ApplicationFeatureMemory.find(feature_id)
+    
+    if memory.nil?
+      puts "❌ Feature '#{feature_id}' not found"
+      exit 1
+    end
+    
+    if memory.update_ui_test_status(scenario_id, status)
+      puts "✅ Updated UI test scenario #{scenario_id} to #{status}"
+    else
+      puts "❌ Failed to update UI test scenario - scenario not found"
+    end
+  end
+
   desc "Quick check: Show IDM instructions for agents"
   task instructions: :environment do
     puts <<~INSTRUCTIONS
@@ -299,19 +439,34 @@ namespace :idm do
     
     3. BEFORE MAKING CHANGES:
        - Check IDM status: rails idm:status[feature_id]
+       - Check UI testing status: rails idm:ui_status[feature_id]
        - Show plan progress to user
        - Update task status when starting work
     
-    4. AFTER MAKING CHANGES:
+    4. DURING DEVELOPMENT:
+       - Add UI testing scenarios to feature memory
+       - Create comprehensive test coverage (happy path, edge cases, errors)
+       - Update UI test status as tests are written and executed
+    
+    5. AFTER MAKING CHANGES:
        - Update implementation_log in the IDM file
        - Document decisions and code references
+       - Update UI test execution results
        - Show IDM updates to user
+    
+    6. BEFORE COMPLETION:
+       - Verify all UI tests pass: rails idm:completion_status[feature_id]
+       - Ensure test coverage meets requirements (90%+ default)
+       - No UI testing blockers remaining
     
     Example workflow:
        rails idm:find[linkedin]          # Find related IDM files
        rails idm:status[feature_id]      # Check current status
+       rails idm:ui_status[feature_id]   # Check UI testing status
        # Make your changes...
+       # Add UI testing scenarios
        # Update IDM file implementation_log
+       rails idm:completion_status[feature_id]  # Final status check
     
     INSTRUCTIONS
   end

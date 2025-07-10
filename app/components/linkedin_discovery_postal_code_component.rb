@@ -61,7 +61,23 @@ class LinkedinDiscoveryPostalCodeComponent < ViewComponent::Base
   end
 
   def batch_size_options
-    [10, 25, 50, 100, 200, 500, 1000]
+    base_options = [10, 25, 50, 100, 200, 500, 1000]
+    available_count = company_preview[:count]
+    
+    if available_count > 0
+      # Only show options that don't exceed available company count
+      valid_options = base_options.select { |option| option <= available_count }
+      
+      # Always include the exact available count if it's not already in the list
+      unless valid_options.include?(available_count)
+        valid_options << available_count
+        valid_options.sort!
+      end
+      
+      valid_options
+    else
+      base_options
+    end
   end
 
   private
@@ -69,8 +85,10 @@ class LinkedinDiscoveryPostalCodeComponent < ViewComponent::Base
   def calculate_company_preview
     return { count: 0, revenue_range: nil } if postal_code.blank?
 
+    # Use same filtering logic as controller - companies that need LinkedIn discovery
     companies = Company.where(postal_code: postal_code)
                       .where.not(operating_revenue: nil)
+                      .needing_service("company_linkedin_discovery")
                       .order(operating_revenue: :desc)
     
     count = companies.count

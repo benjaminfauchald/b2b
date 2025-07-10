@@ -140,6 +140,31 @@ Include:
 - How you solved them (`solution`)
 - Where the code lives (`code_ref`)
 
+### RULE 5: UI Testing is Mandatory
+**Every feature MUST have comprehensive UI testing before completion**
+
+Requirements:
+- **Test Coverage**: Minimum 90% coverage of UI functionality
+- **Happy Path Tests**: Core user journeys must work perfectly
+- **Edge Case Tests**: Boundary conditions and unusual inputs
+- **Error State Tests**: Graceful error handling and user feedback
+- **Accessibility Tests**: WCAG compliance and keyboard navigation
+- **Performance Tests**: Load times and responsiveness validation
+
+UI Testing Status:
+```bash
+rails idm:ui_status[feature_id]        # Check UI test status
+rails idm:completion_status[feature_id] # Full completion check
+rails idm:update_ui_test[feature_id,scenario_id,status] # Update test status
+```
+
+**MANDATORY Before Feature Completion:**
+- All critical UI tests must pass
+- Test coverage must meet minimum requirement (90%)
+- No failing UI tests
+- Accessibility requirements verified
+- Performance thresholds met
+
 ## 📝 IDM Structure
 
 Each IDM file contains:
@@ -186,7 +211,37 @@ implementation_log do
 end
 ```
 
-### 4. Troubleshooting
+### 4. UI Testing (MANDATORY)
+```ruby
+ui_testing do
+  test_coverage_requirement 90
+  mandatory_before_completion true
+  test_frameworks :rspec, :capybara, :puppeteer
+  
+  happy_path "User can successfully submit form" do
+    test_type :system
+    user_actions ["navigate_to_form", "fill_required_fields", "submit_form"]
+    expected_outcome "Form submitted successfully with confirmation message"
+    components_under_test ["FormComponent", "SubmitButtonComponent"]
+    priority :critical
+  end
+  
+  edge_case "Handles empty form submission" do
+    test_type :system
+    user_actions ["navigate_to_form", "submit_empty_form"]
+    expected_outcome "Validation errors displayed appropriately"
+    priority :high
+  end
+  
+  accessibility "Keyboard navigation works throughout feature" do
+    test_type :system
+    accessibility_requirements ["tab_navigation", "enter_submit", "aria_labels", "focus_management"]
+    priority :high
+  end
+end
+```
+
+### 5. Troubleshooting
 ```ruby
 troubleshooting do
   issue "Problem description" do
@@ -256,6 +311,50 @@ memory.troubleshooting do
 end
 ```
 
+### Example 3: Adding UI Testing to Feature
+```ruby
+# 1. Add comprehensive UI testing to feature memory
+memory = FeatureMemories::PaymentIntegration
+memory.ui_testing do
+  test_coverage_requirement 95
+  mandatory_before_completion true
+  test_frameworks :rspec, :capybara, :puppeteer
+  
+  happy_path "User completes successful payment" do
+    test_type :system
+    user_actions ["select_payment_method", "enter_card_details", "submit_payment"]
+    expected_outcome "Payment processed and confirmation displayed"
+    components_under_test ["PaymentFormComponent", "CardInputComponent"]
+    test_file "spec/system/payment_flow_spec.rb"
+    priority :critical
+    estimated_time "45 minutes"
+  end
+  
+  edge_case "Handles payment failure gracefully" do
+    test_type :system
+    user_actions ["enter_invalid_card", "submit_payment"]
+    expected_outcome "Error message displayed, form remains accessible"
+    priority :high
+    test_data { card_number: "4000000000000002" } # Declined card
+  end
+  
+  accessibility "Payment form is fully accessible" do
+    test_type :system
+    accessibility_requirements ["keyboard_navigation", "screen_reader_support", "error_announcements"]
+    priority :high
+  end
+end
+
+# 2. Check UI testing status
+$ rails idm:ui_status[payment_integration]
+
+# 3. Update test status as tests are written and executed
+$ rails idm:update_ui_test[payment_integration,scenario_id,passed]
+
+# 4. Final completion check
+$ rails idm:completion_status[payment_integration]
+```
+
 ## 🚀 Quick Reference
 
 ```bash
@@ -271,12 +370,20 @@ rails idm:list
 # See instructions
 rails idm:instructions
 
+# UI Testing Commands
+rails idm:ui_status[feature_id]              # Check UI test status
+rails idm:completion_status[feature_id]      # Full completion check
+rails idm:update_ui_test[feature_id,scenario_id,status] # Update test
+
 # In Ruby code
 memory = FeatureMemories::YourFeature
 memory.plan_status           # Get plan progress
 memory.current_tasks         # Get current tasks
 memory.update_task(id, ...) # Update task
 memory.log_step(...)        # Log action
+memory.ui_testing_status     # Get UI test status
+memory.ready_for_completion? # Check if ready
+memory.completion_blockers   # Get blocking issues
 ```
 
 ## ❓ FAQ
@@ -296,6 +403,25 @@ A: No IDM update needed for read-only operations.
 **Q: Can I modify the implementation plan?**
 A: Yes, but document why in the log when you do.
 
+**Q: Is UI testing required for all features?**
+A: Yes, unless the feature has no user interface. Backend-only services may skip UI testing but must have comprehensive unit/integration tests.
+
+**Q: What's the minimum UI test coverage required?**
+A: 90% by default, but can be configured per feature. Critical user journeys must have 100% coverage.
+
+**Q: Can I complete a feature with failing UI tests?**
+A: No, all UI tests must pass before feature completion. Use `rails idm:completion_status[feature_id]` to check blockers.
+
+**Q: What types of UI tests should I write?**
+A: Happy path (core functionality), edge cases (boundary conditions), error states (graceful failures), accessibility (WCAG compliance), and performance (load times).
+
+**Q: Which testing frameworks should I use?**
+A: RSpec for unit/integration, Capybara/Selenium for system tests, and Puppeteer for complex E2E scenarios. Choose based on the test complexity.
+
+**Q: How do I update UI test status?**
+A: Use `rails idm:update_ui_test[feature_id,scenario_id,status]` or update directly in the feature memory file.
+
 ---
 
 **Remember: IDM is not optional - it's a critical part of our development workflow!**
+**UI Testing is mandatory for feature completion - no exceptions!**

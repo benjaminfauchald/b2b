@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Validate Puppeteer Configuration Script
+# This script ensures all Puppeteer configurations are set to use large viewport sizes
+
+echo "🔧 Validating Puppeteer Configuration..."
+echo "========================================="
+
+CONFIG_VALID=true
+
+# Check Claude settings file
+echo "📋 Checking Claude settings (.claude/settings.json)..."
+if [ -f ".claude/settings.json" ]; then
+    if grep -q "toolDefaults" .claude/settings.json && grep -q "1920" .claude/settings.json; then
+        echo "✅ Claude toolDefaults configured with large viewport"
+    else
+        echo "❌ Claude toolDefaults missing or incorrect"
+        CONFIG_VALID=false
+    fi
+else
+    echo "❌ Claude settings file not found"
+    CONFIG_VALID=false
+fi
+
+# Check CLAUDE.md for browser configuration
+echo "📋 Checking CLAUDE.md for browser configuration..."
+if [ -f "CLAUDE.md" ]; then
+    if grep -q "Browser Testing & Puppeteer Configuration" CLAUDE.md && grep -q "1920" CLAUDE.md; then
+        echo "✅ CLAUDE.md contains browser configuration guidelines"
+    else
+        echo "❌ CLAUDE.md missing browser configuration section"
+        CONFIG_VALID=false
+    fi
+else
+    echo "❌ CLAUDE.md file not found"
+    CONFIG_VALID=false
+fi
+
+# Check common Puppeteer config file
+echo "📋 Checking common Puppeteer config file..."
+if [ -f "test/puppeteer/puppeteer_config.js" ]; then
+    if grep -q "1920" test/puppeteer/puppeteer_config.js && grep -q "1080" test/puppeteer/puppeteer_config.js; then
+        echo "✅ Common Puppeteer config file exists with correct viewport"
+    else
+        echo "❌ Common Puppeteer config has incorrect viewport settings"
+        CONFIG_VALID=false
+    fi
+else
+    echo "❌ Common Puppeteer config file missing"
+    CONFIG_VALID=false
+fi
+
+# Check key test files
+echo "📋 Checking key test files for correct viewport..."
+TEST_FILES=(
+    "test/puppeteer/linkedin_discovery_postal_code_3_companies_test.js"
+    "test/puppeteer/user_login_test.js"
+    "test/puppeteer/linkedin_discovery_test.js"
+)
+
+for file in "${TEST_FILES[@]}"; do
+    if [ -f "$file" ]; then
+        if grep -q "1920" "$file" && grep -q "1080" "$file"; then
+            echo "✅ $file: Correct viewport configuration"
+        else
+            echo "⚠️  $file: May have old viewport settings"
+        fi
+    else
+        echo "⚠️  $file: File not found"
+    fi
+done
+
+echo ""
+echo "🎯 VALIDATION SUMMARY:"
+echo "======================="
+
+if [ "$CONFIG_VALID" = true ]; then
+    echo "✅ All critical configurations are valid"
+    echo "✅ Puppeteer tools will use large viewport (1920x1080)"
+    echo "✅ Screenshots will capture full page content"
+    echo ""
+    echo "🚀 Configuration is ready for use!"
+else
+    echo "❌ Some configurations are missing or incorrect"
+    echo "🔧 Please review the failed checks above"
+    echo ""
+    echo "📝 To fix issues:"
+    echo "1. Ensure .claude/settings.json has toolDefaults section"
+    echo "2. Ensure CLAUDE.md has browser configuration guidelines"
+    echo "3. Ensure test/puppeteer/puppeteer_config.js exists"
+    echo "4. Update test files to use 1920x1080 viewport"
+fi
+
+echo ""
+echo "📚 For more information, see CLAUDE.md section:"
+echo "   '🖥️ Browser Testing & Puppeteer Configuration'"

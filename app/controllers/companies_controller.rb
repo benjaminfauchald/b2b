@@ -436,7 +436,11 @@ class CompaniesController < ApplicationController
       return
     end
 
+    # Handle both postal_code and custom_postal_code (same logic as JavaScript)
     postal_code = params[:postal_code]&.strip
+    if postal_code.blank?
+      postal_code = params[:custom_postal_code]&.strip
+    end
     batch_size = params[:batch_size]&.to_i || 100
 
     # Validate postal code is provided
@@ -456,9 +460,10 @@ class CompaniesController < ApplicationController
       return
     end
 
-    # Get available companies by postal code with revenue ordering
+    # Get available companies by postal code that need LinkedIn discovery
     available_companies = Company.where(postal_code: postal_code)
                                 .where.not(operating_revenue: nil)
+                                .needing_service("company_linkedin_discovery")
                                 .order(operating_revenue: :desc)
     
     available_count = available_companies.count
@@ -497,11 +502,35 @@ class CompaniesController < ApplicationController
 
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: turbo_stream.replace(
-          "company_queue_statistics", 
-          partial: "companies/queue_statistics", 
-          locals: { queue_stats: get_queue_stats }
-        )
+        # Get fresh stats data for immediate update
+        stats_data = calculate_service_stats
+        queue_stats = get_queue_stats
+        
+        render turbo_stream: [
+          turbo_stream.replace(
+            "company_queue_statistics", 
+            partial: "companies/queue_statistics", 
+            locals: { queue_stats: queue_stats }
+          ),
+          turbo_stream.replace(
+            "company_linkedin_discovery_stats",
+            partial: "companies/service_stats",
+            locals: {
+              service_name: "company_linkedin_discovery",
+              companies_needing: stats_data[:linkedin_needing],
+              companies_potential: stats_data[:linkedin_potential],
+              queue_depth: queue_stats["company_linkedin_discovery"] || 0
+            }
+          ),
+          turbo_stream.prepend(
+            "companies-page",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "Queued #{queued} companies from postal code #{postal_code} for LinkedIn discovery",
+              type: "success"
+            }
+          )
+        ]
       end
       format.json do
         render json: {
@@ -643,9 +672,10 @@ class CompaniesController < ApplicationController
       return
     end
 
-    # Get companies by postal code with revenue ordering
+    # Get companies by postal code that need LinkedIn discovery (same logic as queue method)
     companies = Company.where(postal_code: postal_code)
                       .where.not(operating_revenue: nil)
+                      .needing_service("company_linkedin_discovery")
                       .order(operating_revenue: :desc)
     
     count = companies.count

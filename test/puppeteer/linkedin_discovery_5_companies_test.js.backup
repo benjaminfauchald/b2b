@@ -3,11 +3,7 @@ const puppeteer = require('puppeteer');
 async function testLinkedInDiscovery5Companies() {
   const browser = await puppeteer.launch({ 
     headless: false,
-    defaultViewport: { width: 1920, height: 1080 },
-    args: [
-      '--window-size=1920,1080',
-      '--start-maximized'
-    ]
+    defaultViewport: { width: 1400, height: 900 }
   });
   
   try {

@@ -66,7 +66,8 @@ export default class extends Controller {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        credentials: 'same-origin'
       })
       
       const data = await response.json()

@@ -2,12 +2,14 @@
 
 require 'fileutils'
 require 'digest'
+require_relative 'ui_testing_dsl'
 
 module FeatureMemories
   # Base class for all feature memory implementations
   # Provides DSL for documenting feature development in a structured way
   class ApplicationFeatureMemory
   include ActiveSupport::Configurable
+  include UITestingHelpers
 
   class_attribute :feature_id
   
@@ -117,6 +119,12 @@ module FeatureMemories
       save_data!
     end
 
+    def ui_testing(&block)
+      feature_data[:ui_testing] ||= {}
+      UITestingDSL.new(feature_data[:ui_testing]).instance_eval(&block)
+      save_data!
+    end
+
     def find(feature_name)
       class_name = "FeatureMemories::#{feature_name.to_s.camelize}"
       class_name.constantize
@@ -138,9 +146,15 @@ module FeatureMemories
       implementation_log = feature_data[:implementation_log] || []
       return :not_started if implementation_log.empty?
       
-      # If all tasks are completed, feature is completed regardless of log status
+      # Check if UI testing is blocking completion
+      unless ready_for_completion?
+        ui_blockers = ui_testing_blockers
+        return :ui_testing_incomplete if ui_blockers.any?
+      end
+      
+      # If all tasks are completed and UI tests pass, feature is completed
       plan_status_data = plan_status
-      if plan_status_data[:total] > 0 && plan_status_data[:completion_percentage] == 100.0
+      if plan_status_data[:total] > 0 && plan_status_data[:completion_percentage] == 100.0 && ready_for_completion?
         return :completed
       end
       
@@ -217,6 +231,36 @@ module FeatureMemories
       plan_data = feature_data[:implementation_plan] || []
       plan_dsl = ImplementationPlanDSL.new(plan_data)
       plan_dsl.pending_tasks.first
+    end
+
+    def ui_testing_status
+      ui_test_status
+    end
+
+    def completion_blockers
+      blockers = []
+      
+      # Check implementation plan
+      plan_status_data = plan_status
+      if plan_status_data[:completion_percentage] < 100.0
+        blockers << "Implementation plan not completed (#{plan_status_data[:completion_percentage]}%)"
+      end
+      
+      # Check UI testing
+      ui_blockers = ui_testing_blockers
+      blockers.concat(ui_blockers)
+      
+      blockers
+    end
+
+    def completion_status_report
+      {
+        overall_status: status,
+        implementation_plan: plan_status,
+        ui_testing: ui_testing_status,
+        blockers: completion_blockers,
+        ready_for_completion: ready_for_completion?
+      }
     end
   end
 

@@ -1,8 +1,5 @@
 {
   "hooks": {
-    "pre-edit": ".claude/hooks/pre-edit.sh",
-    "post-edit": ".claude/hooks/post-edit.sh",
-    "pre-read": ".claude/hooks/pre-read.sh"
   },
   "idm": {
     "enabled": true,

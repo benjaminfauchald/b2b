@@ -4,6 +4,64 @@ class FeatureMemories::LinkedinDiscoveryInternal < FeatureMemories::ApplicationF
   FEATURE_ID = "linkedin_discovery_internal"
   self.feature_id = FEATURE_ID
   
+  # UI Testing requirements for this feature
+  ui_testing do
+    test_coverage_requirement 90
+    mandatory_before_completion true
+    test_frameworks :rspec, :capybara, :puppeteer
+    
+    happy_path "User can queue LinkedIn discovery for a company" do
+      test_type :system
+      user_actions [
+        "navigate_to_company_page",
+        "click_linkedin_discovery_button", 
+        "confirm_queue_action"
+      ]
+      expected_outcome "LinkedIn discovery job queued with success message"
+      components_under_test ["CompanyServiceButtonComponent", "LinkedinDiscoveryComponent"]
+      test_file "spec/system/linkedin_discovery_queue_spec.rb"
+      priority :critical
+      estimated_time "45 minutes"
+    end
+    
+    edge_case "Handles company without LinkedIn URL gracefully" do
+      test_type :system
+      user_actions ["attempt_discovery_on_company_without_linkedin"]
+      expected_outcome "Helpful message explaining LinkedIn URL required"
+      priority :high
+      test_data({ company: { linkedin_url: nil } })
+    end
+    
+    error_state "Displays error when service is unavailable" do
+      test_type :system
+      user_actions ["attempt_discovery_during_service_downtime"]
+      expected_outcome "Service unavailable message with retry option"
+      priority :high
+      prerequisites ["mock_service_configuration_inactive"]
+    end
+    
+    accessibility "LinkedIn discovery interface is fully accessible" do
+      test_type :system
+      accessibility_requirements [
+        "keyboard_navigation",
+        "screen_reader_support", 
+        "aria_labels",
+        "focus_management"
+      ]
+      priority :high
+      estimated_time "30 minutes"
+    end
+    
+    performance "Discovery queue action responds quickly" do
+      test_type :system
+      performance_thresholds({
+        button_click: 1,
+        queue_confirmation: 2
+      })
+      priority :medium
+    end
+  end
+
   # Auto-populated during initial generation
   feature_spec do
     description "Internal LinkedIn Discovery using Puppeteer for Sales Navigator scraping"
