@@ -117,24 +117,24 @@
       </div>
 
       <!-- Mobile menu, show/hide based on menu state -->
-      <div class="sm:hidden hidden" id="mobile-menu">
-        <div class="pt-2 pb-3 space-y-1">
+      <div class="sm:hidden hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700" id="mobile-menu" data-mobile-menu-target="menu">
+        <div class="pt-2 pb-3 space-y-1 px-2">
           <%= link_to "Home", root_path,
-              class: "#{request.path == root_path ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+              class: "#{request.path == root_path ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
           <% if user_signed_in? %>
             <%= link_to "Domains", domains_path,
-                class: "#{request.path.start_with?('/domains') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                class: "#{request.path.start_with?('/domains') ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
             <%= link_to "Companies", companies_path,
-                class: "#{request.path.start_with?('/companies') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                class: "#{request.path.start_with?('/companies') ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
             <%= link_to "People", people_path,
-                class: "#{request.path.start_with?('/people') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                class: "#{request.path.start_with?('/people') ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
             <%= link_to "IDM", idm_dashboard_path,
-                class: "#{request.path.start_with?('/idm') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                class: "#{request.path.start_with?('/idm') ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
             <% if current_user.admin? %>
               <%= link_to "Quality", quality_dashboard_index_path,
-                  class: "#{request.path.start_with?('/quality') ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'} block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                  class: "#{request.path.start_with?('/quality') ? 'bg-blue-50 dark:bg-blue-600 border-blue-500 text-blue-700 dark:text-white' : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'} block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
               <%= link_to "Sidekiq", sidekiq_web_path,
-                  class: "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 block pl-3 pr-4 py-2 border-l-4 text-base font-medium" %>
+                  class: "border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white block pl-3 pr-4 py-3 border-l-4 text-base font-medium rounded-r-md transition-colors duration-200" %>
             <% end %>
           <% end %>
         </div>
