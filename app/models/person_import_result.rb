@@ -175,4 +175,30 @@ class PersonImportResult
   def to_json(*args)
     to_h.to_json(*args)
   end
+  
+  def merge_phantom_buster_results(phantom_results)
+    # Merge counts
+    @imported_count += phantom_results[:successful] || 0
+    @updated_count += phantom_results[:updated] || 0
+    @failed_count += phantom_results[:failed] || 0
+    @duplicate_count += phantom_results[:duplicates] || 0
+    
+    # Handle errors from Phantom Buster import
+    if phantom_results[:errors].present?
+      phantom_results[:errors].each do |error|
+        if error.is_a?(Hash)
+          add_failed_person(
+            error[:data] || {},
+            error[:row] || 0,
+            [error[:error] || "Unknown error"]
+          )
+        else
+          @csv_errors << error.to_s
+        end
+      end
+    end
+    
+    # Update total count
+    # Note: Phantom Buster service tracks its own people, so we just update counts
+  end
 end

@@ -35,12 +35,14 @@
             <div class="bg-blue-600 h-2.5 rounded-full" style="width: <%= completion_percentage %>%"></div>
           </div>
           <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            <%= number_with_delimiter(people_completed) %> of <%= number_with_delimiter(profile_extraction_potential) %> people processed
+            <%= number_with_delimiter(items_completed) %> of <%= number_with_delimiter(profile_extraction_potential) %> 
+            <%= service_name == "person_profile_extraction" ? "companies" : "people" %> processed
           </p>
         </div>
       <% else %>
         <div class="<%= text_muted_classes %>">
-          <p data-available-count="<%= service_name %>"><%= number_with_delimiter(people_needing_service) %> people need processing</p>
+          <p data-available-count="<%= service_name %>"><%= number_with_delimiter(items_needing_service) %> 
+            <%= service_name == "person_profile_extraction" ? "companies" : "people" %> need processing</p>
           <p data-queue-stat="<%= queue_name %>"><%= number_with_delimiter(queue_depth) %> in queue</p>
         </div>
       <% end %>
@@ -57,18 +59,18 @@
       <input type="number" 
              name="count" 
              id="<%= service_name %>_count"
-             value="<%= [people_needing_service, 100].min %>" 
+             value="<%= [items_needing_service, 100].min %>" 
              min="1" 
-             max="<%= people_needing_service > 0 ? [people_needing_service, 1000].min : 1000 %>"
+             max="<%= items_needing_service > 0 ? [items_needing_service, 1000].min : 1000 %>"
              class="<%= input_classes %>"
              data-service-queue-target="countInput"
-             data-max-available="<%= people_needing_service %>" />
+             data-max-available="<%= items_needing_service %>" />
     </div>
     
     <button type="submit" 
             class="<%= button_classes %>"
             data-service-queue-target="submitButton"
-            <%= people_needing_service == 0 ? 'disabled' : '' %>>
+            <%= items_needing_service == 0 ? 'disabled' : '' %>>
       Queue Processing
     </button>
   </form>

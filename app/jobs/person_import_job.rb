@@ -11,6 +11,19 @@ class PersonImportJob < ApplicationJob
 
     begin
       user = User.find(user_id)
+      Rails.logger.info "  - User found: #{user.email}"
+
+      # Initialize progress tracking immediately
+      progress_key = "person_import_progress_#{user_id}"
+      progress_data = {
+        current: 0,
+        total: 100,
+        percent: 0,
+        message: "Import job starting...",
+        updated_at: Time.current.iso8601
+      }
+      Rails.cache.write(progress_key, progress_data, expires_in: 10.minutes)
+      Rails.logger.info "  - Initial progress set in cache: #{progress_key}"
 
       # Create a file-like object for the service
       file = ActionDispatch::Http::UploadedFile.new(
@@ -26,7 +39,19 @@ class PersonImportJob < ApplicationJob
         validate_emails: validate_emails
       )
 
+      Rails.logger.info "  - PersonImportService created, starting import..."
       result = service.perform
+
+      # Ensure final progress is set
+      final_progress_data = {
+        current: 100,
+        total: 100,
+        percent: 100,
+        message: "Import completed successfully!",
+        updated_at: Time.current.iso8601
+      }
+      Rails.cache.write(progress_key, final_progress_data, expires_in: 10.minutes)
+      Rails.logger.info "  - Final progress set: 100%"
 
       # Save the result to a temporary file for the controller to read
       result_file_path = Rails.root.join("tmp", "person_import_result_#{import_id}.json")

@@ -78,7 +78,8 @@ class BasePage {
    */
   async getTextContent(selector) {
     await this.waitForElement(selector);
-    return await this.page.textContent(selector);
+    // Use $eval for getting text content in newer Puppeteer
+    return await this.page.$eval(selector, el => el.textContent);
   }
 
   /**
@@ -88,7 +89,10 @@ class BasePage {
   async isElementVisible(selector) {
     try {
       const element = await this.page.$(selector);
-      return element ? await element.isVisible() : false;
+      if (!element) return false;
+      // Use boundingBox to check visibility in newer Puppeteer
+      const box = await element.boundingBox();
+      return box !== null;
     } catch (error) {
       return false;
     }

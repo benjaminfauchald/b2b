@@ -155,4 +155,56 @@ class Person < ApplicationRecord
   def full_name
     name
   end
+
+  # Normalize LinkedIn URL for consistent storage and comparison
+  def self.normalize_linkedin_url(url)
+    return nil if url.blank?
+
+    url = url.to_s.strip
+    
+    # Only process if it contains linkedin.com
+    return nil unless url.include?("linkedin.com")
+    
+    # Remove anything after comma (for CSV parsing issues)
+    url = url.gsub(/,.*$/, "").strip
+    
+    # Normalize LinkedIn URLs
+    # 1. Ensure https protocol
+    url = "https://#{url}" unless url.start_with?("http")
+    url = url.gsub(/^http:/, "https:")
+    
+    # 2. Parse and rebuild URL to normalize
+    begin
+      uri = URI.parse(url)
+      
+      # Ensure www subdomain for consistency
+      uri.host = "www.linkedin.com" if uri.host == "linkedin.com"
+      
+      # Remove trailing slashes from path
+      uri.path = uri.path.chomp("/") if uri.path
+      
+      # Remove query parameters (like ?param=value)
+      uri.query = nil
+      
+      # Remove fragment (like #section)
+      uri.fragment = nil
+      
+      # Return normalized URL
+      uri.to_s
+    rescue URI::InvalidURIError
+      # If URL parsing fails, do basic cleaning
+      url.gsub(/\?.*$/, "")  # Remove query params
+         .gsub(/#.*$/, "")   # Remove fragments
+         .chomp("/")         # Remove trailing slash
+    end
+  end
+
+  # Normalize profile_url before saving
+  before_validation :normalize_profile_url
+
+  private
+
+  def normalize_profile_url
+    self.profile_url = self.class.normalize_linkedin_url(profile_url) if profile_url_changed?
+  end
 end

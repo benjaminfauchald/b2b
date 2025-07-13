@@ -14,6 +14,19 @@ class PersonImportService < ApplicationService
     zb_last_known_activity zb_activity_data_count zb_activity_data_types
     zb_activity_data_channels zerobouncequalityscore
   ].freeze
+  
+  # Phantom Buster CSV format detection
+  PHANTOM_BUSTER_REQUIRED_HEADERS = %w[profileUrl fullName companyName title linkedInProfileUrl].freeze
+  PHANTOM_BUSTER_HEADERS = %w[
+    profileUrl fullName firstName lastName companyName title 
+    companyId companyUrl regularCompanyUrl summary titleDescription
+    industry companyLocation location durationInRole durationInCompany
+    pastExperienceCompanyName pastExperienceCompanyUrl 
+    pastExperienceCompanyTitle pastExperienceDate pastExperienceDuration
+    connectionDegree profileImageUrl sharedConnectionsCount name vmid
+    linkedInProfileUrl isPremium isOpenLink query timestamp defaultProfileUrl
+  ].freeze
+  
   MAX_FILE_SIZE = 200.megabytes # Support larger files for person imports
   VALID_MIME_TYPES = %w[text/csv application/csv].freeze
 
@@ -121,13 +134,69 @@ class PersonImportService < ApplicationService
   def process_csv_file
     # Check if file has headers
     first_line = File.open(file.path, &:readline).strip rescue ""
+    
+    # Check if this is a Phantom Buster CSV
+    if is_phantom_buster_csv?(first_line)
+      Rails.logger.info "🚀 Detected Phantom Buster CSV format"
+      process_phantom_buster_csv
+    else
+      # Detect if file has headers by checking for common header terms
+      header_indicators = [ "name", "email", "first", "last", "title", "company", "linkedin" ]
+      has_headers = header_indicators.any? { |indicator| first_line.downcase.include?(indicator) }
 
-    # Detect if file has headers by checking for common header terms
-    header_indicators = [ "name", "email", "first", "last", "title", "company", "linkedin" ]
-    has_headers = header_indicators.any? { |indicator| first_line.downcase.include?(indicator) }
-
-    # Always process as standard CSV with detected headers
-    process_standard_csv(has_headers)
+      # Always process as standard CSV with detected headers
+      process_standard_csv(has_headers)
+    end
+  end
+  
+  def is_phantom_buster_csv?(first_line)
+    # Parse CSV headers properly (handle quoted headers)
+    headers = CSV.parse_line(first_line).map(&:strip).map(&:downcase)
+    required_headers = PHANTOM_BUSTER_REQUIRED_HEADERS.map(&:downcase)
+    missing_headers = required_headers - headers
+    
+    Rails.logger.info "🔍 Checking Phantom Buster format"
+    Rails.logger.info "  Headers found: #{headers.inspect}"
+    Rails.logger.info "  Required headers: #{required_headers.inspect}"
+    Rails.logger.info "  Missing headers: #{missing_headers.inspect}"
+    
+    missing_headers.empty?
+  end
+  
+  def process_phantom_buster_csv
+    # Delegate to PhantomBusterImportService
+    phantom_service = PhantomBusterImportService.new(file.path)
+    
+    unless phantom_service.detect_format
+      result.add_csv_error("Invalid Phantom Buster CSV format")
+      return
+    end
+    
+    # Import using the Phantom Buster service
+    import_result = phantom_service.import(
+      import_tag: @import_tag,
+      duplicate_strategy: :update
+    )
+    
+    if import_result
+      # Map results back to our result object
+      phantom_results = phantom_service.import_results
+      
+      # Update our result with Phantom Buster import results
+      result.merge_phantom_buster_results(phantom_results)
+      
+      # Handle email validation if enabled
+      if @validate_emails && phantom_results[:successful] > 0
+        # Find all successfully imported people and queue for validation
+        people = Person.where(import_tag: @import_tag)
+        people.each do |person|
+          trigger_email_validation(person)
+          result.track_email_verification(person, true)
+        end
+      end
+    else
+      result.add_csv_error("Phantom Buster import failed: #{phantom_service.errors.join(', ')}")
+    end
   end
 
   def process_standard_csv(has_headers)
@@ -284,8 +353,8 @@ class PersonImportService < ApplicationService
       name = "#{row_data[:first_name]&.to_s&.strip} #{row_data[:last_name]&.to_s&.strip}".strip
     end
 
-    # Extract and clean LinkedIn URL
-    linkedin_url = clean_linkedin_url(row_data[:linkedin])
+    # Extract and normalize LinkedIn URL using Person model's method
+    linkedin_url = Person.normalize_linkedin_url(row_data[:linkedin])
 
     # Prepare person attributes
     person_attributes = {
@@ -393,19 +462,6 @@ class PersonImportService < ApplicationService
     email.match?(/\A[^@\s]+@[^@\s]+\.[^@\s]+\z/)
   end
 
-  def clean_linkedin_url(url)
-    return nil if url.blank?
-
-    url = url.to_s.strip
-    # Extract LinkedIn profile URL from various formats
-    if url.include?("linkedin.com")
-      # Clean up the URL
-      url.gsub(/,.*$/, "") # Remove anything after comma
-         .strip
-    else
-      nil
-    end
-  end
 
   def clean_phone_number(phone)
     return nil if phone.blank?
@@ -487,7 +543,23 @@ class PersonImportService < ApplicationService
 
   def find_existing_person(email, linkedin_url)
     person_by_email = Person.find_by(email: email) if email.present?
-    person_by_linkedin = Person.find_by(profile_url: linkedin_url) if linkedin_url.present?
+    
+    # Search for LinkedIn URL with normalization
+    person_by_linkedin = nil
+    if linkedin_url.present?
+      # First try exact match
+      person_by_linkedin = Person.find_by(profile_url: linkedin_url)
+      
+      # If not found, try to find any person whose normalized URL matches
+      unless person_by_linkedin
+        Person.where.not(profile_url: nil).find_each do |person|
+          if Person.normalize_linkedin_url(person.profile_url) == linkedin_url
+            person_by_linkedin = person
+            break
+          end
+        end
+      end
+    end
 
     # If both exist and are different people, we need to merge them
     if person_by_email && person_by_linkedin && person_by_email.id != person_by_linkedin.id

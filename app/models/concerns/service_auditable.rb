@@ -159,6 +159,8 @@ module ServiceAuditable
         return all.merge(needs_financial_update)
       elsif self == Company && service_name == "company_linkedin_discovery"
         return all.merge(needing_linkedin_discovery)
+      elsif self == Company && service_name == "person_profile_extraction"
+        return all.merge(needing_profile_extraction)
       elsif self == Person && service_name == "person_profile_extraction"
         return all.merge(needs_profile_extraction)
       elsif self == Person && service_name == "person_email_extraction"

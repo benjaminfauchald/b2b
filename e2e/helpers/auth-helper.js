@@ -28,8 +28,11 @@ class AuthHelper {
       throw new Error(`Login failed: ${result.error}`);
     }
     
-    // Verify we're redirected to the expected page
-    await page.waitForURL('**/companies', { timeout: 10000 });
+    // Verify we're redirected away from login page
+    await page.waitForFunction(
+      () => !window.location.href.includes('/users/sign_in'),
+      { timeout: 10000 }
+    );
     
     console.log('✅ Successfully logged in as test user');
     return result;
@@ -49,7 +52,10 @@ class AuthHelper {
       throw new Error(`Admin login failed: ${result.error}`);
     }
     
-    await page.waitForURL('**/companies', { timeout: 10000 });
+    await page.waitForFunction(
+      () => window.location.href.includes('/companies'),
+      { timeout: 10000 }
+    );
     
     console.log('✅ Successfully logged in as admin user');
     return result;
@@ -63,20 +69,23 @@ class AuthHelper {
     try {
       // Look for user menu or logout button
       const userMenuSelector = '[data-testid="user-menu"], .dropdown-toggle, .nav-user';
-      const logoutSelector = 'a:has-text("Logout"), a:has-text("Sign out"), button:has-text("Logout")';
+      const logoutSelector = 'a[href="/users/sign_out"], a[data-method="delete"], .logout-link';
       
       // Try to find and click user menu first
       const userMenu = await page.$(userMenuSelector);
       if (userMenu) {
         await page.click(userMenuSelector);
-        await page.waitForTimeout(500); // Wait for dropdown to open
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait for dropdown to open
       }
       
       // Click logout
       await page.click(logoutSelector);
       
       // Wait for redirect to login page
-      await page.waitForURL('**/users/sign_in', { timeout: 10000 });
+      await page.waitForFunction(
+        () => window.location.href.includes('/users/sign_in'),
+        { timeout: 10000 }
+      );
       
       console.log('✅ Successfully logged out');
     } catch (error) {
@@ -94,14 +103,17 @@ class AuthHelper {
       const userIndicators = [
         '[data-testid="user-menu"]',
         '.nav-user',
-        '.dropdown-toggle:has-text("Profile")',
-        'a:has-text("Logout")'
+        '.dropdown-toggle',
+        'a[href="/users/sign_out"]'
       ];
       
       for (const selector of userIndicators) {
         const element = await page.$(selector);
-        if (element && await element.isVisible()) {
-          return true;
+        if (element) {
+          const box = await element.boundingBox();
+          if (box !== null) {
+            return true;
+          }
         }
       }
       
@@ -162,7 +174,7 @@ class AuthHelper {
       for (const selector of userSelectors) {
         const element = await page.$(selector);
         if (element) {
-          const text = await element.textContent();
+          const text = await page.$eval(selector, el => el.textContent);
           if (text && text.trim()) {
             return text.trim();
           }

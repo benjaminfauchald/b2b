@@ -36,8 +36,8 @@
           needing_count = companies_needing
           item_type = "companies"
         else
-          needing_count = persons_needing
-          item_type = "persons"
+          needing_count = people_needing
+          item_type = "people"
         end
       %>
       <p data-available-count="<%= service_name %>" data-raw-count="<%= needing_count %>"><%= number_with_delimiter(needing_count) %> <%= item_type %> need processing</p>

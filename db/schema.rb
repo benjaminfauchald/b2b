@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_09_110057) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_10_093538) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -482,13 +482,39 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_09_110057) do
     t.decimal "zerobounce_quality_score", precision: 5, scale: 2
     t.datetime "zerobounce_imported_at", precision: nil
     t.string "source"
+    t.string "first_name"
+    t.string "last_name"
+    t.string "company_url"
+    t.string "regular_company_url"
+    t.string "industry"
+    t.string "company_location"
+    t.string "phantom_buster_company_id"
+    t.text "title_description"
+    t.string "duration_in_role"
+    t.string "duration_in_company"
+    t.string "past_experience_company_name"
+    t.string "past_experience_company_url"
+    t.string "past_experience_company_title"
+    t.string "past_experience_date"
+    t.string "past_experience_duration"
+    t.integer "shared_connections_count"
+    t.string "vmid"
+    t.boolean "is_premium", default: false
+    t.boolean "is_open_link", default: false
+    t.string "default_profile_url"
+    t.string "query"
+    t.datetime "phantom_buster_timestamp"
     t.index ["email"], name: "index_people_on_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
     t.index ["email_validation_details"], name: "index_people_on_email_validation_details", using: :gin
     t.index ["email_validation_engine"], name: "index_people_on_email_validation_engine"
     t.index ["email_verification_checked_at"], name: "index_people_on_email_verification_checked_at"
     t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
     t.index ["import_tag"], name: "index_people_on_import_tag"
+    t.index ["is_premium"], name: "index_people_on_is_premium"
+    t.index ["phantom_buster_company_id"], name: "index_people_on_phantom_buster_company_id"
+    t.index ["phantom_buster_timestamp"], name: "index_people_on_phantom_buster_timestamp"
     t.index ["profile_url"], name: "index_people_on_profile_url", unique: true, where: "((profile_url IS NOT NULL) AND ((profile_url)::text <> ''::text))"
+    t.index ["vmid"], name: "index_people_on_vmid"
     t.index ["zerobounce_imported_at"], name: "index_people_on_zerobounce_imported_at"
     t.index ["zerobounce_quality_score"], name: "index_people_on_zerobounce_quality_score"
     t.index ["zerobounce_status"], name: "index_people_on_zerobounce_status"

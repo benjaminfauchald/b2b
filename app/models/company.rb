@@ -137,21 +137,11 @@ class Company < ApplicationRecord
     ).order(operating_revenue: :desc)
   }
 
-  # Companies that need profile extraction (candidates that haven't been processed successfully recently)
+  # Companies that need profile extraction (candidates that have no persons attached yet)
   scope :needing_profile_extraction, -> {
-    service_config = ServiceConfiguration.find_by(service_name: "person_profile_extraction")
-    refresh_threshold = service_config&.refresh_interval_hours&.hours&.ago || 30.days.ago
-
-    subquery = ServiceAuditLog
-      .where(service_name: "person_profile_extraction", status: ServiceAuditLog.statuses[:success])
-      .where("completed_at > ?", refresh_threshold)
-      .select(:auditable_id)
-      .distinct
-
-    profile_extraction_candidates.where(
-      "companies.id NOT IN (?)",
-      subquery
-    )
+    profile_extraction_candidates
+      .left_joins(:people)
+      .where(people: { id: nil })
   }
 
   # Total potential companies for profile extraction (for progress tracking)

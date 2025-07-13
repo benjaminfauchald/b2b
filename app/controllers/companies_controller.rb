@@ -366,7 +366,19 @@ class CompaniesController < ApplicationController
     Rails.logger.info "Params: #{params.inspect}"
 
     unless ServiceConfiguration.active?("company_linkedin_discovery")
-      render json: { success: false, message: "LinkedIn discovery service is disabled" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "LinkedIn discovery service is disabled",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "LinkedIn discovery service is disabled" } }
+      end
       return
     end
 
@@ -442,7 +454,19 @@ class CompaniesController < ApplicationController
     Rails.logger.info "Request headers: #{request.headers['Accept']}"
 
     unless ServiceConfiguration.active?("company_linkedin_discovery")
-      render json: { success: false, message: "LinkedIn discovery service is disabled" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "LinkedIn discovery service is disabled",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "LinkedIn discovery service is disabled" } }
+      end
       return
     end
 
@@ -452,23 +476,71 @@ class CompaniesController < ApplicationController
 
     # Validate postal code is provided and is 4 digits
     if postal_code.blank?
-      render json: { success: false, message: "Postal code is required" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "Postal code is required",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "Postal code is required" } }
+      end
       return
     end
     
     unless postal_code.match?(/\A\d{4}\z/)
-      render json: { success: false, message: "Postal code must be exactly 4 digits" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "Postal code must be exactly 4 digits",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "Postal code must be exactly 4 digits" } }
+      end
       return
     end
 
     # Validate batch size is positive and reasonable
     if batch_size <= 0
-      render json: { success: false, message: "Batch size must be greater than 0" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "Batch size must be greater than 0",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "Batch size must be greater than 0" } }
+      end
       return
     end
 
     if batch_size > 1000
-      render json: { success: false, message: "Cannot queue more than 1000 companies at once" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "Cannot queue more than 1000 companies at once",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "Cannot queue more than 1000 companies at once" } }
+      end
       return
     end
 
@@ -935,7 +1007,19 @@ class CompaniesController < ApplicationController
   # POST /companies/:id/queue_single_linkedin_discovery
   def queue_single_linkedin_discovery
     unless ServiceConfiguration.active?("company_linkedin_discovery")
-      render json: { success: false, message: "LinkedIn discovery service is disabled" }
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.append(
+            "toast-container",
+            partial: "shared/toast_notification",
+            locals: { 
+              message: "LinkedIn discovery service is disabled",
+              type: "error"
+            }
+          )
+        end
+        format.json { render json: { success: false, message: "LinkedIn discovery service is disabled" } }
+      end
       return
     end
 

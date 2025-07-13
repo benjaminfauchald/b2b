@@ -242,6 +242,225 @@ ssh benjamin@app.connectica.no "sudo journalctl -u puma.service -n 50"
 - Make sure that we write any temporary files and scripts to the tmp/ folder
 - **ALWAYS use enhanced deployment scripts** - never push manually without quality checks
 
+## 🔥 Hotwire/Stimulus Best Practices & Rails Compliance Rules
+
+### ✅ Stimulus Controller Best Practices
+
+#### Controller Export and Registration
+```javascript
+// ✅ CORRECT: Proper ES6 export syntax
+export default class extends Controller {
+  // controller code
+}
+
+// ❌ WRONG: Missing export or incorrect syntax
+class CsvUploadController extends Controller {
+  // This won't be properly registered
+}
+```
+
+#### Manual Controller Registration (when needed)
+```javascript
+// app/javascript/controllers/index.js
+import CsvUploadController from "controllers/csv_upload_controller"
+application.register("csv-upload", CsvUploadController)
+```
+
+#### Lifecycle Methods and Error Handling
+```javascript
+connect() {
+  console.log('Controller connected')
+  // Initialize state, set up event listeners
+  // Use setTimeout for DOM-dependent operations
+  setTimeout(() => {
+    if (this.hasSubmitButtonTarget) {
+      this.submitButtonTarget.disabled = true
+    }
+  }, 0)
+}
+
+disconnect() {
+  // Always clean up resources (intervals, timeouts, event listeners)
+  this.stopProgressPolling()
+}
+```
+
+### 🚫 What NOT to Do with JavaScript/AJAX in Rails
+
+#### ❌ Manual Form Submission Anti-Patterns
+```javascript
+// ❌ DON'T: Manually construct FormData and send AJAX
+const formData = new FormData()
+formData.append('file', file)
+fetch('/upload', { method: 'POST', body: formData })
+
+// ✅ DO: Let Rails handle form submission, use Stimulus for enhancement
+handleSubmit(event) {
+  // Validate and enhance, but let form submit naturally
+  if (!this.fileInputTarget.files.length) {
+    event.preventDefault()
+    return false
+  }
+  // Allow normal form submission
+  return true
+}
+```
+
+#### ❌ Session Management Anti-Patterns
+```javascript
+// ❌ DON'T: Try to manage Rails sessions in JavaScript
+localStorage.setItem('user_data', userData)
+sessionStorage.setItem('import_results', results)
+
+// ✅ DO: Let Rails handle session data, use server-side storage
+// Store large data in Rails cache or temporary files
+// Use session only for identifiers and small metadata
+```
+
+#### ❌ Progress Polling Anti-Patterns
+```javascript
+// ❌ DON'T: Infinite polling without safeguards
+setInterval(() => fetchProgress(), 500) // Too frequent, no timeout
+
+// ✅ DO: Implement proper polling with safeguards
+startProgressPolling() {
+  this.progressPoller = setInterval(() => {
+    this.fetchProgress()
+  }, 2000) // Reasonable frequency
+  
+  // Always set timeout to prevent infinite polling
+  this.maxPollingTime = setTimeout(() => {
+    this.stopProgressPolling()
+  }, 300000) // 5 minutes max
+}
+```
+
+### 🎯 Rails-Compliant Response Handling
+
+#### ✅ Proper Response Format Handling
+```ruby
+# Controller should handle both HTML and JSON
+respond_to do |format|
+  format.html { redirect_to results_path }
+  format.json { render json: { status: 'success', redirect_url: results_path } }
+end
+```
+
+#### ✅ Turbo Stream Integration
+```ruby
+# Use Turbo Streams for dynamic updates
+format.turbo_stream do
+  render turbo_stream: turbo_stream.append(
+    "toast-container",
+    partial: "shared/toast_notification",
+    locals: { message: "Success!", type: "success" }
+  )
+end
+```
+
+### 🚨 Critical Rules for Rails/Hotwire Compliance
+
+#### 1. Form Submission Rules
+- **NEVER** prevent default form submission unless absolutely necessary
+- **ALWAYS** validate on client side but let server handle the actual processing
+- **USE** `data-turbo="false"` for file uploads if needed
+- **LET** Rails handle redirects and responses
+
+#### 2. Progress Tracking Rules
+- **STORE** progress data in Rails.cache, not browser storage
+- **POLL** server endpoints for progress, don't rely on WebSockets unless needed
+- **IMPLEMENT** timeout and cleanup mechanisms for all polling
+- **USE** proper HTTP status codes and JSON responses
+
+#### 3. Error Handling Rules
+```javascript
+// ✅ Graceful degradation - always provide fallbacks
+try {
+  // Enhanced functionality
+  this.fileInputTarget.files = files
+} catch (error) {
+  // Fallback for browsers that don't support direct file assignment
+  const dt = new DataTransfer()
+  dt.items.add(files[0])
+  this.fileInputTarget.files = dt.files
+}
+```
+
+#### 4. Memory Management Rules
+```javascript
+// ✅ Always clean up in disconnect()
+disconnect() {
+  // Clear intervals
+  if (this.progressPoller) {
+    clearInterval(this.progressPoller)
+  }
+  // Clear timeouts
+  if (this.maxPollingTime) {
+    clearTimeout(this.maxPollingTime)
+  }
+  // Remove event listeners if manually added
+}
+```
+
+#### 5. Target and Value Management
+```javascript
+// ✅ Always check target existence
+if (this.hasSubmitButtonTarget) {
+  this.submitButtonTarget.disabled = true
+}
+
+// ✅ Use proper data-[controller]-target syntax in HTML
+// <button data-csv-upload-target="submitButton">Submit</button>
+```
+
+### 🛡️ Security and Performance Rules
+
+#### File Upload Security
+```javascript
+// ✅ Validate file types and sizes
+isValidFileType(file) {
+  // Check both MIME type and extension
+  if (this.allowedTypes.includes(file.type)) return true
+  return file.name.toLowerCase().endsWith('.csv')
+}
+
+// ✅ Validate file size before upload
+if (file.size > this.maxFileSize) {
+  this.showError(`File too large (max: 50MB)`)
+  return
+}
+```
+
+#### Performance Rules
+- **DEBOUNCE** expensive operations like file validation
+- **BATCH** DOM updates to prevent layout thrashing
+- **USE** RequestAnimationFrame for smooth animations
+- **CACHE** DOM queries in connect() when possible
+
+### 📝 Documentation and Debugging Rules
+
+```javascript
+// ✅ Comprehensive logging for debugging
+connect() {
+  console.log('Controller connected')
+  console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)))
+}
+
+handleSubmit(event) {
+  console.log('Form submission started', event)
+  console.log('File size:', file.size, 'bytes')
+  console.log('Processing method:', fileSizeMB > threshold ? 'BACKGROUND' : 'SYNCHRONOUS')
+}
+```
+
+### 🎯 Key Takeaways
+1. **Enhance, don't replace** - Stimulus should enhance HTML forms, not replace them
+2. **Server-first** - Let Rails handle data persistence, sessions, and complex logic
+3. **Progressive enhancement** - JavaScript should gracefully degrade if disabled
+4. **Resource cleanup** - Always clean up intervals, timeouts, and event listeners
+5. **Error boundaries** - Wrap risky operations in try/catch with fallbacks
+6. **Performance first** - Use appropriate polling frequencies and timeouts
+
 ## Rails 8 + ViewComponent Compatibility (CRITICAL)
 **SOLVED**: This application uses a comprehensive ViewComponent Rails 8 compatibility solution.
 

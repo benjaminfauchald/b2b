@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test CSV Upload</title>
+</head>
+<body>
+  <h1>Manual CSV Upload Test</h1>
+  
+  <form action="/people/import" method="post" enctype="multipart/form-data">
+    <input type="file" name="csv_file" id="csv_file" accept=".csv" onchange="validateCSV(this)">
+    <div id="result"></div>
+  </form>
+
+  <script>
+    function validateCSV(input) {
+      const file = input.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const firstLine = content.split('\n')[0].toLowerCase();
+        
+        const hasEmail = firstLine.includes('email');
+        const hasPhantomBuster = firstLine.includes('profileurl') && 
+                                firstLine.includes('fullname') &&
+                                firstLine.includes('linkedinprofileurl');
+        
+        const result = document.getElementById('result');
+        result.innerHTML = `
+          <h3>Validation Result:</h3>
+          <p>Has email header: ${hasEmail}</p>
+          <p>Has Phantom Buster headers: ${hasPhantomBuster}</p>
+          <p>Would be accepted: ${hasEmail || hasPhantomBuster ? 'YES ✅' : 'NO ❌'}</p>
+          <p>First line: ${firstLine.substring(0, 100)}...</p>
+        `;
+      };
+      reader.readAsText(file.slice(0, 1024));
+    }
+  </script>
+</body>
+</html>

@@ -3,17 +3,18 @@
 class CompanyServiceQueueButtonComponent < ViewComponent::Base
   include ActionView::Helpers::NumberHelper
 
-  def initialize(service_name:, title:, icon:, action_path:, queue_name:)
+  def initialize(service_name:, title:, icon:, action_path:, queue_name:, selected_country: nil)
     @service_name = service_name
     @title = title
     @icon = icon
     @action_path = action_path
     @queue_name = queue_name
+    @selected_country = selected_country || 'NO'  # Default to Norway
   end
 
   private
 
-  attr_reader :service_name, :title, :icon, :action_path, :queue_name
+  attr_reader :service_name, :title, :icon, :action_path, :queue_name, :selected_country
 
   def companies_needing_service
     number_with_delimiter(companies_needing_service_raw)
@@ -27,19 +28,19 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     else
       service_name
     end
-    Company.needing_service(actual_service_name).count
+    Company.by_country(selected_country).needing_service(actual_service_name).count
   end
 
   # For web discovery, show total potential companies that could be processed
   def web_discovery_potential
     return 0 unless service_name == "company_web_discovery"
-    number_with_delimiter(Company.web_discovery_potential.count)
+    number_with_delimiter(Company.by_country(selected_country).web_discovery_potential.count)
   end
 
   # For LinkedIn discovery, show total potential companies that could be processed
   def linkedin_discovery_potential
     return 0 unless service_name == "company_linkedin_discovery"
-    number_with_delimiter(Company.linkedin_discovery_potential.count)
+    number_with_delimiter(Company.by_country(selected_country).linkedin_discovery_potential.count)
   end
 
   # Calculate companies that have been successfully processed for this service
@@ -52,11 +53,12 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
       processed_by_service = ServiceAuditLog
         .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
         .where(service_name: "company_web_discovery", status: "success")
-        .where("companies.operating_revenue > ?", 10_000_000)
+        .where("companies.operating_revenue > ? AND companies.source_country = ?", 10_000_000, selected_country)
         .distinct
         .pluck("service_audit_logs.record_id")
 
       companies_with_websites = Company
+        .by_country(selected_country)
         .where("operating_revenue > ?", 10_000_000)
         .where("website IS NOT NULL AND website != ''")
         .count
@@ -66,7 +68,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     when "company_financial_data", "company_financials"
       # Count eligible companies that have financial data (indicating they've been processed)
       # The service actually populates ordinary_result and annual_result
-      Company.financial_data_eligible
+      Company.by_country(selected_country).financial_data_eligible
         .where.not(ordinary_result: nil)
         .count
     when "company_linkedin_discovery"
@@ -74,7 +76,7 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
       ServiceAuditLog
         .joins("JOIN companies ON companies.id = CAST(service_audit_logs.record_id AS INTEGER)")
         .where(service_name: "company_linkedin_discovery", status: "success")
-        .where("companies.operating_revenue > ?", 10_000_000)
+        .where("companies.operating_revenue > ? AND companies.source_country = ?", 10_000_000, selected_country)
         .count
     else
       0
@@ -87,12 +89,12 @@ class CompanyServiceQueueButtonComponent < ViewComponent::Base
     total = case service_name
     when "company_web_discovery"
       # Total companies with revenue > 10M (regardless of website status)
-      Company.where("operating_revenue > ?", 10_000_000).count
+      Company.by_country(selected_country).where("operating_revenue > ?", 10_000_000).count
     when "company_financial_data", "company_financials"
       # Use the consistent financial_data_eligible scope
-      Company.financial_data_eligible.count
+      Company.by_country(selected_country).financial_data_eligible.count
     when "company_linkedin_discovery"
-      Company.linkedin_discovery_potential.count
+      Company.by_country(selected_country).linkedin_discovery_potential.count
     else
       return 0
     end

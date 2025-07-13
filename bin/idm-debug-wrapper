@@ -1,0 +1,53 @@
+#!/bin/bash
+# IDM Debug Wrapper - Logs all hook executions for debugging
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Log file for debugging
+LOG_FILE="$PROJECT_ROOT/tmp/idm-hook-debug.log"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Log execution details
+echo "===== IDM Hook Execution at $(date) =====" >> "$LOG_FILE"
+echo "Command: $0 $@" >> "$LOG_FILE"
+echo "Working Directory: $(pwd)" >> "$LOG_FILE"
+echo "Script Directory: $SCRIPT_DIR" >> "$LOG_FILE"
+echo "Project Root: $PROJECT_ROOT" >> "$LOG_FILE"
+echo "Environment PATH: $PATH" >> "$LOG_FILE"
+
+# Check if idm-intelligence.py exists
+IDM_SCRIPT="$PROJECT_ROOT/bin/idm-intelligence.py"
+if [ ! -f "$IDM_SCRIPT" ]; then
+    echo "ERROR: IDM script not found at $IDM_SCRIPT" >> "$LOG_FILE"
+    echo '{"continue": true, "error": "IDM script not found"}'
+    exit 0
+fi
+
+# Check if script is executable
+if [ ! -x "$IDM_SCRIPT" ]; then
+    echo "ERROR: IDM script not executable at $IDM_SCRIPT" >> "$LOG_FILE"
+    echo '{"continue": true, "error": "IDM script not executable"}'
+    exit 0
+fi
+
+# Capture stdin to a temporary file
+STDIN_FILE="$(mktemp)"
+cat > "$STDIN_FILE"
+echo "STDIN Content:" >> "$LOG_FILE"
+cat "$STDIN_FILE" >> "$LOG_FILE"
+
+# Execute the actual IDM script
+echo "Executing: python3 $IDM_SCRIPT $@" >> "$LOG_FILE"
+cat "$STDIN_FILE" | python3 "$IDM_SCRIPT" "$@" 2>> "$LOG_FILE"
+RESULT=$?
+
+echo "Exit Code: $RESULT" >> "$LOG_FILE"
+echo "===== End of execution =====" >> "$LOG_FILE"
+echo "" >> "$LOG_FILE"
+
+# Clean up
+rm -f "$STDIN_FILE"
+
+exit $RESULT

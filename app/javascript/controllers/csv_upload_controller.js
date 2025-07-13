@@ -1,5 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Immediately log that the file is being loaded
+console.log('[CSV Upload Controller] File is being loaded/imported');
+
 export default class extends Controller {
   static targets = [
     "dropZone", "fileInput", "progress", "progressBar", "progressText",
@@ -12,6 +15,7 @@ export default class extends Controller {
 
   connect() {
     console.log('CSV Upload Controller connected')
+    console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this)))
     this.maxFileSize = 50 * 1024 * 1024 // 50MB in bytes
     this.allowedTypes = ['text/csv', 'application/csv', 'text/plain']
     
@@ -144,13 +148,35 @@ export default class extends Controller {
           return
         }
       } else if (isPersonImport) {
-        // Person import validation - check for email header (required for person imports)
+        // Person import validation - check for email header OR Phantom Buster format
         const hasEmailHeader = firstLine.toLowerCase().includes('email')
+        const hasPhantomBusterHeaders = firstLine.toLowerCase().includes('profileurl') && 
+                                        firstLine.toLowerCase().includes('fullname') &&
+                                        firstLine.toLowerCase().includes('linkedinprofileurl')
         console.log('Contains "email"?', hasEmailHeader)
+        console.log('Is Phantom Buster format?', hasPhantomBusterHeaders)
         
-        if (!hasEmailHeader) {
-          console.log('Email header not found, clearing input')
-          this.showError('CSV file must contain an "email" column header for person imports.')
+        if (!hasEmailHeader && !hasPhantomBusterHeaders) {
+          console.log('Neither email header nor Phantom Buster format found, clearing input')
+          console.log('First line headers:', firstLine)
+          
+          // Check if this might be a postal code or domain file
+          const hasPostalHeaders = firstLine.toLowerCase().includes('postcode') || 
+                                  firstLine.toLowerCase().includes('postal') ||
+                                  firstLine.toLowerCase().includes('zip')
+          const hasDomainHeaders = firstLine.toLowerCase().includes('domain')
+          
+          let errorMessage = 'CSV file must contain an "email" column header or be in Phantom Buster format for person imports.'
+          
+          if (hasPostalHeaders) {
+            errorMessage += ' This appears to be a postal code file. Please use the Domain Import feature instead.'
+          } else if (hasDomainHeaders) {
+            errorMessage += ' This appears to be a domain file. Please use the Domain Import feature instead.'
+          } else {
+            errorMessage += ` Found headers: ${firstLine}`
+          }
+          
+          this.showError(errorMessage)
           this.clearFileInput()
           return
         }
@@ -263,47 +289,75 @@ export default class extends Controller {
     }
   }
 
-  // Handle form submission with progress
-  beforeSubmit(event) {
-    console.log('beforeSubmit called')
-    console.log('Form event:', event)
-    console.log('File input target:', this.fileInputTarget)
-    console.log('Files:', this.fileInputTarget.files)
-    console.log('Files length:', this.fileInputTarget.files?.length)
+  // Submit handler for form submission
+  handleSubmit(event) {
+    console.log('CSV Upload handleSubmit called', event)
     
+    // Only validate that a file is selected
     if (!this.fileInputTarget.files || this.fileInputTarget.files.length === 0) {
       console.log('No files selected, preventing submission')
       event.preventDefault()
-      event.stopPropagation()
       this.showError('Please select a CSV file before uploading.')
-      // Focus on the drop zone for accessibility
-      this.dropZoneTarget.focus()
+      if (this.hasDropZoneTarget) {
+        this.dropZoneTarget.focus()
+      }
       return false
     }
 
+    console.log('File validation passed, proceeding with form submission')
+
+    // Get file size to determine if we'll need progress polling
+    const file = this.fileInputTarget.files[0]
+    const fileSizeMB = file.size / (1024 * 1024)
+    const largeFileThreshold = 5.0 // MB - matches server-side threshold
+    
+    console.log(`File size: ${fileSizeMB.toFixed(2)} MB`)
+    console.log(`Large file threshold: ${largeFileThreshold} MB`)
+    console.log(`Will use: ${fileSizeMB > largeFileThreshold ? 'BACKGROUND PROCESSING' : 'SYNCHRONOUS PROCESSING'}`)
+
+    // Update UI to show submission is in progress
+    if (this.hasSubmitButtonTarget) {
+      this.submitButtonTarget.value = "Processing..."
+      this.submitButtonTarget.disabled = true
+      this.submitButtonTarget.classList.add('opacity-50', 'cursor-not-allowed')
+    }
+    
     this.showProgress()
-    this.hideErrors()
-    this.hideFileInfo()
     
-    // Start progress polling after a short delay to allow form submission
-    setTimeout(() => {
-      this.startProgressPolling()
-    }, 500)
+    if (fileSizeMB > largeFileThreshold) {
+      // Large file - will be processed in background, start polling
+      this.updateProgress(0, 'Uploading file...')
+      console.log('Large file detected - will start progress polling after form submission')
+      
+      // Start progress polling after a delay to allow form submission and job queuing
+      setTimeout(() => {
+        this.startProgressPolling()
+      }, 2000)
+    } else {
+      // Small file - will be processed synchronously, just show uploading message
+      this.updateProgress(50, 'Processing file...')
+      console.log('Small file detected - will be processed synchronously (no polling needed)')
+    }
     
+    // Allow form to submit normally
+    console.log('Allowing form to submit normally')
     return true
   }
 
   startProgressPolling() {
     console.log('Starting progress polling...')
+    this.startTime = Date.now() // Reset start time for tracking
+    
     this.progressPoller = setInterval(() => {
       this.fetchProgress()
-    }, 1000) // Poll every second
+    }, 2000) // Poll every 2 seconds (reduced frequency)
     
-    // Set a maximum polling time (2 minutes) to prevent infinite polling
+    // Set a maximum polling time (5 minutes) to prevent infinite polling
     this.maxPollingTime = setTimeout(() => {
       this.stopProgressPolling()
-      console.log('Progress polling stopped due to timeout')
-    }, 120000)
+      console.log('Progress polling stopped due to timeout (5 minutes)')
+      this.updateProgress(100, 'Import may have completed (timeout)')
+    }, 300000) // 5 minutes
   }
 
   stopProgressPolling() {
@@ -321,6 +375,8 @@ export default class extends Controller {
     try {
       // Use dynamic progress URL or fall back to default
       const progressUrl = this.progressUrlValue || '/people/import_progress'
+      console.log('Fetching progress from:', progressUrl)
+      
       const response = await fetch(progressUrl, {
         headers: {
           'Accept': 'application/json',
@@ -330,17 +386,44 @@ export default class extends Controller {
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Progress data:', data)
+        console.log('Progress data received:', data)
         
         if (data.status === 'in_progress') {
-          this.updateProgress(data.percent, data.message)
+          const percent = data.percent || Math.round((data.current / data.total) * 100) || 0
+          const message = data.message || `Processing ${data.current}/${data.total} records...`
+          this.updateProgress(percent, message)
+          
+          console.log(`Progress: ${percent}% - ${message}`)
+        } else if (data.status === 'complete') {
+          // Import completed - stop polling and redirect
+          console.log('Import completed - preparing redirect')
+          this.updateProgress(100, 'Import completed!')
+          this.stopProgressPolling()
+          
+          // Redirect to results page after a short delay
+          console.log('Redirecting to import results page...')
+          setTimeout(() => {
+            const redirectUrl = '/people/import_results'
+            console.log('Redirecting to:', redirectUrl)
+            window.location.href = redirectUrl
+          }, 2000)
         } else if (data.status === 'not_found') {
           // Import might be complete or not started yet
-          console.log('No progress data found')
+          console.log('No progress data found - import may not have started yet')
+          // If we've been polling for more than 30 seconds without finding data, stop
+          if (!this.startTime) this.startTime = Date.now()
+          if (Date.now() - this.startTime > 30000) {
+            console.log('Stopping progress polling - no data found for 30 seconds')
+            this.stopProgressPolling()
+            this.updateProgress(100, 'Import may have completed')
+          }
         }
+      } else {
+        console.error('Progress fetch failed with status:', response.status)
       }
     } catch (error) {
       console.error('Failed to fetch progress:', error)
+      // Don't stop polling on network errors, just log them
     }
   }
 
@@ -358,3 +441,5 @@ export default class extends Controller {
     this.stopProgressPolling()
   }
 }
+
+// Controller class ends here - already exported above

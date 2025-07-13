@@ -1,0 +1,12 @@
+#!/bin/bash
+# IDM Universal Wrapper - Ensures correct execution environment
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Change to project root to ensure consistent working directory
+cd "$PROJECT_ROOT" || exit 1
+
+# Execute the IDM intelligence script with proper Python interpreter
+exec python3 "$PROJECT_ROOT/bin/idm-intelligence.py" "$@"

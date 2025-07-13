@@ -15,10 +15,10 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
 
   attr_reader :service_name, :title, :icon, :action_path, :queue_name
 
-  def people_needing_service
+  def items_needing_service
     case service_name
     when "person_profile_extraction"
-      Person.needing_profile_extraction.count
+      Company.needing_service("person_profile_extraction").count
     when "person_email_extraction"
       Person.needing_email_extraction.count
     when "person_social_media_extraction"
@@ -28,18 +28,26 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
     end
   end
 
-  # For profile extraction, show total potential people that could be processed
+  # For profile extraction, show total potential companies that could be processed
   def profile_extraction_potential
     return 0 unless service_name == "person_profile_extraction"
-    Person.profile_extraction_potential.count
+    Company.profile_extraction_potential.count
   end
 
-  # Calculate people that have been successfully processed for this service
-  def people_completed
+  # Calculate items that have been successfully processed for this service
+  def items_completed
     case service_name
     when "person_profile_extraction"
-      # Count people that have actually been successfully processed by profile extraction service
-      Person.where.not(profile_data: nil).count
+      # Count companies that have actually been successfully processed by profile extraction service
+      ServiceAuditLog
+        .joins("JOIN companies ON companies.id = CAST(service_audit_logs.auditable_id AS INTEGER)")
+        .where(service_name: "person_profile_extraction", status: "success")
+        .where(auditable_type: "Company")
+        .where(
+          "(companies.linkedin_url IS NOT NULL AND companies.linkedin_url != '') OR " \
+          "(companies.linkedin_ai_url IS NOT NULL AND companies.linkedin_ai_url != '' AND companies.linkedin_ai_confidence >= 80)"
+        )
+        .count
     when "person_email_extraction"
       Person.where.not(email: nil).where.not(email: "").count
     when "person_social_media_extraction"
@@ -60,7 +68,7 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
 
     return 0 if total == 0
 
-    completed = people_completed
+    completed = items_completed
     percentage = (completed.to_f / total.to_f) * 100
 
     # Round to 1 decimal place for small percentages, 0 decimals for large ones

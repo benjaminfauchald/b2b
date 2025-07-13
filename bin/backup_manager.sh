@@ -32,9 +32,9 @@ start_backups() {
 stop_backups() {
     echo "Removing automatic backup cron job..."
     
-    if crontab -l 2>/dev/null | grep -q "db_backup.sh"; then
+    if crontab -l 2>/dev/null | grep -q -E "(db_backup\.sh|cron_backup_wrapper\.sh)"; then
         # Remove the backup cron job
-        crontab -l | grep -v "db_backup.sh" | crontab -
+        crontab -l | grep -v -E "(db_backup\.sh|cron_backup_wrapper\.sh)" | crontab -
         echo "✅ Automatic backups stopped"
     else
         echo "ℹ️  No backup cron job found"
@@ -51,10 +51,11 @@ show_status() {
     echo "====================="
     echo ""
     
-    # Check if cron job exists
-    if crontab -l 2>/dev/null | grep -q "db_backup.sh"; then
-        echo "✅ Automatic backups: ENABLED (every 5 minutes)"
-        echo "Cron job: $(crontab -l | grep db_backup.sh)"
+    # Check if cron job exists (check for both old and new script names)
+    if crontab -l 2>/dev/null | grep -q -E "(db_backup\.sh|cron_backup_wrapper\.sh)"; then
+        echo "✅ Automatic backups: ENABLED (hourly)"
+        cron_job=$(crontab -l | grep -E "(db_backup\.sh|cron_backup_wrapper\.sh)")
+        echo "Cron job: $cron_job"
     else
         echo "❌ Automatic backups: DISABLED"
     fi

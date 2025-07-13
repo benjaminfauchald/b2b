@@ -32,6 +32,11 @@ class PeopleController < ApplicationController
 
     @pagy, @people = pagy(people_scope)
     @queue_stats = get_queue_stats
+    
+    # Calculate statistics for the header
+    @total_people_count = Person.count
+    @total_companies_count = Person.where.not(company_name: [nil, ""]).distinct.count(:company_name)
+    @average_people_per_company = @total_companies_count > 0 ? (@total_people_count.to_f / @total_companies_count).ceil : 0
   end
 
   def show
@@ -396,7 +401,7 @@ class PeopleController < ApplicationController
             locals: {
               service_name: "person_email_extraction",
               service_title: "Email Extraction",
-              persons_needing: stats_data[:email_needing],
+              people_needing: stats_data[:email_needing],
               queue_depth: queue_stats["person_email_extraction"] || 0
             }
           ),
@@ -405,7 +410,7 @@ class PeopleController < ApplicationController
             locals: {
               service_name: "person_social_media_extraction",
               service_title: "Social Media Extraction",
-              persons_needing: stats_data[:social_media_needing],
+              people_needing: stats_data[:social_media_needing],
               queue_depth: queue_stats["person_social_media_extraction"] || 0
             }
           ),
@@ -746,8 +751,10 @@ class PeopleController < ApplicationController
         Rails.logger.info "  - Total request time: #{total_request_duration.round(4)} seconds"
         Rails.logger.info "  - Processing queued in background"
 
-        redirect_to import_status_people_path
-        nil
+        respond_to do |format|
+          format.html { redirect_to import_status_people_path }
+          format.json { render json: { status: 'success', redirect_url: import_status_people_path } }
+        end
       else
         # Small file - process synchronously
         Rails.logger.info "\n🔧 SYNCHRONOUS PROCESSING:"
@@ -791,22 +798,48 @@ class PeopleController < ApplicationController
           Rails.logger.info "  - Failed: #{result.data[:failed]}"
           Rails.logger.info "  - Duplicates: #{result.data[:duplicates]}"
 
-          # Store result in temporary file to avoid session overflow
-          result_id = SecureRandom.uuid
-          result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
-          File.write(result_file_path, result.data[:result].to_h.to_json)
-
-          # Store only the result ID in session
-          session[:last_import_result_id] = result_id
+          # Store result directly in session (like domains controller)
+          # Limit the data to prevent session overflow
+          import_result_data = result.data[:result]
+          session_data = {
+            success: true,
+            imported_count: import_result_data.imported_count,
+            updated_count: import_result_data.updated_count,
+            failed_count: import_result_data.failed_count,
+            duplicate_count: import_result_data.duplicate_count,
+            total_count: import_result_data.total_count,
+            summary_message: import_result_data.summary_message,
+            email_verification_summary: import_result_data.email_verification_summary,
+            processing_time: import_result_data.processing_time,
+            people_per_second: import_result_data.people_per_second,
+            # Limit arrays to prevent session overflow
+            imported_people: import_result_data.imported_people.first(10),
+            updated_people: import_result_data.updated_people.first(10),
+            failed_people: import_result_data.failed_people.first(10),
+            duplicate_people: import_result_data.duplicate_people.first(10),
+            csv_errors: import_result_data.csv_errors.first(5)
+          }
+          
+          session[:last_import_results] = session_data
           session[:last_import_time] = Time.current
 
           # Clean up progress data
           Rails.cache.delete("person_import_progress_#{current_user.id}")
 
+          Rails.logger.info "🎯 ABOUT TO REDIRECT TO RESULTS PAGE"
+          Rails.logger.info "  - Session data stored: #{session[:last_import_results].present?}"
+          Rails.logger.info "  - Import results path: #{import_results_people_path}"
+          
+          # Always redirect to results page after successful import
           redirect_to import_results_people_path, notice: "Person import completed successfully!"
+          
+          Rails.logger.info "🎯 REDIRECT CALLED"
         else
           Rails.logger.info "  - Import failed: #{result.error}"
-          redirect_to import_people_path, alert: result.error
+          respond_to do |format|
+            format.html { redirect_to import_people_path, alert: result.error }
+            format.json { render json: { status: 'error', message: result.error }, status: :unprocessable_entity }
+          end
         end
       end
 
@@ -814,39 +847,26 @@ class PeopleController < ApplicationController
       Rails.logger.error "❌ PERSON IMPORT ERROR: #{e.message}"
       Rails.logger.error "❌ BACKTRACE: #{e.backtrace.join("\n")}"
 
-      redirect_to import_people_path, alert: "Import failed: #{e.message}"
+      respond_to do |format|
+        format.html { redirect_to import_people_path, alert: "Import failed: #{e.message}" }
+        format.json { render json: { status: 'error', message: "Import failed: #{e.message}" }, status: :internal_server_error }
+      end
     end
   end
 
   # GET /people/import_results
   def import_results
-    result_id = session[:last_import_result_id]
+    import_results = session[:last_import_results]
     import_time = session[:last_import_time]
 
-    if result_id.nil?
+    if import_results.nil?
       redirect_to import_people_path, alert: "No import results found."
       return
     end
 
-    # Check if result file exists and is not too old (cleanup after 1 hour)
-    result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
-
-    if !File.exist?(result_file_path) || (import_time && import_time < 1.hour.ago)
-      redirect_to import_people_path, alert: "Import results have expired."
-      return
-    end
-
-    begin
-      # Read result from temporary file
-      result_data = JSON.parse(File.read(result_file_path))
-      @import_result = OpenStruct.new(result_data)
-
-      # Clean up old result files (older than 1 hour)
-      cleanup_old_import_results
-    rescue JSON::ParserError, StandardError => e
-      Rails.logger.error "Failed to read import results: #{e.message}"
-      redirect_to import_people_path, alert: "Failed to load import results."
-    end
+    # Convert session data to OpenStruct for easier access in view
+    @import_result = OpenStruct.new(import_results)
+    @import_time = import_time
   end
 
   # GET /people/import_progress (AJAX endpoint)
@@ -857,8 +877,12 @@ class PeopleController < ApplicationController
     # Rails.logger.debug "Progress request for user #{current_user.id}: #{progress_data.inspect}"
 
     if progress_data
+      # Check if import is complete
+      is_complete = progress_data[:percent] == 100 || 
+                    (progress_data[:current] == progress_data[:total] && progress_data[:total] > 0)
+      
       render json: {
-        status: "in_progress",
+        status: is_complete ? "complete" : "in_progress",
         current: progress_data[:current],
         total: progress_data[:total],
         percent: progress_data[:percent],
@@ -938,34 +962,19 @@ class PeopleController < ApplicationController
 
   # GET /people/export_errors
   def export_errors
-    result_id = session[:last_import_result_id]
+    import_results = session[:last_import_results]
 
-    if result_id.nil?
+    if import_results.nil?
       redirect_to people_path, alert: "No import results found."
       return
     end
 
-    result_file_path = Rails.root.join("tmp", "person_import_result_#{result_id}.json")
-
-    if !File.exist?(result_file_path)
-      redirect_to people_path, alert: "Import results have expired."
+    if import_results[:failed_people].blank?
+      redirect_to people_path, alert: "No error data found to export."
       return
     end
 
-    begin
-      result_data = JSON.parse(File.read(result_file_path))
-
-      if result_data["failed_people"].blank?
-        redirect_to people_path, alert: "No error data found to export."
-        return
-      end
-
-      csv_content = generate_error_export_csv(result_data["failed_people"])
-    rescue JSON::ParserError, StandardError => e
-      Rails.logger.error "Failed to read import results for export: #{e.message}"
-      redirect_to people_path, alert: "Failed to load import results."
-      return
-    end
+    csv_content = generate_error_export_csv(import_results[:failed_people])
 
     respond_to do |format|
       format.csv do
@@ -1031,8 +1040,8 @@ class PeopleController < ApplicationController
     {
       profile_needing: Company.needing_service("person_profile_extraction").count,
       profile_potential: Company.profile_extraction_potential.count,
-      email_needing: Person.needing_service("person_email_extraction").count,
-      social_media_needing: Person.needing_service("person_social_media_extraction").count
+      email_needing: Person.needing_email_extraction.count,
+      social_media_needing: Person.needing_social_media_extraction.count
     }
   end
 

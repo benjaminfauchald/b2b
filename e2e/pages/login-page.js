@@ -22,10 +22,10 @@ class LoginPage extends BasePage {
       emailField: '#user_email',
       passwordField: '#user_password',
       signInButton: 'input[type="submit"]',
-      signUpButton: 'button:has-text("Sign up")',
-      errorMessage: '.alert-danger, .alert, [role="alert"]',
-      successMessage: '.alert-success, .notice',
-      forgotPasswordLink: 'a:has-text("Forgot your password?")',
+      signUpButton: 'button[type="submit"], input[value="Sign up"]',
+      errorMessage: '.alert-danger, .alert.alert-danger, [data-turbo-temporary="true"]',
+      successMessage: '.alert-success, .notice, .alert-info',
+      forgotPasswordLink: 'a[href*="password/new"]',
       rememberMeCheckbox: '#user_remember_me'
     };
     
@@ -89,21 +89,35 @@ class LoginPage extends BasePage {
       await this.clickElement(this.selectors.rememberMeCheckbox);
     }
     
+    // Start navigation promise before clicking
+    const navigationPromise = this.page.waitForNavigation({ 
+      waitUntil: 'networkidle0',
+      timeout: 5000 
+    }).catch(() => null);
+    
     await this.submitSignIn();
     
-    // Wait for either success (navigation) or error message
-    try {
-      await this.waitForNavigation();
+    // Wait for navigation or timeout
+    await navigationPromise;
+    
+    // Wait a bit for any messages to appear
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check current URL - if we're no longer on sign_in page, login was successful
+    const currentUrl = this.page.url();
+    if (!currentUrl.includes('/users/sign_in')) {
       return { success: true };
-    } catch (error) {
-      // Check if there's an error message
-      const hasError = await this.isElementVisible(this.selectors.errorMessage);
-      if (hasError) {
-        const errorText = await this.getTextContent(this.selectors.errorMessage);
-        return { success: false, error: errorText };
-      }
-      throw error;
     }
+    
+    // Still on login page, check for error messages
+    const hasError = await this.isElementVisible(this.selectors.errorMessage);
+    if (hasError) {
+      const errorText = await this.getTextContent(this.selectors.errorMessage);
+      return { success: false, error: errorText };
+    }
+    
+    // No navigation and no error message - something went wrong
+    return { success: false, error: 'Login failed - no redirect occurred' };
   }
 
   /**

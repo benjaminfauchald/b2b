@@ -1,5 +1,7 @@
 <% content_for :title, "Import People from CSV" %>
 
+<!-- CSV Upload Form - Supports both small (synchronous) and large (background) file processing -->
+
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <!-- Page Header -->
   <div class="mb-8">
@@ -7,7 +9,7 @@
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Import People from CSV</h1>
         <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-          Upload a CSV file to bulk import person records
+          Upload a CSV file to bulk import person records. Supports standard CSV format and Phantom Buster exports.
         </p>
       </div>
       <div class="mt-4 sm:mt-0">
@@ -25,8 +27,12 @@
   <div class="space-y-8">
   <!-- Import Form -->
   <%= render CardComponent.new(title: "Upload CSV File") do %>
-    <%= form_with url: import_people_path, method: :post, multipart: true, local: true, 
-                  data: { controller: "csv-upload", action: "submit->csv-upload#beforeSubmit" }, 
+    <%= form_with url: import_people_path, method: :post, multipart: true, local: true,
+                  data: { 
+                    controller: "csv-upload",
+                    action: "submit->csv-upload#handleSubmit",
+                    "csv-upload-progress-url-value": import_progress_people_path
+                  }, 
                   class: "space-y-6" do |form| %>
       
       <%= render CsvUploadComponent.new %>
@@ -47,7 +53,7 @@
             class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600" %>
         
         <%= form.submit "Import People", 
-            class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed",
+            class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed",
             data: { "csv-upload-target": "submitButton" } %>
         </div>
       </div>
@@ -57,15 +63,34 @@
   <!-- CSV Format Information -->
   <%= render CardComponent.new(title: "CSV Format Requirements") do %>
     <div class="space-y-6">
-      <!-- Required Format -->
+      <!-- Supported Formats -->
       <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Expected Format</h3>
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <code class="text-sm text-gray-800 dark:text-gray-200">
-            Name,Email,Title,Company Name,Location,Linkedin<br>
-            John Doe,john@example.com,Software Engineer,Example Corp,San Francisco,https://linkedin.com/in/johndoe<br>
-            Jane Smith,jane@testcorp.com,Product Manager,Test Corp,New York,https://linkedin.com/in/janesmith
-          </code>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Supported Formats</h3>
+        <div class="grid gap-4 md:grid-cols-2">
+          <!-- Standard Format -->
+          <div>
+            <h4 class="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Standard CSV Format</h4>
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <code class="text-sm text-gray-800 dark:text-gray-200">
+                Name,Email,Title,Company Name,Location,Linkedin<br>
+                John Doe,john@example.com,Software Engineer,Example Corp,San Francisco,https://linkedin.com/in/johndoe
+              </code>
+            </div>
+          </div>
+          
+          <!-- Phantom Buster Format -->
+          <div>
+            <h4 class="text-base font-medium text-gray-700 dark:text-gray-300 mb-2">Phantom Buster Format</h4>
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <code class="text-sm text-gray-800 dark:text-gray-200">
+                profileUrl,fullName,firstName,lastName,companyName,title,linkedInProfileUrl,...<br>
+                https://linkedin.com/in/johndoe,John Doe,John,Doe,Example Corp,Software Engineer,...
+              </code>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              ✓ Automatically detected and all fields mapped
+            </p>
+          </div>
         </div>
       </div>
 
@@ -153,6 +178,24 @@
           <li>Duplicate emails will update existing records</li>
           <li>LinkedIn URLs will be cleaned automatically</li>
           <li>Company matching is done by name (case-insensitive)</li>
+        </ul>
+      </div>
+      
+      <!-- Phantom Buster Features -->
+      <div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Phantom Buster Import Features</h3>
+        <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+          <li>Automatic format detection based on CSV headers</li>
+          <li>Maps all 30+ Phantom Buster fields including:
+            <ul class="list-disc list-inside ml-6 mt-1">
+              <li>Past experience data (company, title, dates)</li>
+              <li>LinkedIn metadata (premium status, connections, etc.)</li>
+              <li>Company details (industry, location, URLs)</li>
+              <li>Duration in role and company</li>
+            </ul>
+          </li>
+          <li>Handles LinkedIn Sales Navigator URLs</li>
+          <li>Preserves search query and timestamp data</li>
         </ul>
       </div>
 
