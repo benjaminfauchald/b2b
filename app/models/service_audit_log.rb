@@ -100,6 +100,26 @@ class ServiceAuditLog < ApplicationRecord
     where("created_at < ?", days.days.ago).delete_all
   end
 
+  # Webhook-specific methods
+  def add_webhook_payload(payload)
+    update!(webhook_payload: payload)
+  end
+
+  def set_phantom_container_id(container_id)
+    update!(phantom_container_id: container_id)
+  end
+
+  def webhook_processing?
+    service_name == 'phantom_buster_webhook' || metadata&.key?('webhook_url')
+  end
+
+  def phantom_job?
+    service_name.include?('phantom') && phantom_container_id.present?
+  end
+
+  scope :webhook_jobs, -> { where(service_name: 'phantom_buster_webhook') }
+  scope :phantom_jobs, -> { where.not(phantom_container_id: nil) }
+
   def self.batch_audit(records, service_name:, operation_type: "process", batch_size: 1000)
     records.each_slice(batch_size) do |batch|
       transaction do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_10_093538) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -540,6 +540,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_10_093538) do
     t.string "table_name", default: "", null: false
     t.string "target_table"
     t.string "record_id"
+    t.jsonb "webhook_payload"
+    t.string "phantom_container_id"
     t.index ["auditable_type", "auditable_id", "service_name"], name: "index_service_audit_logs_on_auditable_and_service"
     t.index ["auditable_type", "auditable_id"], name: "index_service_audit_logs_on_auditable"
     t.index ["auditable_type", "service_name", "status", "completed_at"], name: "index_sal_type_service_status_completed"

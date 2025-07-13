@@ -232,7 +232,8 @@ class PeopleController < ApplicationController
 
     queued = 0
     companies.each do |company|
-      PersonProfileExtractionWorker.perform_async(company.id)
+      # Use sequential queue to prevent 429 rate limiting errors
+      PhantomBusterSequentialQueue.enqueue_job(company.id, 'profile_extraction')
       queued += 1
     end
 
@@ -449,7 +450,8 @@ class PeopleController < ApplicationController
     end
 
     begin
-      job_id = PersonProfileExtractionWorker.perform_async(company.id)
+      # Use sequential queue to prevent 429 rate limiting errors
+      job_id = PhantomBusterSequentialQueue.enqueue_job(company.id, 'profile_extraction')
 
       # Invalidate cache immediately when queue changes
       Rails.cache.delete("person_service_stats_data")
@@ -462,7 +464,7 @@ class PeopleController < ApplicationController
             company_id: company.id,
             service: "profile_extraction",
             job_id: job_id,
-            worker: "PersonProfileExtractionWorker"
+            worker: "PhantomBusterSequentialQueue"
           }
         end
         format.html do

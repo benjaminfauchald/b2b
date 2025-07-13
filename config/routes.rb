@@ -128,6 +128,7 @@ Rails.application.routes.draw do
 
   namespace :webhooks do
     post "/instantly", to: "instantly_webhook#create"
+    post "/phantombuster/profile_extraction", to: "phantom_buster_webhook#profile_extraction"
   end
 
   # ------------------------------------------------------------------

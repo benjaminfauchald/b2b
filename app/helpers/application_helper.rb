@@ -1,5 +1,10 @@
 module ApplicationHelper
   include Pagy::Frontend
+  
+  # Override pagy_nav to use our custom Flowbite-styled partial
+  def pagy_nav(pagy, pagy_id: nil, link_extra: "", **vars)
+    render partial: "shared/pagy_nav", locals: { pagy: pagy }
+  end
 
   def safe_external_link(url, text = nil, options = {})
     return "" if url.blank?
