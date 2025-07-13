@@ -24,7 +24,7 @@ class PhantomBusterSequentialQueue
       
       # Only process if no job is currently running
       # This prevents concurrent launches when multiple jobs are queued rapidly
-      unless redis.exists?(LOCK_KEY) == 1
+      unless redis.exists?(LOCK_KEY)
         Rails.logger.info "No job currently processing, starting queue processing"
         process_next_job
       else
@@ -94,7 +94,7 @@ class PhantomBusterSequentialQueue
     def queue_status
       {
         queue_length: redis.llen(REDIS_KEY),
-        is_processing: redis.exists?(LOCK_KEY) == 1,
+        is_processing: redis.exists?(LOCK_KEY),
         current_job: current_job_info,
         lock_timestamp: redis.get(LOCK_KEY)&.to_i
       }

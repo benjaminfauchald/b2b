@@ -171,4 +171,9 @@ Rails.application.routes.draw do
   #     mount Sidekiq::Web => '/sidekiq'
   #   end
   # end
+  
+  # API routes
+  namespace :api do
+    get "phantom_buster/status", to: "phantom_buster#status"
+  end
 end

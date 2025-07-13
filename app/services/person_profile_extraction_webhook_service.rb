@@ -112,12 +112,24 @@ class PersonProfileExtractionWebhookService < ApplicationService
                     current_config["argument"] || {}
     end
 
-    # Update with company LinkedIn URL and webhook
+    # Update with company LinkedIn URL and comprehensive webhook configuration
     updated_argument_obj = argument_obj.merge(
       "spreadsheetUrl" => company_url,
-      "webhookUrl" => webhook_url,
-      "enableWebhooks" => true
+      "webhookUrl" => webhook_url,           # Primary webhook URL parameter
+      "webhook" => webhook_url,              # Alternative webhook parameter
+      "enableWebhooks" => true,              # Enable webhook functionality
+      "notifyOnCompletion" => true,          # Notify when job completes
+      "notifyOnFailure" => true,             # Notify when job fails
+      "webhook_settings" => {                # Detailed webhook configuration
+        "url" => webhook_url,
+        "method" => "POST",
+        "headers" => {
+          "Content-Type" => "application/json"
+        }
+      }
     )
+
+    Rails.logger.info "🔗 Updated config webhook settings: #{updated_argument_obj.slice('webhookUrl', 'webhook', 'enableWebhooks')}"
 
     updated_argument = if current_config["argument"].is_a?(String)
                         JSON.generate(updated_argument_obj)
@@ -147,11 +159,24 @@ class PersonProfileExtractionWebhookService < ApplicationService
   def launch_phantom
     Rails.logger.info "🚀 Launching PhantomBuster phantom with webhook mode..."
 
-    # Configure launch with webhook settings
+    # Configure launch with comprehensive webhook settings
     launch_body = {
       id: @phantom_id,
-      webhook: @webhook_url # Some PhantomBuster versions support webhook in launch
+      webhook: @webhook_url,            # Main webhook URL
+      webhookUrl: @webhook_url,         # Alternative webhook parameter
+      notifications: true,              # Enable notifications
+      notifyOnCompletion: true,         # Notify when job completes
+      notifyOnFailure: true,            # Notify when job fails
+      webhook_settings: {               # Comprehensive webhook config
+        url: @webhook_url,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
     }
+
+    Rails.logger.info "🔗 Launch body webhook config: #{launch_body.slice(:webhook, :webhookUrl, :notifications)}"
 
     launch_response = HTTParty.post(
       "#{@base_url}/agents/launch",

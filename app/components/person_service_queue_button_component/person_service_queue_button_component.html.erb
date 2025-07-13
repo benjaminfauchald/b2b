@@ -1,7 +1,8 @@
 <div class="<%= card_classes %>" 
      data-service="<%= service_name %>"
-     data-controller="service-queue"
-     data-service-queue-service-name-value="<%= service_name %>">
+     data-controller="service-queue phantom-buster-status"
+     data-service-queue-service-name-value="<%= service_name %>"
+     data-phantom-buster-status-service-name-value="<%= service_name %>">
   <div class="flex items-center mb-4">
     <div class="flex-shrink-0 w-10 h-10 mr-3 flex items-center justify-center">
       <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,6 +48,11 @@
         </div>
       <% end %>
     </turbo-frame>
+    
+    <!-- Optional status container for PhantomBuster processing details -->
+    <% if service_name == "person_profile_extraction" %>
+      <div data-phantom-buster-status-target="statusContainer" class="mt-2"></div>
+    <% end %>
   </div>
   
   <form data-service-queue-target="form" 
@@ -70,6 +76,7 @@
     <button type="submit" 
             class="<%= button_classes %>"
             data-service-queue-target="submitButton"
+            data-phantom-buster-status-target="submitButton"
             <%= items_needing_service == 0 ? 'disabled' : '' %>>
       Queue Processing
     </button>

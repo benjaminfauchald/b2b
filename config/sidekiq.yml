@@ -22,6 +22,7 @@
   - [domain_dns_testing, 5]
   - [domain_mx_testing, 5]
   - [linkedin_discovery_internal, 2]  # Limited workers for beta testing
+  - [phantom_webhooks, 5]  # PhantomBuster webhook processing
   - [default, 5]
   - [mailers, 5]
   - [active_storage_analysis, 5]
@@ -43,3 +44,4 @@
   domain_dns_testing: 1
   domain_mx_testing: 1
   linkedin_discovery_internal: 1  # Rate limit to avoid detection
+  phantom_webhooks: 2  # Allow some concurrency for webhook processing

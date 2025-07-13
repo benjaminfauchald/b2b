@@ -39,9 +39,10 @@ class PersonServiceQueueButtonComponent < ViewComponent::Base
     case service_name
     when "person_profile_extraction"
       # Count companies that have actually been successfully processed by profile extraction service
+      # Include both service names: "person_profile_extraction" and "phantom_buster_profile_extraction"
       ServiceAuditLog
         .joins("JOIN companies ON companies.id = CAST(service_audit_logs.auditable_id AS INTEGER)")
-        .where(service_name: "person_profile_extraction", status: "success")
+        .where(service_name: ["person_profile_extraction", "phantom_buster_profile_extraction"], status: "success")
         .where(auditable_type: "Company")
         .where(
           "(companies.linkedin_url IS NOT NULL AND companies.linkedin_url != '') OR " \
