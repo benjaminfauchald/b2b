@@ -65,7 +65,7 @@
       <input type="number" 
              name="count" 
              id="<%= service_name %>_count"
-             value="<%= [items_needing_service, 100].min %>" 
+             value="<%= service_name == 'person_profile_extraction' ? [items_needing_service, 2].min : [items_needing_service, 100].min %>" 
              min="1" 
              max="<%= items_needing_service > 0 ? [items_needing_service, 1000].min : 1000 %>"
              class="<%= input_classes %>"
