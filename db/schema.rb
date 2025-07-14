@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_14_140304) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -353,14 +353,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
     t.text "linkedin_internal_sales_navigator_url"
     t.integer "linkedin_internal_profile_count"
     t.text "linkedin_internal_error_message"
+    t.bigint "linkedin_company_id"
+    t.string "linkedin_slug"
     t.index ["employee_discovery_updated_at"], name: "index_companies_on_employee_discovery_updated_at"
     t.index ["employees_data"], name: "index_companies_on_employees_data", using: :gin
     t.index ["financial_data_updated_at"], name: "index_companies_on_financial_data_updated_at"
     t.index ["id"], name: "index_companies_needing_web_discovery", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)) AND ((web_pages IS NULL) OR (web_pages = '{}'::jsonb) OR (jsonb_array_length(web_pages) = 0)))"
     t.index ["linkedin_ai_url"], name: "index_companies_on_linkedin_ai_url"
+    t.index ["linkedin_company_id"], name: "index_companies_on_linkedin_company_id", unique: true
     t.index ["linkedin_internal_last_processed_at"], name: "index_companies_on_linkedin_internal_last_processed_at"
     t.index ["linkedin_internal_processed"], name: "index_companies_on_linkedin_internal_processed"
     t.index ["linkedin_last_processed_at"], name: "index_companies_on_linkedin_last_processed_at"
+    t.index ["linkedin_slug"], name: "index_companies_on_linkedin_slug", unique: true
     t.index ["operating_revenue", "website"], name: "index_companies_web_discovery_candidates", where: "((operating_revenue > 10000000) AND ((website IS NULL) OR (website = ''::text)))"
     t.index ["operating_revenue"], name: "index_companies_on_operating_revenue"
     t.index ["organization_form_description"], name: "index_companies_on_organization_form_description"
@@ -432,6 +436,20 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
     t.index ["term_type"], name: "index_geographical_terms_on_term_type"
   end
 
+  create_table "linkedin_company_lookups", force: :cascade do |t|
+    t.string "linkedin_company_id", null: false
+    t.bigint "company_id", null: false
+    t.string "linkedin_slug"
+    t.integer "confidence_score", default: 100
+    t.datetime "last_verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_linkedin_company_lookups_on_company_id"
+    t.index ["last_verified_at"], name: "index_linkedin_company_lookups_on_last_verified_at"
+    t.index ["linkedin_company_id"], name: "index_linkedin_company_lookups_on_linkedin_company_id", unique: true
+    t.index ["linkedin_slug"], name: "index_linkedin_company_lookups_on_linkedin_slug"
+  end
+
   create_table "people", force: :cascade do |t|
     t.string "name"
     t.string "title"
@@ -488,7 +506,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
     t.string "regular_company_url"
     t.string "industry"
     t.string "company_location"
-    t.string "phantom_buster_company_id"
+    t.string "linkedin_company_id"
     t.text "title_description"
     t.string "duration_in_role"
     t.string "duration_in_company"
@@ -511,7 +529,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
     t.index ["email_verification_status"], name: "index_people_on_email_verification_status"
     t.index ["import_tag"], name: "index_people_on_import_tag"
     t.index ["is_premium"], name: "index_people_on_is_premium"
-    t.index ["phantom_buster_company_id"], name: "index_people_on_phantom_buster_company_id"
+    t.index ["linkedin_company_id"], name: "index_people_on_linkedin_company_id"
     t.index ["phantom_buster_timestamp"], name: "index_people_on_phantom_buster_timestamp"
     t.index ["profile_url"], name: "index_people_on_profile_url", unique: true, where: "((profile_url IS NOT NULL) AND ((profile_url)::text <> ''::text))"
     t.index ["vmid"], name: "index_people_on_vmid"
@@ -599,4 +617,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_13_121049) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "domains", "companies"
   add_foreign_key "email_verification_attempts", "people"
+  add_foreign_key "linkedin_company_lookups", "companies"
 end

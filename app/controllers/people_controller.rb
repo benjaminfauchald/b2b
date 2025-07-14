@@ -2,8 +2,8 @@
 
 class PeopleController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction service_status verify_email]
-  skip_before_action :verify_authenticity_token, only: [ :queue_profile_extraction, :queue_email_extraction, :queue_social_media_extraction, :queue_single_profile_extraction, :queue_single_email_extraction, :queue_single_social_media_extraction ]
+  before_action :set_person, only: %i[show edit update destroy queue_single_email_extraction queue_single_social_media_extraction service_status verify_email associate_with_company]
+  skip_before_action :verify_authenticity_token, only: [ :queue_profile_extraction, :queue_email_extraction, :queue_social_media_extraction, :queue_single_profile_extraction, :queue_single_email_extraction, :queue_single_social_media_extraction, :associate_with_company ]
 
   def index
     people_scope = Person.includes(:service_audit_logs, :company)
@@ -24,6 +24,8 @@ class PeopleController < ApplicationController
       people_scope = people_scope.with_social_media_data
     elsif params[:filter] == "needs_extraction"
       people_scope = people_scope.needs_profile_extraction
+    elsif params[:filter] == "no_company"
+      people_scope = people_scope.where(company_id: nil)
     end
 
     if params[:import_tag].present?
@@ -624,6 +626,113 @@ class PeopleController < ApplicationController
       render json: {
         success: false,
         error: "An error occurred during verification"
+      }
+    end
+  end
+
+  # POST /people/:id/associate_with_company
+  def associate_with_company
+    unless ServiceConfiguration.active?("linkedin_company_association")
+      render json: { success: false, message: "LinkedIn company association service is disabled" }
+      return
+    end
+
+    unless @person.linkedin_company_id.present? || (@person.query.present? && @person.query.include?('linkedin.com/company/'))
+      render json: { success: false, message: "Person has no LinkedIn company ID or company slug" }
+      return
+    end
+
+    if @person.company_id.present?
+      render json: { success: false, message: "Person is already associated with a company" }
+      return
+    end
+
+    begin
+      # Create service audit log for this manual action
+      audit_log = ServiceAuditLog.create!(
+        auditable: @person,
+        service_name: "linkedin_company_association",
+        operation_type: "manual_association",
+        status: ServiceAuditLog::STATUS_PENDING,
+        table_name: @person.class.table_name,
+        record_id: @person.id.to_s,
+        columns_affected: [ "company_id" ],
+        started_at: Time.current,
+        metadata: {
+          action: "manual_association",
+          user_id: current_user.id,
+          linkedin_company_id: @person.linkedin_company_id,
+          linkedin_slug: (@person.query.present? && @person.query.include?('linkedin.com/company/')) ? 
+                          (@person.query.match(/linkedin\.com\/company\/([^\/\?]+)/)[1] rescue nil) : nil,
+          timestamp: Time.current
+        }
+      )
+
+      # Use the simpler association method that doesn't require audit context
+      service = LinkedinCompanyAssociationService.new
+      result = service.associate_person_with_company(@person)
+      
+      if result[:success]
+        company_name = result[:company].company_name
+        
+        # Update audit log with success
+        audit_log.update!(
+          status: ServiceAuditLog::STATUS_SUCCESS,
+          completed_at: Time.current,
+          execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
+          metadata: audit_log.metadata.merge({
+            company_found: company_name,
+            company_id: result[:company].id
+          })
+        )
+        
+        render json: {
+          success: true,
+          message: "Successfully associated with #{company_name}",
+          company_name: company_name,
+          company_id: @person.company_id
+        }
+      else
+        # Update audit log with failure
+        audit_log.update!(
+          status: ServiceAuditLog::STATUS_FAILED,
+          completed_at: Time.current,
+          execution_time_ms: ((Time.current - audit_log.started_at) * 1000).round,
+          metadata: audit_log.metadata.merge({
+            error: result[:error]
+          })
+        )
+        
+        # Provide more helpful error message for missing companies
+        error_message = result[:error] || "Failed to associate with company"
+        if error_message.include?("Company not found for LinkedIn ID")
+          error_message = "No matching company found in database. The company may need to be imported first."
+        end
+        
+        render json: {
+          success: false,
+          message: error_message
+        }
+      end
+
+    rescue => e
+      Rails.logger.error "LinkedIn association error for person #{@person.id}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+
+      # Update audit log with exception
+      audit_log&.update!(
+        status: ServiceAuditLog::STATUS_FAILED,
+        completed_at: Time.current,
+        execution_time_ms: audit_log&.started_at ? ((Time.current - audit_log.started_at) * 1000).round : 0,
+        metadata: (audit_log&.metadata || {}).merge({
+          error: "Exception: #{e.message}",
+          backtrace: e.backtrace.first(5)
+        })
+      )
+
+      render json: {
+        success: false,
+        message: "An error occurred during association: #{e.message}"
       }
     end
   end

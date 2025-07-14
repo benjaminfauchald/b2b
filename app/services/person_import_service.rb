@@ -365,6 +365,8 @@ class PersonImportService < ApplicationService
       location: row_data[:location]&.to_s&.strip,
       profile_url: linkedin_url,
       phone: clean_phone_number(row_data[:phone]),
+      query: row_data[:query]&.to_s&.strip,
+      linkedin_company_id: row_data[:linkedin_company_id]&.to_s&.strip,
       import_tag: @import_tag
     }
 
@@ -388,10 +390,65 @@ class PersonImportService < ApplicationService
     # Always start with unverified status for imported emails
     person_attributes[:email_verification_status] = "unverified"
 
-    # Associate with company if exists
-    if person_attributes[:company_name].present?
-      company = Company.find_by(company_name: person_attributes[:company_name])
-      person_attributes[:company_id] = company.id if company
+    # Associate with company - try LinkedIn data first, then fallback to company name
+    company = nil
+    linkedin_association_success = false
+    name_fallback_success = false
+    
+    # Track company association attempts
+    Rails.logger.info "🔍 IMPORT DEBUG for #{person_attributes[:name]}: linkedin_company_id=#{person_attributes[:linkedin_company_id]}, query=#{person_attributes[:query]}, company_name=#{person_attributes[:company_name]}"
+    
+    if person_attributes[:linkedin_company_id].present? || person_attributes[:query].present? || person_attributes[:company_name].present?
+      Rails.logger.info "🎯 Will attempt company association for #{person_attributes[:name]}"
+      
+      # First try LinkedIn company association if we have LinkedIn data
+      if person_attributes[:linkedin_company_id].present? || person_attributes[:query].present?
+        Rails.logger.info "🔗 Trying LinkedIn association for #{person_attributes[:name]} (ID: #{person_attributes[:linkedin_company_id]}, Query: #{person_attributes[:query]})"
+        
+        begin
+          # Create a temporary person object to use the LinkedIn association service
+          temp_person = Person.new(person_attributes)
+          Rails.logger.info "👤 Created temp person for #{person_attributes[:name]}: query=#{temp_person.query}"
+          
+          # Use the LinkedIn company association service (import version that doesn't save)
+          association_service = LinkedinCompanyAssociationService.new
+          association_result = association_service.find_company_for_person(temp_person)
+          
+          Rails.logger.info "🔬 LinkedIn association result for #{person_attributes[:name]}: #{association_result}"
+          
+          if association_result[:success]
+            company = association_result[:company]
+            person_attributes[:company_id] = company.id
+            linkedin_association_success = true
+            Rails.logger.info "✅ LinkedIn association successful for #{person_attributes[:name]}: #{company.company_name} (ID: #{company.id})"
+          else
+            Rails.logger.warn "❌ LinkedIn association failed for #{person_attributes[:name]}: #{association_result[:error]}"
+          end
+        rescue StandardError => e
+          Rails.logger.error "💥 LinkedIn association error for #{person_attributes[:name]}: #{e.message}"
+          Rails.logger.error "💥 Backtrace: #{e.backtrace.first(5).join("\n")}"
+        end
+      else
+        Rails.logger.info "⏭️  Skipping LinkedIn association for #{person_attributes[:name]} - no LinkedIn data"
+      end
+      
+      # Fallback to company name lookup if LinkedIn association didn't work
+      if company.nil? && person_attributes[:company_name].present?
+        company = Company.find_by(company_name: person_attributes[:company_name])
+        if company
+          person_attributes[:company_id] = company.id
+          name_fallback_success = true
+          Rails.logger.info "✅ Name fallback association successful for #{person_attributes[:name]}: #{company.company_name}"
+        else
+          Rails.logger.warn "❌ Name fallback failed for #{person_attributes[:name]}: No company found with name '#{person_attributes[:company_name]}'"
+        end
+      end
+      
+      # Track the association attempt
+      result.add_company_association_attempt(
+        linkedin_success: linkedin_association_success,
+        name_fallback_success: name_fallback_success
+      )
     end
 
     # Find existing person by email OR LinkedIn profile URL
@@ -404,6 +461,38 @@ class PersonImportService < ApplicationService
       if merged_attributes.any?
         begin
           existing_person.update!(merged_attributes)
+          
+          # Try LinkedIn company association for updated person if not already associated
+          # Check the person's actual fields after update, not just merged_attributes
+          existing_person.reload
+          Rails.logger.info "🔄 UPDATE DEBUG for #{existing_person.name}: company_id=#{existing_person.company_id}, query=#{existing_person.query}, linkedin_company_id=#{existing_person.linkedin_company_id}"
+          
+          has_linkedin_data = existing_person.query.present? && existing_person.query.include?('linkedin.com/company/') || existing_person.linkedin_company_id.present?
+          Rails.logger.info "🎯 Update association check for #{existing_person.name}: unassociated=#{existing_person.company_id.blank?}, has_linkedin_data=#{has_linkedin_data}"
+          
+          if existing_person.company_id.blank? && has_linkedin_data
+            Rails.logger.info "🔗 Attempting LinkedIn association for updated person #{existing_person.name}"
+            
+            begin
+              association_service = LinkedinCompanyAssociationService.new
+              association_result = association_service.associate_person_with_company(existing_person)
+              
+              Rails.logger.info "🔬 Update LinkedIn association result for #{existing_person.name}: #{association_result}"
+              
+              if association_result[:success]
+                Rails.logger.info "✅ LinkedIn association successful for updated person #{existing_person.name}: #{association_result[:company].company_name}"
+                # Update the company association stat (note: this person was already counted in the original logic)
+              else
+                Rails.logger.warn "❌ LinkedIn association failed for updated person #{existing_person.name}: #{association_result[:error]}"
+              end
+            rescue StandardError => e
+              Rails.logger.error "💥 LinkedIn association error for updated person #{existing_person.name}: #{e.message}"
+              Rails.logger.error "💥 Update backtrace: #{e.backtrace.first(3).join("\n")}"
+            end
+          else
+            Rails.logger.info "⏭️  Skipping update LinkedIn association for #{existing_person.name}: already_associated=#{existing_person.company_id.present?}, no_linkedin_data=#{!has_linkedin_data}"
+          end
+          
           result.add_updated_person(existing_person, row_number, merged_attributes)
           # Trigger email validation if enabled and track stats
           if @validate_emails

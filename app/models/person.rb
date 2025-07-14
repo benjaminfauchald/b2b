@@ -48,6 +48,22 @@ class Person < ApplicationRecord
 
   # ZeroBounce data scopes
   scope :with_zerobounce_data, -> { where.not(zerobounce_status: nil) }
+  
+  # LinkedIn company association scopes
+  scope :needing_company_association, -> {
+    where(company_id: nil)
+      .where.not(linkedin_company_id: [nil, ''])
+      .includes(:company)
+  }
+  
+  scope :recently_associated, -> {
+    where('updated_at > ?', 24.hours.ago)
+      .where.not(company_id: nil)
+  }
+  
+  scope :with_linkedin_company_id, -> {
+    where.not(linkedin_company_id: [nil, ''])
+  }
   scope :without_zerobounce_data, -> { where(zerobounce_status: nil) }
   scope :zerobounce_valid, -> { where(zerobounce_status: "valid") }
   scope :zerobounce_invalid, -> { where(zerobounce_status: "invalid") }

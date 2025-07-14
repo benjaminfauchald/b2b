@@ -6,8 +6,10 @@ module Webhooks
 
     def profile_extraction
       # Log the webhook for debugging
-      Rails.logger.info "PhantomBuster webhook received for profile extraction"
-      Rails.logger.info "Params: #{params.inspect}"
+      Rails.logger.info "📨 [WEBHOOK_CTRL] PhantomBuster webhook received for profile extraction"
+      Rails.logger.info "📋 [WEBHOOK_CTRL] Container ID: #{params[:containerId]}"
+      Rails.logger.info "📊 [WEBHOOK_CTRL] Status: #{params[:status]}, Exit Code: #{params[:exitCode]}"
+      Rails.logger.info "🔍 [WEBHOOK_CTRL] Full params keys: #{params.keys.join(', ')}"
       
       # Create audit log without auditable - we'll find it later from container ID
       # Use a dummy company for now to satisfy the not-null constraint
@@ -38,11 +40,16 @@ module Webhooks
       begin
         validate_webhook_payload!
         
+        Rails.logger.info "🚀 [WEBHOOK_CTRL] Enqueueing PhantomBusterWebhookJob for processing"
+        Rails.logger.info "📝 [WEBHOOK_CTRL] Audit log ID: #{audit_log.id}"
+        
         # Queue async processing job
-        PhantomBusterWebhookJob.perform_later(
+        job = PhantomBusterWebhookJob.perform_later(
           webhook_params.to_h,
           audit_log.id
         )
+        
+        Rails.logger.info "✅ [WEBHOOK_CTRL] Webhook job enqueued: #{job.job_id}"
 
         audit_log.update!(
           status: :success,

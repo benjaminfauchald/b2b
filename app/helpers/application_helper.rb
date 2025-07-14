@@ -69,4 +69,46 @@ module ApplicationHelper
       end
     end
   end
+
+  def truncate_linkedin_url(url, max_length = 35)
+    return "" if url.blank?
+
+    if url.length <= max_length
+      url
+    else
+      # For LinkedIn URLs, show a more user-friendly truncation
+      begin
+        uri = URI.parse(url)
+        if uri.host&.include?('linkedin')
+          # Extract profile identifier from LinkedIn URLs
+          if uri.path.include?('/in/')
+            # Personal profile: https://linkedin.com/in/username
+            profile_id = uri.path.split('/in/')[1]&.split('/')[0]
+            result = "linkedin.com/in/#{profile_id}" if profile_id
+            return result if result && result.length <= max_length
+          elsif uri.path.include?('/company/')
+            # Company profile: https://linkedin.com/company/company-name
+            company_id = uri.path.split('/company/')[1]&.split('/')[0]
+            result = "linkedin.com/company/#{company_id}" if company_id
+            return result if result && result.length <= max_length
+          elsif uri.path.include?('/sales/')
+            # Sales Navigator: Show more meaningful truncation with 15 more characters
+            path_parts = uri.path.split('/sales/')[1]
+            if path_parts && path_parts.length > 15
+              result = "linkedin.com/sales/#{path_parts[0..14]}..."
+            else
+              result = "linkedin.com/sales/#{path_parts || '...'}"
+            end
+            return result if result.length <= max_length
+          end
+        end
+        
+        # Fall back to regular truncation
+        truncate_url(url, max_length)
+      rescue URI::InvalidURIError
+        # If URL parsing fails, just truncate the string
+        "#{url[0..max_length-4]}..."
+      end
+    end
+  end
 end

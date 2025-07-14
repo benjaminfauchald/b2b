@@ -2,6 +2,7 @@
 
 class CompanyLinkedinProfilesComponent < ViewComponent::Base
   include ActionView::Helpers::NumberHelper
+  include ApplicationHelper
 
   def initialize(company:)
     @company = company

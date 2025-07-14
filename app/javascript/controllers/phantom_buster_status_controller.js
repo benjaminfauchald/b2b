@@ -11,11 +11,20 @@ export default class extends Controller {
   connect() {
     console.log("PhantomBuster status controller connected")
     this.startPolling()
+    
+    // Listen for queue restart events
+    this.refreshHandler = this.handleQueueRestart.bind(this)
+    document.addEventListener('phantom-buster:queue-restarted', this.refreshHandler)
   }
 
   disconnect() {
     console.log("PhantomBuster status controller disconnected")
     this.stopPolling()
+    
+    // Remove event listener
+    if (this.refreshHandler) {
+      document.removeEventListener('phantom-buster:queue-restarted', this.refreshHandler)
+    }
   }
 
   startPolling() {
@@ -149,5 +158,11 @@ export default class extends Controller {
     }
     
     this.statusContainerTarget.innerHTML = html
+  }
+
+  handleQueueRestart(event) {
+    console.log("Queue restart event received, checking status immediately")
+    // Immediately check status after queue restart
+    this.checkStatus()
   }
 }

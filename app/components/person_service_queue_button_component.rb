@@ -3,17 +3,18 @@
 class PersonServiceQueueButtonComponent < ViewComponent::Base
   include ActionView::Helpers::NumberHelper
 
-  def initialize(service_name:, title:, icon:, action_path:, queue_name:)
+  def initialize(service_name:, title:, icon:, action_path:, queue_name:, current_user: nil)
     @service_name = service_name
     @title = title
     @icon = icon
     @action_path = action_path
     @queue_name = queue_name
+    @current_user = current_user
   end
 
   private
 
-  attr_reader :service_name, :title, :icon, :action_path, :queue_name
+  attr_reader :service_name, :title, :icon, :action_path, :queue_name, :current_user
 
   def items_needing_service
     case service_name

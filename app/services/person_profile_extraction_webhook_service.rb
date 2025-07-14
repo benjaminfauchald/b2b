@@ -112,24 +112,10 @@ class PersonProfileExtractionWebhookService < ApplicationService
                     current_config["argument"] || {}
     end
 
-    # Update with company LinkedIn URL and comprehensive webhook configuration
+    # Update with company LinkedIn URL only (webhook config goes in agent settings)
     updated_argument_obj = argument_obj.merge(
-      "spreadsheetUrl" => company_url,
-      "webhookUrl" => webhook_url,           # Primary webhook URL parameter
-      "webhook" => webhook_url,              # Alternative webhook parameter
-      "enableWebhooks" => true,              # Enable webhook functionality
-      "notifyOnCompletion" => true,          # Notify when job completes
-      "notifyOnFailure" => true,             # Notify when job fails
-      "webhook_settings" => {                # Detailed webhook configuration
-        "url" => webhook_url,
-        "method" => "POST",
-        "headers" => {
-          "Content-Type" => "application/json"
-        }
-      }
+      "spreadsheetUrl" => company_url
     )
-
-    Rails.logger.info "🔗 Updated config webhook settings: #{updated_argument_obj.slice('webhookUrl', 'webhook', 'enableWebhooks')}"
 
     updated_argument = if current_config["argument"].is_a?(String)
                         JSON.generate(updated_argument_obj)
@@ -137,13 +123,24 @@ class PersonProfileExtractionWebhookService < ApplicationService
                         updated_argument_obj
     end
 
-    # Save updated configuration
+    # Prepare agent configuration with proper webhook notification settings
+    # Based on PhantomBuster documentation and actual agent config inspection
+    # The webhook URL needs to be set in notifications.webhook field
+    agent_config = {
+      id: @phantom_id,
+      argument: updated_argument,
+      # Webhook configuration in notifications object - this is the correct location
+      notifications: {
+        webhook: webhook_url                     # This is where the webhook URL should be set
+      }
+    }
+
+    Rails.logger.info "🔗 Agent config webhook settings: #{agent_config.slice(:webhookUrl, :webhook, :notifications, :notificationSettings)}"
+
+    # Save updated agent configuration with webhook settings
     save_response = HTTParty.post(
       "#{@base_url}/agents/save",
-      body: {
-        id: @phantom_id,
-        argument: updated_argument
-      }.to_json,
+      body: agent_config.to_json,
       headers: {
         "X-Phantombuster-Key-1" => @api_key,
         "Content-Type" => "application/json"
@@ -151,32 +148,40 @@ class PersonProfileExtractionWebhookService < ApplicationService
       timeout: 10
     )
 
-    raise "Failed to save phantom config: #{save_response.code}" unless save_response.success?
+    unless save_response.success?
+      Rails.logger.error "❌ Failed to save phantom config: HTTP #{save_response.code} - #{save_response.body}"
+      raise "Failed to save phantom config: #{save_response.code} - #{save_response.message}"
+    end
 
-    Rails.logger.info "✅ Updated Phantom config with webhook URL successfully"
+    Rails.logger.info "✅ Updated Phantom agent config with webhook notification settings successfully"
+    Rails.logger.info "📄 Agent save response: #{save_response.body}"
+    
+    # Verify the webhook was actually set by fetching the agent config
+    verify_response = HTTParty.get(
+      "#{@base_url}/agents/fetch",
+      query: { id: @phantom_id },
+      headers: { "X-Phantombuster-Key-1" => @api_key },
+      timeout: 10
+    )
+    
+    if verify_response.success?
+      webhook_status = verify_response.parsed_response.dig("notifications", "webhook")
+      Rails.logger.info "🔍 Webhook verification: notifications.webhook = '#{webhook_status}'"
+    end
   end
 
   def launch_phantom
-    Rails.logger.info "🚀 Launching PhantomBuster phantom with webhook mode..."
+    Rails.logger.info "🚀 [SERVICE] Launching PhantomBuster phantom with webhook mode..."
+    Rails.logger.info "🏢 [SERVICE] Company: #{@company.company_name} (ID: #{@company.id})"
+    Rails.logger.info "🔗 [SERVICE] Webhook URL: #{@webhook_url}"
 
-    # Configure launch with comprehensive webhook settings
+    # Launch phantom - webhook settings are now configured in agent settings, not launch body
+    # According to PhantomBuster documentation, webhooks should be set in agent notification settings
     launch_body = {
-      id: @phantom_id,
-      webhook: @webhook_url,            # Main webhook URL
-      webhookUrl: @webhook_url,         # Alternative webhook parameter
-      notifications: true,              # Enable notifications
-      notifyOnCompletion: true,         # Notify when job completes
-      notifyOnFailure: true,            # Notify when job fails
-      webhook_settings: {               # Comprehensive webhook config
-        url: @webhook_url,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
+      id: @phantom_id
     }
 
-    Rails.logger.info "🔗 Launch body webhook config: #{launch_body.slice(:webhook, :webhookUrl, :notifications)}"
+    Rails.logger.info "🔗 Launch body (webhooks configured in agent settings): #{launch_body}"
 
     launch_response = HTTParty.post(
       "#{@base_url}/agents/launch",
@@ -202,12 +207,13 @@ class PersonProfileExtractionWebhookService < ApplicationService
     container_id = launch_response.parsed_response["containerId"]
 
     if container_id.nil? || container_id.blank?
-      Rails.logger.error "❌ PhantomBuster API returned success but no container ID"
-      Rails.logger.error "Response body: #{launch_response.body}"
+      Rails.logger.error "❌ [SERVICE] PhantomBuster API returned success but no container ID"
+      Rails.logger.error "📄 [SERVICE] Response body: #{launch_response.body}"
       return nil
     end
 
-    Rails.logger.info "📦 Phantom launched with container ID: #{container_id} (webhook mode)"
+    Rails.logger.info "📦 [SERVICE] Phantom launched with container ID: #{container_id} (webhook mode)"
+    Rails.logger.info "✅ [SERVICE] Launch successful, waiting for webhook completion..."
     container_id
   rescue Net::ReadTimeout, Net::OpenTimeout => e
     Rails.logger.error "❌ PhantomBuster API timeout: #{e.message}"

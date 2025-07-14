@@ -24,7 +24,7 @@ class User < ApplicationRecord
   validates :uid, uniqueness: { scope: :provider }, allow_nil: true
 
   def admin?
-    email == "admin@example.com"
+    email == "admin@example.com" || email == "benjamin@connectica.no"
   end
 
   # OAuth methods

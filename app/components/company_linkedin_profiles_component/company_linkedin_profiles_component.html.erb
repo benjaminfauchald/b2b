@@ -108,7 +108,7 @@
                     <% end %>
                     
                     <% if person.profile_url.present? %>
-                      <%= link_to truncate_url(person.profile_url, 30), person.profile_url, 
+                      <%= link_to truncate_linkedin_url(person.profile_url, 30), person.profile_url, 
                           target: "_blank", 
                           rel: "noopener noreferrer",
                           class: "inline-flex items-center text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800" %>

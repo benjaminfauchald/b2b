@@ -1,0 +1,41 @@
+<div class="linkedin-company-data-button-wrapper">
+  <%= turbo_frame_tag turbo_frame_id, class: "linkedin-company-data-frame" do %>
+    <div class="d-flex align-items-center gap-2">
+      <%= button_to queue_path, 
+          method: :post, 
+          class: "btn #{button_class} btn-#{size} d-flex align-items-center gap-2",
+          disabled: button_disabled?,
+          data: {
+            turbo_frame: turbo_frame_id,
+            controller: "linkedin-company-data",
+            action: "click->linkedin-company-data#extractData"
+          } do %>
+        <%= button_icon %>
+        <span><%= button_text %></span>
+      <% end %>
+      
+      <% if service_status != 'unknown' %>
+        <small class="<%= status_class %>">
+          <%= service_status.humanize %>
+        </small>
+      <% end %>
+    </div>
+    
+    <% if last_extraction_info %>
+      <div class="mt-2">
+        <small class="text-muted">
+          Last extracted: <%= time_ago_in_words(last_extraction_info[:extracted_at]) %> ago
+          <% if last_extraction_info[:company_name] %>
+            | <%= last_extraction_info[:company_name] %>
+          <% end %>
+          <% if last_extraction_info[:linkedin_id] %>
+            | ID: <%= last_extraction_info[:linkedin_id] %>
+          <% end %>
+          <% if last_extraction_info[:execution_time] %>
+            | <%= last_extraction_info[:execution_time] %>ms
+          <% end %>
+        </small>
+      </div>
+    <% end %>
+  <% end %>
+</div>

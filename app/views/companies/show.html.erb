@@ -91,7 +91,7 @@
                   <% if url_safe?(linkedin_url) %>
                     <div class="space-y-1">
                       <div class="flex items-center gap-2">
-                        <%= link_to truncate_url(sanitize(@company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'))), 
+                        <%= link_to truncate_linkedin_url(sanitize(@company.linkedin_url.gsub(/https?:\/\/(www\.|no\.)?linkedin\.com\/company\//, 'linkedin/'))), 
                             linkedin_url, 
                             target: "_blank", 
                             rel: "noopener",

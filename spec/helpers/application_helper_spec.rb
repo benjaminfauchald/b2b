@@ -113,4 +113,60 @@ RSpec.describe ApplicationHelper, type: :helper do
       expect(result.length).to be <= 50
     end
   end
+
+  describe '#truncate_linkedin_url' do
+    it 'returns empty string for blank URLs' do
+      expect(helper.truncate_linkedin_url(nil)).to eq('')
+      expect(helper.truncate_linkedin_url('')).to eq('')
+    end
+
+    it 'returns full URL when under max length' do
+      short_url = 'https://linkedin.com/in/john'
+      expect(helper.truncate_linkedin_url(short_url)).to eq(short_url)
+    end
+
+    it 'shows clean format for LinkedIn personal profiles' do
+      long_url = 'https://www.linkedin.com/in/ACwAAEZya98BKfAe4xzkdmaSBA8VVvAgssLyK_4E'
+      result = helper.truncate_linkedin_url(long_url, 60)
+      expect(result).to eq('linkedin.com/in/ACwAAEZya98BKfAe4xzkdmaSBA8VVvAgssLyK_4E')
+    end
+
+    it 'shows clean format for LinkedIn personal profiles when it fits' do
+      short_url = 'https://www.linkedin.com/in/john-doe'
+      result = helper.truncate_linkedin_url(short_url)
+      expect(result).to eq('linkedin.com/in/john-doe')
+    end
+
+    it 'shows clean format for LinkedIn company profiles' do
+      long_url = 'https://www.linkedin.com/company/microsoft'
+      result = helper.truncate_linkedin_url(long_url)
+      expect(result).to eq('linkedin.com/company/microsoft')
+    end
+
+    it 'handles Sales Navigator URLs' do
+      sales_url = 'https://www.linkedin.com/sales/people/ACwAAEZya98BKfAe4xzkdmaSBA8VVvAgssLyK_4E'
+      result = helper.truncate_linkedin_url(sales_url, 50)
+      expect(result).to eq('linkedin.com/sales/people/ACwAAEZy...')
+    end
+
+    it 'falls back to regular truncation for non-LinkedIn URLs' do
+      long_url = 'https://example.com/very/long/path/that/should/be/truncated'
+      result = helper.truncate_linkedin_url(long_url)
+      expect(result).to end_with('...')
+      expect(result.length).to be <= 35
+    end
+
+    it 'handles custom max length' do
+      url = 'https://linkedin.com/in/john-doe-very-long-name'
+      result = helper.truncate_linkedin_url(url, 20)
+      expect(result.length).to be <= 20
+    end
+
+    it 'handles malformed URLs gracefully' do
+      malformed_url = 'not-a-valid-url-but-very-long-string-that-should-be-truncated'
+      result = helper.truncate_linkedin_url(malformed_url)
+      expect(result).to end_with('...')
+      expect(result.length).to be <= 35
+    end
+  end
 end

@@ -25,7 +25,7 @@ class PhantomBusterImportService
     'lastName' => :last_name,
     'companyName' => :company_name,
     'title' => :title,
-    'companyId' => :phantom_buster_company_id,
+    'companyId' => :linkedin_company_id,
     'companyUrl' => :company_url,
     'regularCompanyUrl' => :regular_company_url,
     'summary' => :bio,
@@ -145,6 +145,10 @@ class PhantomBusterImportService
     attributes[:import_tag] = import_tag
     attributes[:source] = 'phantom_buster'
     
+    # Try LinkedIn company association before saving
+    company = attempt_linkedin_company_association(attributes)
+    attributes[:company_id] = company.id if company
+    
     # Check for existing person by profile_url
     existing_person = find_existing_person(attributes)
     
@@ -152,6 +156,13 @@ class PhantomBusterImportService
       case duplicate_strategy
       when :update
         existing_person.update!(attributes)
+        
+        # Try LinkedIn company association for updated person if not already associated
+        if existing_person.company_id.blank?
+          existing_person.reload
+          attempt_linkedin_company_association_for_person(existing_person)
+        end
+        
         @import_results[:updated] += 1
       when :create_new
         # Remove unique fields for new record
@@ -278,6 +289,53 @@ class PhantomBusterImportService
   def normalize_linkedin_url(url)
     # Use the Person model's normalization method for consistency
     Person.normalize_linkedin_url(url)
+  end
+  
+  def attempt_linkedin_company_association(attributes)
+    # Try to associate with LinkedIn company data
+    return nil unless attributes[:linkedin_company_id].present? || attributes[:query].present?
+    
+    begin
+      # Create a temporary person object to use the LinkedIn association service
+      temp_person = Person.new(
+        linkedin_company_id: attributes[:linkedin_company_id],
+        query: attributes[:query],
+        name: attributes[:name]
+      )
+      
+      association_service = LinkedinCompanyAssociationService.new
+      result = association_service.find_company_for_person(temp_person)
+      
+      if result[:success]
+        Rails.logger.info "✅ PhantomBuster LinkedIn association successful for #{attributes[:name]}: #{result[:company].company_name}"
+        return result[:company]
+      else
+        Rails.logger.warn "❌ PhantomBuster LinkedIn association failed for #{attributes[:name]}: #{result[:error]}"
+        return nil
+      end
+    rescue StandardError => e
+      Rails.logger.error "💥 PhantomBuster LinkedIn association error for #{attributes[:name]}: #{e.message}"
+      return nil
+    end
+  end
+  
+  def attempt_linkedin_company_association_for_person(person)
+    # Try to associate an existing person with LinkedIn company
+    return unless person.linkedin_company_id.present? || person.query.present?
+    return if person.company_id.present? # Already associated
+    
+    begin
+      association_service = LinkedinCompanyAssociationService.new
+      result = association_service.associate_person_with_company(person)
+      
+      if result[:success]
+        Rails.logger.info "✅ PhantomBuster update LinkedIn association successful for #{person.name}: #{result[:company].company_name}"
+      else
+        Rails.logger.warn "❌ PhantomBuster update LinkedIn association failed for #{person.name}: #{result[:error]}"
+      end
+    rescue StandardError => e
+      Rails.logger.error "💥 PhantomBuster update LinkedIn association error for #{person.name}: #{e.message}"
+    end
   end
   
   def extract_names(full_name)

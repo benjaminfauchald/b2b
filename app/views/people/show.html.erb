@@ -41,7 +41,7 @@
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">LinkedIn Profile</dt>
               <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <%= link_to truncate_url(@person.profile_url), @person.profile_url, target: "_blank", 
+                <%= link_to truncate_linkedin_url(@person.profile_url), @person.profile_url, target: "_blank", 
                     class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
               </dd>
             </div>
@@ -50,10 +50,7 @@
           <% if @person.email.present? %>
             <div>
               <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
-              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                <div data-controller="email-verification">
-                  <%= render EmailVerificationStatusComponent.new(person: @person) %>
-              </dd>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @person.email %></dd>
             </div>
           <% end %>
           
@@ -91,6 +88,28 @@
               <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
                 <%= link_to @person.company.company_name, company_path(@person.company), 
                     class: "font-medium text-blue-600 dark:text-blue-500 hover:underline" %>
+              </dd>
+            </div>
+          <% elsif @person.linkedin_company_id.present? || (@person.query.present? && @person.query.include?('linkedin.com/company/')) %>
+            <div class="sm:col-span-2">
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Company Association</dt>
+              <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <div class="flex items-center space-x-3">
+                  <% if @person.linkedin_company_id.present? %>
+                    <span class="text-gray-600 dark:text-gray-400">LinkedIn Company ID: <%= @person.linkedin_company_id %></span>
+                  <% elsif @person.query.present? && @person.query.include?('linkedin.com/company/') %>
+                    <% linkedin_slug = @person.query.match(/linkedin\.com\/company\/([^\/\?]+)/)[1] rescue nil %>
+                    <span class="text-gray-600 dark:text-gray-400">LinkedIn Company Slug: <%= linkedin_slug %></span>
+                  <% end %>
+                  <button onclick="associateWithCompany('<%= @person.id %>')"
+                          id="associate-company-btn"
+                          class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                    Associate with Company
+                  </button>
+                </div>
               </dd>
             </div>
           <% end %>
@@ -185,6 +204,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Email Verification Section -->
+  <% if @person.email.present? %>
+    <div class="mb-8">
+      <div data-controller="email-verification">
+        <%= render EmailVerificationStatusComponent.new(person: @person) %>
+      </div>
+    </div>
+  <% end %>
 
   <!-- Service Testing Buttons -->
   <div class="mt-8 p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
@@ -455,6 +483,102 @@
         button.classList.remove('bg-red-600', 'hover:bg-red-700');
         button.classList.add('bg-blue-600', 'hover:bg-blue-700');
       }, 3000);
+    });
+  }
+  
+  function associateWithCompany(personId) {
+    const button = document.getElementById('associate-company-btn');
+    const originalContent = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = `
+      <svg class="w-3 h-3 mr-1.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+      </svg>
+      Associating...
+    `;
+    
+    fetch(`/people/${personId}/associate_with_company`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        button.innerHTML = `
+          <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Success!
+        `;
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-green-600', 'hover:bg-green-700');
+        
+        // Show success message with company info
+        const companyInfo = data.people_associated > 1 
+          ? `${data.company_name} (${data.people_associated} people associated)`
+          : data.company_name;
+        
+        // Refresh the page after 2 seconds to show the updated association
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } else {
+        button.innerHTML = `
+          <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Error
+        `;
+        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        button.classList.add('bg-red-600', 'hover:bg-red-700');
+        
+        console.error('Association failed:', data.message);
+        
+        // Show the error message in the button temporarily
+        button.title = data.message;
+        
+        // Reset button after 5 seconds for longer error messages
+        setTimeout(() => {
+          button.innerHTML = originalContent;
+          button.disabled = false;
+          button.classList.remove('bg-red-600', 'hover:bg-red-700');
+          button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+          button.title = '';
+        }, 5000);
+      }
+    })
+    .catch(error => {
+      console.error('Network or server error:', error);
+      button.innerHTML = `
+        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Network Error
+      `;
+      button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+      button.classList.add('bg-red-600', 'hover:bg-red-700');
+      
+      // Show detailed error in tooltip
+      button.title = `Network error: ${error.message}`;
+      
+      // Reset button after 5 seconds
+      setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        button.classList.remove('bg-red-600', 'hover:bg-red-700');
+        button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        button.title = '';
+      }, 5000);
     });
   }
   

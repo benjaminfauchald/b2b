@@ -48,6 +48,10 @@ module FeatureMemories
       @data[:test_environment] = env
     end
 
+    def scenario(description, &block)
+      test_scenario(description, :general, &block)
+    end
+
     private
 
     def test_scenario(description, scenario_type, &block)
@@ -136,6 +140,18 @@ module FeatureMemories
 
     def estimated_time(time)
       @data[:estimated_time] = time
+    end
+
+    def description(text)
+      @data[:description] = text
+    end
+
+    def test_steps(steps)
+      @data[:test_steps] = steps.is_a?(Array) ? steps : [steps]
+    end
+
+    def expected_result(result)
+      @data[:expected_result] = result
     end
 
     def automation_level(level)

@@ -95,6 +95,7 @@ Rails.application.routes.draw do
       post :queue_single_social_media_extraction
       get :service_status
       post :verify_email
+      post :associate_with_company
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
@@ -175,5 +176,6 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     get "phantom_buster/status", to: "phantom_buster#status"
+    post "phantom_buster/restart_queue", to: "phantom_buster#restart_queue"
   end
 end

@@ -12,7 +12,8 @@ class PhantomBusterWebhookJob < ApplicationJob
     status = webhook_payload['status'] || webhook_payload['exitMessage']
     exit_code = webhook_payload['exitCode']
     
-    Rails.logger.info "Processing PhantomBuster webhook: container_id=#{container_id}, status=#{status}, exit_code=#{exit_code}"
+    Rails.logger.info "📨 [WEBHOOK] Processing PhantomBuster webhook: container_id=#{container_id}, status=#{status}, exit_code=#{exit_code}"
+    Rails.logger.info "📋 [WEBHOOK] Full payload keys: #{webhook_payload.keys.join(', ')}"
     
     begin
       # Determine the actual status based on exit code and status/exitMessage
@@ -323,9 +324,13 @@ class PhantomBusterWebhookJob < ApplicationJob
 
   def trigger_next_phantom_job
     # Signal job completion to the sequential queue
-    Rails.logger.info "Triggering next PhantomBuster job in queue"
+    Rails.logger.info "🔄 [WEBHOOK] Triggering next PhantomBuster job in queue"
+    Rails.logger.info "📊 [WEBHOOK] About to call PhantomBusterSequentialQueue.job_completed(nil, 'completed')"
+    
     # Note: We don't need the container_id here, just signal that a job completed
     # The queue manager will clear the lock and process the next job
-    PhantomBusterSequentialQueue.job_completed(nil, 'completed')
+    result = PhantomBusterSequentialQueue.job_completed(nil, 'completed')
+    
+    Rails.logger.info "🎯 [WEBHOOK] Queue completion result: #{result ? 'Next job started' : 'No next job started'}"
   end
 end

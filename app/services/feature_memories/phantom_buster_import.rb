@@ -109,7 +109,7 @@ class FeatureMemories::PhantomBusterImport < FeatureMemories::ApplicationFeature
       action "Created and ran database migration for 21 new fields"
       status :completed
       code_ref "db/migrate/20250710093538_add_phantom_buster_fields_to_people.rb"
-      notes "Added indexes for performance on key fields: phantom_buster_company_id, vmid, is_premium, phantom_buster_timestamp"
+      notes "Added indexes for performance on key fields: linkedin_company_id, vmid, is_premium, phantom_buster_timestamp"
     end
     
     step (Time.current + 15.minutes).to_s do

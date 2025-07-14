@@ -3,7 +3,7 @@
 class PersonImportResult
   attr_reader :imported_count, :failed_count, :duplicate_count, :imported_people, :failed_people,
               :duplicate_people, :error_message, :processing_time, :csv_errors, :updated_count, :updated_people,
-              :import_tag, :email_verification_stats
+              :import_tag, :email_verification_stats, :company_association_stats
 
   def initialize(import_tag: nil)
     @imported_count = 0
@@ -25,6 +25,12 @@ class PersonImportResult
       failed: 0,
       pending: 0,
       skipped: 0
+    }
+    @company_association_stats = {
+      total_attempted: 0,
+      linkedin_successful: 0,
+      name_fallback_successful: 0,
+      failed: 0
     }
   end
 
@@ -99,6 +105,30 @@ class PersonImportResult
     end
   end
 
+  def add_company_association_attempt(linkedin_success: false, name_fallback_success: false)
+    @company_association_stats[:total_attempted] += 1
+    
+    if linkedin_success
+      @company_association_stats[:linkedin_successful] += 1
+    elsif name_fallback_success
+      @company_association_stats[:name_fallback_successful] += 1
+    else
+      @company_association_stats[:failed] += 1
+    end
+  end
+
+  def company_association_summary
+    stats = @company_association_stats
+    return "No company association attempted" if stats[:total_attempted] == 0
+
+    parts = []
+    parts << "#{stats[:linkedin_successful]} LinkedIn" if stats[:linkedin_successful] > 0
+    parts << "#{stats[:name_fallback_successful]} name lookup" if stats[:name_fallback_successful] > 0
+    parts << "#{stats[:failed]} failed" if stats[:failed] > 0
+
+    "Company associations: " + (parts.empty? ? "none" : parts.join(", "))
+  end
+
   def email_verification_summary
     stats = @email_verification_stats
     return "No email verification performed" if stats[:total_verified] == 0 && stats[:skipped] == 0
@@ -168,7 +198,9 @@ class PersonImportResult
       summary_message: summary_message,
       people_per_second: people_per_second,
       email_verification_stats: @email_verification_stats,
-      email_verification_summary: email_verification_summary
+      email_verification_summary: email_verification_summary,
+      company_association_stats: @company_association_stats,
+      company_association_summary: company_association_summary
     }
   end
 

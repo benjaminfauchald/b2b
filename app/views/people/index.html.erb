@@ -38,7 +38,8 @@
         title: "Profile Extraction",
         icon: "user-group",
         action_path: queue_profile_extraction_people_path,
-        queue_name: "person_profile_extraction"
+        queue_name: "person_profile_extraction",
+        current_user: current_user
       ) %>
       
       <%= render PersonServiceQueueButtonComponent.new(
@@ -46,7 +47,8 @@
         title: "Email Extraction",
         icon: "email",
         action_path: queue_email_extraction_people_path,
-        queue_name: "person_email_extraction"
+        queue_name: "person_email_extraction",
+        current_user: current_user
       ) %>
       
       <%= render PersonServiceQueueButtonComponent.new(
@@ -54,7 +56,8 @@
         title: "Social Media Extraction",
         icon: "social",
         action_path: queue_social_media_extraction_people_path,
-        queue_name: "person_social_media_extraction"
+        queue_name: "person_social_media_extraction",
+        current_user: current_user
       ) %>
     </div>
   </div>
@@ -124,7 +127,8 @@
               ["With Profiles", "with_profiles"],
               ["With Emails", "with_emails"],
               ["With Social Media", "with_social_media"],
-              ["Needs Extraction", "needs_extraction"]
+              ["Needs Extraction", "needs_extraction"],
+              ["No Company", "no_company"]
             ], params[:filter]),
             {},
             class: "block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" %>

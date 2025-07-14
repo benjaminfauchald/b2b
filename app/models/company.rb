@@ -7,9 +7,12 @@ class Company < ApplicationRecord
   has_many :service_audit_logs, as: :auditable, dependent: :nullify
   has_many :people, dependent: :destroy
   has_one :domain, dependent: :destroy
+  has_many :linkedin_company_lookups, dependent: :destroy
 
   # Validations
   validates :registration_number, presence: true, uniqueness: true
+  validates :linkedin_company_id, uniqueness: true, allow_nil: true, numericality: { only_integer: true }
+  validates :linkedin_slug, uniqueness: true, allow_nil: true
 
   # Callbacks
   before_save :auto_populate_linkedin_url_from_ai
@@ -142,6 +145,20 @@ class Company < ApplicationRecord
     profile_extraction_candidates
       .left_joins(:people)
       .where(people: { id: nil })
+  }
+
+  # Scopes for LinkedIn company association
+  scope :with_linkedin_identifiers, -> {
+    where.not(linkedin_company_id: nil)
+      .or(where.not(linkedin_slug: nil))
+  }
+  
+  scope :needs_linkedin_slug_population, -> {
+    where(linkedin_slug: nil)
+      .where(
+        "(linkedin_url IS NOT NULL AND linkedin_url != '') OR " \
+        "(linkedin_ai_url IS NOT NULL AND linkedin_ai_url != '')"
+      )
   }
 
   # Total potential companies for profile extraction (for progress tracking)
