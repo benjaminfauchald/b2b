@@ -108,7 +108,7 @@ group :test do
   gem "webmock"
 end
 
-gem "rubocop", "~> 1.76", group: :development
+gem "rubocop", "~> 1.79", group: :development
 gem "rubocop-rails", "~> 2.32", group: :development
 gem "rubocop-performance", "~> 1.25", group: :development
 gem "rubocop-rspec", "~> 3.6", groups: [:development, :test]
