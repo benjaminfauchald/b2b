@@ -169,7 +169,7 @@ jobs:
           echo "✅ ViewComponent production compatibility verified"
 
       - name: Upload screenshots from failed tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: screenshots
